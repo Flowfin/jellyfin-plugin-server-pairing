@@ -4,4 +4,27 @@
         <AssemblyVersion>0.0.0.0</AssemblyVersion>
         <FileVersion>0.0.0.0</FileVersion>
     </PropertyGroup>
+
+    <!--
+        Analysis settings for every project in the tree, tests included.
+        They live here rather than in a single csproj so that a project added
+        later inherits them instead of having to remember them.
+    -->
+    <PropertyGroup>
+        <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+        <CodeAnalysisTreatWarningsAsErrors>true</CodeAnalysisTreatWarningsAsErrors>
+        <Nullable>enable</Nullable>
+        <AnalysisMode>AllEnabledByDefault</AnalysisMode>
+        <AnalysisModeSecurity>All</AnalysisModeSecurity>
+    </PropertyGroup>
+
+    <!--
+        Same source, same bytes. ContinuousIntegrationBuild additionally
+        normalises the paths embedded in the assembly, and it is set only where
+        the checkout path is the runner's rather than a person's.
+    -->
+    <PropertyGroup>
+        <Deterministic>true</Deterministic>
+        <ContinuousIntegrationBuild Condition="'$(GITHUB_ACTIONS)' == 'true' or '$(CI)' == 'true'">true</ContinuousIntegrationBuild>
+    </PropertyGroup>
 </Project>
