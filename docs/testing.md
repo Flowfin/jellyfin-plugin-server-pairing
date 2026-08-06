@@ -68,13 +68,53 @@ Each is expected to return nothing. The first refuses a browser driver, the
 second refuses any machine trust store API, and the third refuses an absolute
 path outside a temporary directory, on either platform.
 
-These three greps currently match nothing because there is no test project in
-the tree for them to read. That is an empty result from an empty input and not a
-passing check, and this document does not claim otherwise. They become evidence
-on the day the test project exists, and the issue that adds it is the place
-their first real run belongs.
+An empty result from these three is worth nothing on its own. A grep whose
+pathspec matches no file prints nothing and exits 1, which is byte for byte what
+a clean test project prints, so the input is counted before the result is read:
+
+```
+git ls-files -- '*Tests*'
+```
+
+Run at `d070084`, that names five files:
+
+```
+Jellyfin.Plugin.ServerPairing.Tests/Jellyfin.Plugin.ServerPairing.Tests.csproj
+Jellyfin.Plugin.ServerPairing.Tests/PluginIdentityTests.cs
+Jellyfin.Plugin.ServerPairing.Tests/ServiceRegistrationTests.cs
+Jellyfin.Plugin.ServerPairing.Tests/StaticStateTests.cs
+Jellyfin.Plugin.ServerPairing.Tests/packages.lock.json
+```
+
+and each of the three greps returns nothing and exits 1 over them. That is the
+first run of these commands against a test project rather than against an empty
+set. It says the project carries none of the three refused things today. It is a
+grep and not a gate: it reads the names in the source and never what the code
+does, and nothing refuses a change that reintroduces one of them. #67 is where a
+check over this would live.
+
+The pathspec is the fragile part. It matches on the segment `Tests`, so a test
+project named without it would take these three greps back to reading an empty
+set, silently and permanently green. Renaming the project means rewriting the
+pathspec in the same change.
 
 ## Where the suite runs
 
-On a Linux CI runner with no display. That the suite passes there is not
-something this document can assert yet, for the same reason: there is no suite.
+On a Linux CI runner with no display, measured rather than assumed. The
+`call / test` job of run 31107829142, at `d070084`:
+
+```
+Image: ubuntu-24.04
+```
+
+```
+Total tests: 9
+     Passed: 9
+```
+
+No display is attached to that image and no step in the job attaches one. What
+this shows is that the nine tests in the tree today run and pass there. It is
+not a statement about tests that do not exist yet: nothing in the suite yet
+exercises certificate pinning, the two-instance harness or the dashboard page,
+so none of the three replacements above has been carried out in code. Each
+arrives with the issue that builds the thing it replaces.
