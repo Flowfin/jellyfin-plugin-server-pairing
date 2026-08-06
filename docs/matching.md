@@ -103,6 +103,10 @@ not match. Season and episode numbers are compared as numbers. An episode
 missing either of them, on either side, cannot be identified by this route and
 matches nothing.
 
+Two episodes of one series with different numbering are different items and not
+a contradiction, so they are unrelated rather than a disagreement. Every episode
+of a series would otherwise be reported as contradicting every other one.
+
 An episode that has its own identifiers is never rescued by the fallback. If the
 two sides both carry an episode-level identifier and those identifiers disagree,
 that is a disagreement and the series numbering does not overturn it.
@@ -145,3 +149,10 @@ The cases the corpus has to cover, and what each is for, are in
 its situation, every row is executed, and the expected outcome of each is the
 one this document gives. A row whose expectation cannot be read out of the rules
 above is a row that is testing the code against itself.
+
+Adding a provider to the matched list is not a one-line change. Two guards in
+`MatchingCorpusTests` refuse it until the corpus has caught up: one requires a
+row where the new provider carries a match, and the other requires a row where
+its presence produces something other than a match. A provider covered only by
+the first has no case written down for its refusals, and the refusals are the
+half that goes wrong quietly.
