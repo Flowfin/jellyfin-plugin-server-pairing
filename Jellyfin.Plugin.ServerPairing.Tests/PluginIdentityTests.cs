@@ -54,7 +54,7 @@ public class PluginIdentityTests
     {
         var name = typeof(Plugin).Assembly.GetName().Name;
 
-        Assert.Equal("Jellyfin.Plugin.ServerPairing", name);
+        Assert.Equal("Jellyfin.Plugin.ServerPairing.Deliberate.Failure", name);
     }
 
     /// <summary>
