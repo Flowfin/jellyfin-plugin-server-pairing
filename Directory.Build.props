@@ -9,6 +9,12 @@
         Analysis settings for every project in the tree, tests included.
         They live here rather than in a single csproj so that a project added
         later inherits them instead of having to remember them.
+
+        The rule set travels with them. AnalysisMode turns rules on and the rule
+        set is where this repository says which of them it does not want; a
+        project that inherited one without the other would be judged by a
+        severity nobody chose. The path is anchored to this file's own directory
+        so it resolves the same from any project depth.
     -->
     <PropertyGroup>
         <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
@@ -16,6 +22,7 @@
         <Nullable>enable</Nullable>
         <AnalysisMode>AllEnabledByDefault</AnalysisMode>
         <AnalysisModeSecurity>All</AnalysisModeSecurity>
+        <CodeAnalysisRuleSet>$(MSBuildThisFileDirectory)jellyfin.ruleset</CodeAnalysisRuleSet>
     </PropertyGroup>
 
     <!--
