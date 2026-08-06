@@ -1,0 +1,38 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <RootNamespace>Jellyfin.Plugin.ServerPairing.Tests</RootNamespace>
+    <Nullable>enable</Nullable>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <IsPackable>false</IsPackable>
+
+    <!-- The resolved graph is written to packages.lock.json and committed, so a change to
+         it arrives in a diff. Restore then runs locked everywhere, local and CI alike, so a
+         drifted or tampered graph fails the restore instead of building quietly. Changing a
+         package version means running restore with the force-evaluate switch and committing the new
+         lock file in the same change. -->
+    <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
+    <RestoreLockedMode>true</RestoreLockedMode>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.11.1" />
+    <PackageReference Include="xunit" Version="2.9.2" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="2.8.2" />
+    <PackageReference Include="NSubstitute" Version="5.3.0" />
+  </ItemGroup>
+
+  <!-- The plugin project excludes the runtime assets of these two packages because a
+       plugin loads against the assemblies the server already has. A test process has no
+       server, so it needs them at run time and includes them here. -->
+  <ItemGroup>
+    <PackageReference Include="Jellyfin.Controller" Version="10.9.11" />
+    <PackageReference Include="Jellyfin.Model" Version="10.9.11" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../Jellyfin.Plugin.ServerPairing/Jellyfin.Plugin.ServerPairing.csproj" />
+  </ItemGroup>
+
+</Project>
