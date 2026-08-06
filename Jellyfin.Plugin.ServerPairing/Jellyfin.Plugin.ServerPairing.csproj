@@ -2,9 +2,17 @@
 
   <PropertyGroup>
     <TargetFramework>net9.0</TargetFramework>
-    <RootNamespace>Jellyfin.Plugin.Template</RootNamespace>
+    <RootNamespace>Jellyfin.Plugin.ServerPairing</RootNamespace>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <CodeAnalysisRuleSet>../jellyfin.ruleset</CodeAnalysisRuleSet>
+
+    <!-- The resolved graph is written to packages.lock.json and committed, so a change to
+         it arrives in a diff. Restore then runs locked everywhere, local and CI alike, so a
+         drifted or tampered graph fails the restore instead of building quietly. Changing a
+         package version means running restore with the force-evaluate switch and committing the new
+         lock file in the same change. -->
+    <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
+    <RestoreLockedMode>true</RestoreLockedMode>
   </PropertyGroup>
 
   <ItemGroup>
