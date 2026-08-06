@@ -19,10 +19,16 @@ get to a clean build. If a rule is wrong, argue with the rule in an issue and
 change the rule, in `jellyfin.ruleset` or in `Directory.Build.props`, where the
 change is visible to everyone.
 
-There is no test project in the tree yet. `dotnet test` therefore exits 0 and
-prints only its restore lines, without saying that it ran nothing, so a green
-`dotnet test` here means nothing was executed rather than that anything passed.
-Read it that way until the test project lands.
+`dotnet test` has something to run. The test project is
+`Jellyfin.Plugin.ServerPairing.Tests` and it is in the solution, so a run from
+the root reaches it rather than finding nothing and exiting 0. What belongs in
+that project, and which three kinds of test this repository refuses outright,
+is in [`docs/testing.md`](docs/testing.md).
+
+Both commands need the SDK that `global.json` pins. Where a different one is
+installed they do not start at all, and the error says which version was asked
+for, so a machine that cannot run the gate says so instead of appearing to pass
+it.
 
 ## No change without an issue
 
