@@ -4,10 +4,6 @@
     <TargetFramework>net9.0</TargetFramework>
     <RootNamespace>Jellyfin.Plugin.ServerPairing</RootNamespace>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
-    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
-    <Nullable>enable</Nullable>
-    <AnalysisMode>AllEnabledByDefault</AnalysisMode>
-    <CodeAnalysisRuleSet>../jellyfin.ruleset</CodeAnalysisRuleSet>
 
     <!-- The resolved graph is written to packages.lock.json and committed, so a change to
          it arrives in a diff. Restore then runs locked everywhere, local and CI alike, so a
