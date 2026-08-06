@@ -113,9 +113,14 @@ git commit -s
 
 The trailer asserts the Developer Certificate of Origin, whose text is in
 [`DCO`](DCO) in this repository. Read it before you sign it. The sign-off check
-in `.github/workflows/dco.yml` refuses any pull request containing a commit
+in `.github/workflows/dco.yml` refuses a pull request containing a commit
 without a matching trailer, and it is the whole of the enforcement: nothing else
 in the tree reads the trailer.
+
+It walks non-merge commits only, and it skips commits authored by the two
+GitHub bot identities it names, which cannot sign their own work. Every commit
+a person writes is walked. Read the check itself for the exact list rather than
+this sentence, which is a summary of it.
 
 Commits are signed cryptographically as well as signed off. A signing failure is
 a reason to stop and fix the signing, never a reason to reach for
