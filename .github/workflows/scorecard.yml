@@ -29,8 +29,10 @@ on:
   # Keeps the Maintained check current and re-scores against upstream drift.
   schedule:
     - cron: "27 4 * * 1"
+  # The default branch of this repository is master. A push filter naming a
+  # branch that does not exist here matches nothing and the trigger is dead.
   push:
-    branches: [main]
+    branches: [master]
 
 # Read-only by default; the analysis job adds only the scopes it needs. A
 # read-only top-level declaration is itself one of the Token-Permissions checks
