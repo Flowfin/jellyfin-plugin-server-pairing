@@ -69,8 +69,11 @@ the secrets the run generated. The test generates the secrets, so it knows every
 byte it is looking for, and it fails on any of them appearing anywhere in the
 captured output.
 
-That test does not exist. There is no test project in the tree, and no enrolment,
-rotation or revocation to drive. Until it exists, both lists above are a design
-statement and nothing refuses a call site that violates them. This paragraph is
-the whole of that disclosure and no later edit of this file turns it into a
-statement that the logging has been checked.
+That test does not exist. When this was written there was also no test project
+to put it in; one landed afterwards, in `87cee9c`, so the missing piece is now
+only the thing being logged. There is no enrolment, no rotation and no
+revocation to drive, so there is nothing for a capturing logger to capture.
+Until the test exists, both lists above are a design statement and nothing
+refuses a call site that violates them. This paragraph is the whole of that
+disclosure and no later edit of this file turns it into a statement that the
+logging has been checked.
