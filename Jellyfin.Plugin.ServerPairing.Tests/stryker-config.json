@@ -1,0 +1,19 @@
+{
+  "stryker-config": {
+    "project": "Jellyfin.Plugin.ServerPairing.csproj",
+    "target-framework": "net9.0",
+    "mutate": [
+      "Matching/*.cs"
+    ],
+    "reporters": [
+      "html",
+      "markdown",
+      "progress"
+    ],
+    "thresholds": {
+      "high": 100,
+      "low": 100,
+      "break": 0
+    }
+  }
+}
