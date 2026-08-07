@@ -25,13 +25,22 @@ the same bytes rather than against whatever the file says later:
 <https://github.com/JPKribs/jellyfin-plugin-serversync>, README blob
 `49ac9d520fdf1d0601e7a7f5478ad98273aa0473`.
 
+That repository's README has moved on since it was read, which is what naming
+the blob is for. Every quotation below is against the blob and not against
+whatever the file says now:
+
+    gh api repos/JPKribs/jellyfin-plugin-serversync/readme --jq '.sha'
+    63c340f8af0ab670a99316ba0b06f067ac1c71bc
+
+The other two are unchanged at the time of writing, checked the same way.
+
 Trust. The credential is a Jellyfin API key generated on the other server and
 pasted into this one. The README instructs the operator to "Generate an API Key
 on the source server", "Go to Dashboard > API Keys on the source server", and
 then to configure "Server URL: The full URL of the source server (e.g.,
 `http://192.168.1.100:8096`)" and "API Key: The API key you generated on the
 source server". It also states that "No modifications are required on the Source
-Server", which is the same fact from the other direction: the source server is
+server", which is the same fact from the other direction: the source server is
 not asked to agree to anything, because the key already speaks for it.
 
 This is the credential problem in its purest form, and it is why the first design
@@ -40,10 +49,18 @@ to an endpoint, so the string that exists to move watch state also opens every
 administrative endpoint on the server that issued it. The command that
 establishes that about the server is in #11 and is not repeated here.
 
-Matching. By file path, stated three times and emphasised in the source: "Content
-is matched by file path, allowing the plugin to track what needs to be
-downloaded, updated, or removed", and for history, "Source Server watch history
-is compared, **by file path**, against the Local Server". Two servers with
+Matching. By file path. The phrase appears four times in that blob, three of
+them emphasised, which is the count rather than an impression of one:
+
+    gh api repos/JPKribs/jellyfin-plugin-serversync/git/blobs/49ac9d520fdf1d0601e7a7f5478ad98273aa0473 --jq '.content' | tr -d '\n' | base64 -d | grep -c -i "by file path"
+    4
+    gh api repos/JPKribs/jellyfin-plugin-serversync/git/blobs/49ac9d520fdf1d0601e7a7f5478ad98273aa0473 --jq '.content' | tr -d '\n' | base64 -d | grep -c -F '**by file path**'
+    3
+
+The unemphasised one is "Content is matched by file path, allowing the plugin to
+track what needs to be downloaded, updated, or removed", and one of the three
+emphasised is "Source Server watch history is compared, **by file path**,
+against the Local Server". Two servers with
 different mount layouts therefore cannot be paired at all, and the README's own
 Library Mapping section exists to rewrite one layout into the other by hand.
 

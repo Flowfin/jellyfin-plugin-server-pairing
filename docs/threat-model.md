@@ -19,12 +19,29 @@ them:
     git clone https://github.com/jellyfin/jellyfin.git
     cd jellyfin
 
-The two tags used throughout are the heads of the two server lines this plugin
-targets:
+Two tags are used throughout, one from each of the two server lines this plugin
+may end up shipping for:
 
     git rev-parse v10.11.9 v12.0-rc3
     e83a7e62f26443f7dd98f126d6955ac1af090125
     fc43f151a2418cc112e116050a99dd6318917ab0
+
+Whether it ships for both lines or for one is issue #9, which is open and
+blocked on decision 7 in #1. `build.yaml` declares one `targetAbi` and one
+`framework` today. So this sentence says which tags the commands were run at
+and nothing about what the plugin supports.
+
+They were also not the newest tag on either line when this was written:
+
+    gh api "repos/jellyfin/jellyfin/tags?per_page=100" --jq 'first(.[] | select(.name | startswith("v10.11"))) | .name'
+    v10.11.11
+    gh api "repos/jellyfin/jellyfin/tags?per_page=100" --jq 'first(.[] | select(.name | startswith("v12."))) | .name'
+    v12.0-rc4
+
+That takes nothing away from a measurement below, because each one names the tag
+it was run at and those bytes stay fetchable. It does fix what each one is about:
+v10.11.9 and v12.0-rc3, rather than whatever the two lines hold today. Re-running
+one at a newer tag produces a new reading rather than confirming the old one.
 
 A claim with no command beside it is a claim about this plugin's own design, not
 about the host. Where something about the host is believed and was not measured,

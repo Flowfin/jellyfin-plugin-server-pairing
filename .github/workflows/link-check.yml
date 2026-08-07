@@ -1,0 +1,55 @@
+name: link-check
+
+on:
+  # Every branch and every pull request for the offline half, which resolves
+  # links inside this repository and needs nothing but the checkout.
+  push:
+    branches: ["**"]
+  pull_request:
+    branches: ["**"]
+  # The half that leaves this repository runs on its own, because a link that
+  # has rotted is a fact about somebody else's server rather than about the
+  # change in front of the reader, and a gate that reds for one teaches people
+  # to re-run the gate until it is green.
+  schedule:
+    - cron: "41 3 * * 2"
+  workflow_dispatch:
+
+# Read-only: the check reads the tracked tree and, in the external job, fetches
+# URLs. It writes nothing.
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  relative:
+    name: Resolve every relative link
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # No step pushes via git, so do not persist the GITHUB_TOKEN.
+          persist-credentials: false
+      - name: Resolve relative links and heading anchors
+        # The same script a person runs, rather than a second copy of the logic
+        # that can drift from it.
+        run: sh .github/link-check.sh
+
+  external:
+    name: Reach every external link
+    # Never on a pull request, so it cannot become a merge gate by accident.
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Fetch every link that leaves this repository
+        run: sh .github/link-check.sh --external
