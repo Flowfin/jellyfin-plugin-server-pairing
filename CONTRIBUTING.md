@@ -19,10 +19,16 @@ get to a clean build. If a rule is wrong, argue with the rule in an issue and
 change the rule, in `jellyfin.ruleset` or in `Directory.Build.props`, where the
 change is visible to everyone.
 
-There is no test project in the tree yet. `dotnet test` therefore exits 0 and
-prints only its restore lines, without saying that it ran nothing, so a green
-`dotnet test` here means nothing was executed rather than that anything passed.
-Read it that way until the test project lands.
+`dotnet test` has something to run. The test project is
+`Jellyfin.Plugin.ServerPairing.Tests` and it is in the solution, so a run from
+the root reaches it rather than finding nothing and exiting 0. What belongs in
+that project, and which three kinds of test this repository refuses outright,
+is in [`docs/testing.md`](docs/testing.md).
+
+Both commands need the SDK that `global.json` pins. Where a different one is
+installed they do not start at all, and the error says which version was asked
+for, so a machine that cannot run the gate says so instead of appearing to pass
+it.
 
 ## No change without an issue
 
@@ -107,9 +113,14 @@ git commit -s
 
 The trailer asserts the Developer Certificate of Origin, whose text is in
 [`DCO`](DCO) in this repository. Read it before you sign it. The sign-off check
-in `.github/workflows/dco.yml` refuses any pull request containing a commit
+in `.github/workflows/dco.yml` refuses a pull request containing a commit
 without a matching trailer, and it is the whole of the enforcement: nothing else
 in the tree reads the trailer.
+
+It walks non-merge commits only, and it skips commits authored by the two
+GitHub bot identities it names, which cannot sign their own work. Every commit
+a person writes is walked. Read the check itself for the exact list rather than
+this sentence, which is a summary of it.
 
 Commits are signed cryptographically as well as signed off. A signing failure is
 a reason to stop and fix the signing, never a reason to reach for
@@ -123,5 +134,6 @@ uses. It is not decoration.
 ## Security reports
 
 Do not open a public issue for a vulnerability in the pairing path.
-`SECURITY.md` does not exist yet and the reporting address is not fixed. Until it
-is, use GitHub's private vulnerability reporting on this repository.
+[`SECURITY.md`](SECURITY.md) says where one goes, what is in scope, what a
+reporter can expect and which classes of finding are already accepted as out of
+scope.

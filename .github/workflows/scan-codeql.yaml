@@ -1,20 +1,32 @@
 name: '🔬 Run CodeQL'
 
+# No path filter. The analysis is cheap enough to run on every change, and a
+# filtered workflow reports nothing at all on the changes it skips, which turns
+# into a merge that never completes on the day this context is required. #62
+# removed the same filter from the build and test workflows for that reason.
 on:
   push:
     branches: [ master ]
-    paths-ignore:
-      - '**/*.md'
   pull_request:
     branches: [ master ]
-    paths-ignore:
-      - '**/*.md'
   schedule:
     - cron: '24 2 * * 4'
   workflow_dispatch:
 
+# The called workflow declares no permissions of its own, so it runs with what
+# this file grants it. The default workflow permission on this repository is
+# read, and uploading the analysis needs security-events: write, so that scope
+# is granted on the job that needs it and the top level stays empty.
+permissions: {}
+
 jobs:
   call:
+    permissions:
+      contents: read # check out the repository being analysed
+      security-events: write # upload the analysis into the code-scanning tab
+    # The called workflow gates its only job on this input matching the
+    # repository it is running in, so a name that is not this repository skips
+    # the analysis silently and still reports a check run.
     uses: jellyfin/jellyfin-meta-plugins/.github/workflows/scan-codeql.yaml@master
     with:
-      repository-name: jellyfin/jellyfin-plugin-template
+      repository-name: iderex/jellyfin-plugin-server-pairing

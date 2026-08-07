@@ -19,12 +19,29 @@ them:
     git clone https://github.com/jellyfin/jellyfin.git
     cd jellyfin
 
-The two tags used throughout are the heads of the two server lines this plugin
-targets:
+Two tags are used throughout, one from each of the two server lines this plugin
+may end up shipping for:
 
     git rev-parse v10.11.9 v12.0-rc3
     e83a7e62f26443f7dd98f126d6955ac1af090125
     fc43f151a2418cc112e116050a99dd6318917ab0
+
+Whether it ships for both lines or for one is issue #9, which is open and
+blocked on decision 7 in #1. `build.yaml` declares one `targetAbi` and one
+`framework` today. So this sentence says which tags the commands were run at
+and nothing about what the plugin supports.
+
+They were also not the newest tag on either line when this was written:
+
+    gh api "repos/jellyfin/jellyfin/tags?per_page=100" --jq 'first(.[] | select(.name | startswith("v10.11"))) | .name'
+    v10.11.11
+    gh api "repos/jellyfin/jellyfin/tags?per_page=100" --jq 'first(.[] | select(.name | startswith("v12."))) | .name'
+    v12.0-rc4
+
+That takes nothing away from a measurement below, because each one names the tag
+it was run at and those bytes stay fetchable. It does fix what each one is about:
+v10.11.9 and v12.0-rc3, rather than whatever the two lines hold today. Re-running
+one at a newer tag produces a new reading rather than confirming the old one.
 
 A claim with no command beside it is a claim about this plugin's own design, not
 about the host. Where something about the host is believed and was not measured,
@@ -297,6 +314,45 @@ It does not reach the Jellyfin server. A pairing secret is this plugin's own
 credential and is never a Jellyfin API key, which is the subject of issue #11.
 Nothing on the pairing plane can be presented to the server's own API, and
 nothing on the server's own API accepts it.
+
+That constraint exists because of what the alternative is worth to whoever takes
+it. A Jellyfin API key is not scoped. The server's default authorization handler
+succeeds the default requirement for any request carrying one, before any user,
+permission or remote-access check runs, and it says so in a comment on line 53
+at both supported lines:
+
+```
+git grep -n "Api keys are unrestricted" v10.11.9 v12.0-rc3 -- Jellyfin.Api/Auth/DefaultAuthorizationPolicy/DefaultAuthorizationHandler.cs
+v10.11.9:Jellyfin.Api/Auth/DefaultAuthorizationPolicy/DefaultAuthorizationHandler.cs:53:                // Api keys are unrestricted.
+v12.0-rc3:Jellyfin.Api/Auth/DefaultAuthorizationPolicy/DefaultAuthorizationHandler.cs:53:                // Api keys are unrestricted.
+```
+
+Read without a Jellyfin checkout, the same bytes come through the API, and the
+tags resolve to the commits a reader will get:
+
+```
+gh api "repos/jellyfin/jellyfin/contents/Jellyfin.Api/Auth/DefaultAuthorizationPolicy/DefaultAuthorizationHandler.cs?ref=v10.11.9" --jq '.content' | tr -d '\n' | base64 -d | grep -n "Api keys are unrestricted"
+53:                // Api keys are unrestricted.
+gh api "repos/jellyfin/jellyfin/contents/Jellyfin.Api/Auth/DefaultAuthorizationPolicy/DefaultAuthorizationHandler.cs?ref=v12.0-rc3" --jq '.content' | tr -d '\n' | base64 -d | grep -n "Api keys are unrestricted"
+53:                // Api keys are unrestricted.
+gh api repos/jellyfin/jellyfin/git/ref/tags/v10.11.9 --jq '.object.sha'
+e83a7e62f26443f7dd98f126d6955ac1af090125
+gh api repos/jellyfin/jellyfin/git/ref/tags/v12.0-rc3 --jq '.object.sha'
+fc43f151a2418cc112e116050a99dd6318917ab0
+```
+
+So a credential of that kind, taken from a configuration file, a backup or a
+support log, is full administrative control of the server that issued it. The
+prior art uses exactly that as the inter-server credential, which is why the
+first constraint on this protocol was fixed before any of it was designed. The
+second half of the constraint runs the other way: this plugin never creates,
+reads, stores or asks an operator for a Jellyfin API key either, because a
+plugin holding one has widened the blast radius of its own key store.
+
+The `git grep` form is what somebody with a Jellyfin checkout runs. It was not
+run on the machine that added this paragraph, which has no such checkout, and
+the API form under it is what was actually executed there. The two read the same
+blobs and the tag shas are printed so a reader can tell.
 
 It does not reach a second pairing. Keys are per pairing, so a server paired
 with three peers holds three keys and a stolen one is worth one peer's access.

@@ -1,3 +1,8 @@
+> [!NOTE]
+>
+> **Part of [Flowfin](https://github.com/Flowfin).** It works with any Jellyfin
+> server, and with the Flowfin clients.
+
 # So you want to make a Jellyfin plugin
 
 Awesome! This guide is for you. Jellyfin plugins are written using the dotnet standard framework. What that means is you can write them in any language that implements the CLI or the DLI and can compile to net8.0. The examples on this page are in C# because that is what most of Jellyfin is written in, but F#, Visual Basic, and IronPython should all be compatible once compiled.
@@ -404,6 +409,13 @@ This example expects you to clone `jellyfin`, `jellyfin-web` and `jellyfin-plugi
             },
         ```
 
+## Security
+
+[SECURITY.md](SECURITY.md) is where a vulnerability in this plugin's pairing
+path is reported, and it is not a public issue. It also says what is in scope,
+what a reporter can expect back, and which classes of finding the threat model
+already accepts as out of scope.
+
 ## Licensing
 
 Licensing is a complex topic. This repository features a GPLv3 license template that can be used to provide a good default license for your plugin. You may alter this if you like, but if you do a permissive license must be chosen.
@@ -413,3 +425,5 @@ Due to how plugins in Jellyfin work, when your plugin is compiled into a binary,
 If you accept the default GPLv3 license from this template, all will be good. However if you choose a different license, please keep this fact in mind, as it might not always be obvious that an, e.g. MIT-licensed plugin would become GPLv3 when compiled.
 
 Please note that this also means making "proprietary", source-unavailable, or otherwise "hidden" plugins for public consumption is not permitted. To build a Jellyfin plugin for distribution to others, it must be under the GPLv3 or a permissive open-source license that can be linked against the GPLv3.
+
+See NOTICE.md for the intended-use notice.
