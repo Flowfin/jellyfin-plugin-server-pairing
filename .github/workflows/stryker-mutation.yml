@@ -1,0 +1,112 @@
+# Mutation testing (Stryker.NET) over the parts of this plugin where being wrong
+# is a security failure, issue #68.
+#
+# Line coverage says which lines ran. It does not say whether a test would have
+# noticed if one of them were wrong. Stryker answers that by breaking the code on
+# purpose and asking whether a test fails, so a surviving mutant is a specific
+# missing negative test rather than a number to manage.
+#
+# The scope is what exists. Issue #68 names four areas: the request
+# authenticator and its canonical form, the freshness check and the nonce store,
+# the pairing state machine's transition table, and the item matcher with its
+# precedence rules. Only the last one is in the tree, so the mutate list in
+# Jellyfin.Plugin.ServerPairing.Tests/stryker-config.json names it and nothing
+# else. Each of the other three joins that list with the change that adds it.
+#
+# The score is reported and never gated:
+#   - There is no pull_request trigger, so this workflow cannot run as a check on
+#     a pull request and cannot become a required status check by accident. A
+#     mutation run is minutes to hours and a gate that slow gets worked around.
+#   - thresholds.break is 0 in the configuration, so a low score never exits
+#     non-zero. What the run produces is a report, not a verdict.
+#
+# What must be red is the run that produced nothing. A broken mutation setup
+# ending green is how this kind of workflow quietly stops working, and it is the
+# failure #68 is written to prevent. Two things hold that: the Stryker step has
+# no continue-on-error, so a tool or infrastructure failure fails the job, and
+# the upload sets if-no-files-found: error, so a run that finished without
+# writing a report fails at the upload instead of ending green with nothing to
+# read.
+#
+# Stryker is pinned by the committed tool manifest at .config/dotnet-tools.json
+# and restored with `dotnet tool restore`, so the version is reproducible rather
+# than whatever "latest" resolves to on the day the run happens.
+name: Mutation testing
+
+on:
+  schedule:
+    # Wednesdays. Offset from the scorecard (27 4 * * 1), the link check
+    # (41 3 * * 2) and the code scan (24 2 * * 4) so no two scheduled runs
+    # contend for a runner at the same minute.
+    - cron: "17 5 * * 3"
+  # Let a maintainer run it on demand from the Actions tab.
+  workflow_dispatch:
+
+# Read-only. This job reads the source, runs tests against mutated copies of it
+# and uploads a run artifact. It writes nothing to the repository, to a release
+# or to the security dashboard.
+permissions:
+  contents: read
+
+# A newer run on the same ref supersedes an in-flight one. This is an
+# informational scan rather than a publish, so cancelling a superseded run is
+# safe.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  mutation:
+    name: Mutate the item matcher
+    runs-on: ubuntu-latest
+    # The matcher is a few hundred lines and the suite it is measured against
+    # runs in under a second, so the real run is minutes. The limit is set well
+    # above that so a run that hangs is killed rather than left, and so the
+    # limit is not the thing that has to move the first time the scope grows.
+    timeout-minutes: 60
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # No step here pushes over git, so the token is not persisted into
+          # .git/config where a later step could read it.
+          persist-credentials: false
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+        with:
+          # global.json pins the SDK, so no version is named here. A machine
+          # without it says which version was asked for instead of appearing to
+          # pass.
+          global-json-file: global.json
+          cache: true
+          cache-dependency-path: '**/packages.lock.json'
+
+      - name: Restore dependencies
+        # --locked-mode fails the restore where the committed packages.lock.json
+        # files would change, which is the same posture the build job takes.
+        run: dotnet restore --locked-mode
+
+      - name: Restore the pinned tools
+        # Installs dotnet-stryker at the version in .config/dotnet-tools.json.
+        run: dotnet tool restore
+
+      - name: Run Stryker
+        # Run from the test project directory so Stryker reads
+        # stryker-config.json beside it and drives that project. No
+        # continue-on-error: a tool failure here is the failure this workflow
+        # exists to make visible.
+        working-directory: Jellyfin.Plugin.ServerPairing.Tests
+        run: dotnet stryker
+
+      - name: Upload the mutation report
+        # if: always() so a partial report from a failed scan is still readable.
+        # if-no-files-found: error so a run that wrote no report fails here
+        # rather than ending green with nothing behind it.
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: mutation-report
+          path: Jellyfin.Plugin.ServerPairing.Tests/StrykerOutput/**/reports/**
+          retention-days: 14
+          if-no-files-found: error
