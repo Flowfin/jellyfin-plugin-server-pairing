@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Linq;
-using System.Runtime.CompilerServices;
 using Xunit;
 
 namespace Jellyfin.Plugin.ServerPairing.Tests;
@@ -16,6 +15,12 @@ namespace Jellyfin.Plugin.ServerPairing.Tests;
 /// </summary>
 public class ClockSourceTests
 {
+    /// <summary>
+    /// The file that marks the repository root. It is tracked and it is at the top of the
+    /// tree, so a walk upwards from the build output finds it on any machine.
+    /// </summary>
+    private const string SolutionFileName = "Jellyfin.Plugin.ServerPairing.sln";
+
     /// <summary>
     /// The calls that read the wall clock. Each one returns a different answer on every
     /// invocation and takes no argument a test could substitute, which is what makes a
@@ -152,9 +157,9 @@ public class ClockSourceTests
         => $"{Path.DirectorySeparatorChar}{name}{Path.DirectorySeparatorChar}";
 
     /// <summary>
-    /// The plugin project directory, derived from where this file was compiled from rather
-    /// than from the working directory of the test run, which differs between a local run
-    /// and a run on a build machine.
+    /// The plugin project directory, derived from where the test assembly sits rather than
+    /// from the working directory of the test run, which differs between a local run and a
+    /// run on a build machine.
     /// </summary>
     /// <returns>The absolute path of the plugin project directory.</returns>
     private static string PluginSourceDirectory()
@@ -168,10 +173,27 @@ public class ClockSourceTests
         => Path.Combine(RepositoryRoot(), "Jellyfin.Plugin.ServerPairing.Tests");
 
     /// <summary>
-    /// The repository root, two directories above this file.
+    /// The repository root, found by walking up from the directory the test assembly was
+    /// loaded from until the solution file appears.
+    ///
+    /// It is not derived from the path the compiler recorded for this file. Deterministic
+    /// builds rewrite that path to a placeholder root, so a compiler-supplied path is a
+    /// real directory on a developer machine and is not one anywhere the build sets
+    /// ContinuousIntegrationBuild, which Directory.Build.props does on every build machine.
     /// </summary>
-    /// <param name="thisFile">Filled in by the compiler with the path of this source file.</param>
     /// <returns>The absolute path of the repository root.</returns>
-    private static string RepositoryRoot([CallerFilePath] string thisFile = "")
-        => Path.GetDirectoryName(Path.GetDirectoryName(thisFile)!)!;
+    private static string RepositoryRoot()
+    {
+        var directory = new DirectoryInfo(AppContext.BaseDirectory);
+
+        while (directory is not null && !File.Exists(Path.Combine(directory.FullName, SolutionFileName)))
+        {
+            directory = directory.Parent;
+        }
+
+        return directory is null
+            ? throw new InvalidOperationException(
+                $"No directory at or above '{AppContext.BaseDirectory}' holds '{SolutionFileName}', so the source scan has no root to read.")
+            : directory.FullName;
+    }
 }
