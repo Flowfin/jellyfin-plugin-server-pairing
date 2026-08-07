@@ -409,6 +409,13 @@ This example expects you to clone `jellyfin`, `jellyfin-web` and `jellyfin-plugi
             },
         ```
 
+## Security
+
+[SECURITY.md](SECURITY.md) is where a vulnerability in this plugin's pairing
+path is reported, and it is not a public issue. It also says what is in scope,
+what a reporter can expect back, and which classes of finding the threat model
+already accepts as out of scope.
+
 ## Licensing
 
 Licensing is a complex topic. This repository features a GPLv3 license template that can be used to provide a good default license for your plugin. You may alter this if you like, but if you do a permissive license must be chosen.

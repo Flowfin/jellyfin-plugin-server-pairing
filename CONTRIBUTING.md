@@ -134,5 +134,6 @@ uses. It is not decoration.
 ## Security reports
 
 Do not open a public issue for a vulnerability in the pairing path.
-`SECURITY.md` does not exist yet and the reporting address is not fixed. Until it
-is, use GitHub's private vulnerability reporting on this repository.
+[`SECURITY.md`](SECURITY.md) says where one goes, what is in scope, what a
+reporter can expect and which classes of finding are already accepted as out of
+scope.
