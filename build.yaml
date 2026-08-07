@@ -17,7 +17,7 @@ description: >
   one. A pairing is between two servers under one operator, and pairing to
   anything that is not a Jellyfin server is out of scope.
 category: "Administration"
-owner: "iderex"
+owner: "Flowfin"
 artifacts:
 - "Jellyfin.Plugin.ServerPairing.dll"
 changelog: >
