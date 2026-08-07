@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using Jellyfin.Plugin.ServerPairing.Matching;
@@ -18,6 +19,12 @@ internal static class MatchingCorpus
     private static readonly string Imdb = MetadataProvider.Imdb.ToString();
     private static readonly string Tmdb = MetadataProvider.Tmdb.ToString();
     private static readonly string Tvdb = MetadataProvider.Tvdb.ToString();
+
+    /// <summary>
+    /// A provider the host knows and this plugin does not match on. Rows use it to prove
+    /// that a provider outside the matched list is ignored rather than quietly consulted.
+    /// </summary>
+    private static readonly string Tvcom = MetadataProvider.Tvcom.ToString();
 
     /// <summary>
     /// Gets every row.
@@ -73,6 +80,67 @@ internal static class MatchingCorpus
             PeerItem = Movie(),
             LocalCandidates = [Movie(), Movie((Imdb, "tt0111161"))],
             Expected = MatchOutcome.NoIdentifiers
+        },
+        new MatchingCase
+        {
+            Situation = "an episode whose series carries a different identifier on each side",
+            PeerItem = Episode(1, 2, (Tvdb, "121361")),
+            LocalCandidates = [Episode(1, 2, (Tvdb, "999999"))],
+            Expected = MatchOutcome.Disagreement
+        },
+        new MatchingCase
+        {
+            Situation = "identifiers differing only by the case of the provider name, the case of the value and surrounding whitespace",
+            PeerItem = Movie(("imdb", "  TT0111161 ")),
+            LocalCandidates = [Movie((Imdb, "tt0111161"))],
+            Expected = MatchOutcome.Matched,
+            ExpectedMatches = [0],
+            ExpectedMatchedOn = MetadataProvider.Imdb.ToString()
+        },
+        new MatchingCase
+        {
+            Situation = "a provider this plugin does not match on, identical on both sides and the only thing shared",
+            PeerItem = Movie((Tvcom, "12345")),
+            LocalCandidates = [Movie((Tvcom, "12345"))],
+            Expected = MatchOutcome.NoIdentifiers
+        },
+        new MatchingCase
+        {
+            Situation = "a provider this plugin does not match on, agreeing while a matched provider contradicts",
+            PeerItem = Movie((Imdb, "tt0111161"), (Tvcom, "12345")),
+            LocalCandidates = [Movie((Imdb, "tt0000001"), (Tvcom, "12345"))],
+            Expected = MatchOutcome.Disagreement
+        },
+        new MatchingCase
+        {
+            Situation = "two local films agreeing with the peer item and contradicting each other",
+            PeerItem = Movie((Imdb, "tt0111161")),
+            LocalCandidates = [Movie((Imdb, "tt0111161"), (Tmdb, "278")), Movie((Imdb, "tt0111161"), (Tmdb, "279"))],
+            Expected = MatchOutcome.Ambiguous,
+            ExpectedMatches = [0, 1]
+        },
+        new MatchingCase
+        {
+            Situation = "a film the local server does not have, which is not a contradiction",
+            PeerItem = Movie((Imdb, "tt0111161")),
+            LocalCandidates = [Movie((Tmdb, "238")), Movie((Tvdb, "9"))],
+            Expected = MatchOutcome.NoCandidate
+        },
+        new MatchingCase
+        {
+            Situation = "another episode of the same series, which is a different item and not a contradiction",
+            PeerItem = Episode(1, 2, (Tvdb, "121361")),
+            LocalCandidates = [Episode(1, 3, (Tvdb, "121361"))],
+            Expected = MatchOutcome.NoCandidate
+        },
+        new MatchingCase
+        {
+            Situation = "a provider present with a blank value, which is a gap in the metadata and not a contradiction",
+            PeerItem = Movie((Imdb, "tt0111161"), (Tmdb, "   ")),
+            LocalCandidates = [Movie((Imdb, "tt0111161"), (Tmdb, "278"))],
+            Expected = MatchOutcome.Matched,
+            ExpectedMatches = [0],
+            ExpectedMatchedOn = MetadataProvider.Imdb.ToString()
         }
     ];
 
@@ -91,6 +159,27 @@ internal static class MatchingCorpus
     /// <returns>The row.</returns>
     public static MatchingCase Row(string situation)
         => Rows.Single(row => row.Situation == situation);
+
+    /// <summary>
+    /// Every provider name a row mentions anywhere, on the peer item or on a candidate,
+    /// on the item itself or on its series. This is what the coverage guards count, so it
+    /// has to look everywhere a row can put one.
+    /// </summary>
+    /// <param name="row">The row.</param>
+    /// <returns>The provider names, without duplicates and ignoring case.</returns>
+    public static IReadOnlySet<string> ProviderNames(MatchingCase row)
+    {
+        ArgumentNullException.ThrowIfNull(row);
+
+        var names = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var item in row.LocalCandidates.Prepend(row.PeerItem))
+        {
+            names.UnionWith(item.ProviderIds.Keys);
+            names.UnionWith(item.SeriesProviderIds.Keys);
+        }
+
+        return names;
+    }
 
     private static MatchableItem Movie(params (string Provider, string Value)[] providerIds)
         => new()
