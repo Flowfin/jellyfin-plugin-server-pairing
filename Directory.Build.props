@@ -4,4 +4,34 @@
         <AssemblyVersion>0.0.0.0</AssemblyVersion>
         <FileVersion>0.0.0.0</FileVersion>
     </PropertyGroup>
+
+    <!--
+        Analysis settings for every project in the tree, tests included.
+        They live here rather than in a single csproj so that a project added
+        later inherits them instead of having to remember them.
+
+        The rule set travels with them. AnalysisMode turns rules on and the rule
+        set is where this repository says which of them it does not want; a
+        project that inherited one without the other would be judged by a
+        severity nobody chose. The path is anchored to this file's own directory
+        so it resolves the same from any project depth.
+    -->
+    <PropertyGroup>
+        <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+        <CodeAnalysisTreatWarningsAsErrors>true</CodeAnalysisTreatWarningsAsErrors>
+        <Nullable>enable</Nullable>
+        <AnalysisMode>AllEnabledByDefault</AnalysisMode>
+        <AnalysisModeSecurity>All</AnalysisModeSecurity>
+        <CodeAnalysisRuleSet>$(MSBuildThisFileDirectory)jellyfin.ruleset</CodeAnalysisRuleSet>
+    </PropertyGroup>
+
+    <!--
+        Same source, same bytes. ContinuousIntegrationBuild additionally
+        normalises the paths embedded in the assembly, and it is set only where
+        the checkout path is the runner's rather than a person's.
+    -->
+    <PropertyGroup>
+        <Deterministic>true</Deterministic>
+        <ContinuousIntegrationBuild Condition="'$(GITHUB_ACTIONS)' == 'true' or '$(CI)' == 'true'">true</ContinuousIntegrationBuild>
+    </PropertyGroup>
 </Project>

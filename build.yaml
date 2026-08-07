@@ -1,16 +1,25 @@
 ---
-name: "Template"
-guid: "eb5d7894-8eef-4b36-aa6f-5d124e828ce1"
-version: "1.0.0.0"
-targetAbi: "10.9.0.0"
-framework: "net8.0"
-overview: "Short description about your plugin"
+name: "Server Pairing"
+guid: "130cc961-461b-49fd-8a3e-f9eb46db0716"
+version: "0.0.0.0"
+targetAbi: "10.11.0.0"
+framework: "net9.0"
+overview: "Pairs this Jellyfin server with a second one, so plugins on both sides can work across the pair."
 description: >
-  This is a longer description that can span more than one
-  line and include details about your plugin.
-category: "General"
-owner: "jellyfin"
+  Server Pairing links two Jellyfin servers under a credential of its own, which
+  is accepted by this plugin's pairing surface and by nothing else on either
+  server. An administrator on each side confirms the pairing by hand, and the
+  plugin holds the resulting key material and the user mapping that goes with
+  it.
+
+  It carries no syncing of its own. Watch state, playlists and everything else
+  that might move between two servers belong to the plugins that build on this
+  one. A pairing is between two servers under one operator, and pairing to
+  anything that is not a Jellyfin server is out of scope.
+category: "Administration"
+owner: "iderex"
 artifacts:
-- "Jellyfin.Plugin.Template.dll"
+- "Jellyfin.Plugin.ServerPairing.dll"
 changelog: >
-  changelog
+  No release has been published from this repository yet. The first release
+  replaces this entry with what it changed.
