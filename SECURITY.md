@@ -16,7 +16,7 @@ Use GitHub's private vulnerability reporting on this repository instead. It is
 enabled:
 
 ```
-gh api repos/iderex/jellyfin-plugin-server-pairing/private-vulnerability-reporting --jq '.enabled'
+gh api repos/Flowfin/jellyfin-plugin-server-pairing/private-vulnerability-reporting --jq '.enabled'
 true
 ```
 
@@ -73,6 +73,11 @@ The first release replaces this section with the versions it supports. The
 server line the plugin builds against is `targetAbi` in
 [`build.yaml`](build.yaml), which is the manifest the packaging reads, and it is
 not copied here.
+
+The other document that has to agree with this one is the release checklist,
+[`docs/release.md`](docs/release.md). It says the same thing about the same
+absence, in its own words, and it is named here so that a reader comparing the
+two knows which second document to open rather than having to find it.
 
 ## What is already known and accepted
 
