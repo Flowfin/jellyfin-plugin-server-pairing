@@ -409,6 +409,22 @@ This example expects you to clone `jellyfin`, `jellyfin-web` and `jellyfin-plugi
             },
         ```
 
+## Contributing
+
+Every change here starts as an issue and lands as a pull request.
+[CONTRIBUTING.md](CONTRIBUTING.md) is where that is set out: what an issue has to
+say, what a pull request body has to carry, which commands run locally the same
+things the checks run, and the rule that a claim carries the command that
+produced it. Read it before opening either.
+
+Every commit carries a `Signed-off-by` trailer asserting the Developer
+Certificate of Origin, whose text is in [DCO](DCO). Read it before you sign it.
+The sign-off check refuses a pull request that contains a commit without a
+matching trailer.
+
+[CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) applies to every space this project
+uses.
+
 ## Security
 
 [SECURITY.md](SECURITY.md) is where a vulnerability in this plugin's pairing
