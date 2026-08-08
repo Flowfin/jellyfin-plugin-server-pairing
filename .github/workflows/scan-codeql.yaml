@@ -41,6 +41,11 @@ jobs:
     # skipping it. That is the trade taken deliberately. This repository is not
     # a fork of the template and has no case in which it wants code scanning to
     # switch itself off quietly.
-    uses: jellyfin/jellyfin-meta-plugins/.github/workflows/scan-codeql.yaml@master
+    #
+    # Pinned to a commit rather than to a branch. The ref belongs to another
+    # organisation, and a branch is whatever it points at when the run starts,
+    # so a change there reaches this repository's analysis with no diff here.
+    # The trailing comment names the branch the commit was taken from.
+    uses: jellyfin/jellyfin-meta-plugins/.github/workflows/scan-codeql.yaml@eb99033a7ff644881b014bc0b4169916c854a68b # master
     with:
       repository-name: ${{ github.repository }}
