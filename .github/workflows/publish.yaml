@@ -6,9 +6,29 @@ on:
       - released
   workflow_dispatch:
 
+# Deny at the workflow level and grant on the job. Same reason as in build.yaml,
+# and it matters most here: this is the one call that needs a write scope, and
+# an inherited default is the wrong place for that decision to live.
+permissions: {}
+
 jobs:
   call:
-    uses: jellyfin/jellyfin-meta-plugins/.github/workflows/publish.yaml@master
+    # Write on contents, stated rather than inherited, and the widening is
+    # deliberate. The called upload job attaches the built assets to the GitHub
+    # release with shogo82148/actions-upload-release-asset, and no read token
+    # can do that. The repository default is read, so this call has never had
+    # the scope its own upload step requires.
+    #
+    # What that costs: a reusable-workflow call carries one permission set into
+    # every job of the called workflow, so its build job runs with write on
+    # contents although it only reads. There is no per-job grant across a call
+    # boundary. Owning the job instead of calling the shared one is #62, and
+    # that is where the split becomes available.
+    permissions:
+      contents: write # attach the built assets to the release
+    # Pinned to a commit rather than to a branch, for the reason written out in
+    # build.yaml. The trailing comment names the branch the commit came from.
+    uses: jellyfin/jellyfin-meta-plugins/.github/workflows/publish.yaml@eb99033a7ff644881b014bc0b4169916c854a68b # master
     with:
       version: ${{ github.event.release.tag_name }}
       is-unstable: ${{ github.event.release.prerelease }}

@@ -9,6 +9,17 @@ on:
       - master
   workflow_dispatch:
 
+# Deny at the workflow level and grant on the job. Same reason as in build.yaml:
+# the repository default workflow permission is a repository setting no file in
+# this tree can pin, and this call must not move when that setting does.
+permissions: {}
+
 jobs:
   call:
-    uses: jellyfin/jellyfin-meta-plugins/.github/workflows/test.yaml@master
+    # The called job checks this repository out, restores, builds and runs the
+    # test suite. Nothing in it writes to the repository or to any other scope.
+    permissions:
+      contents: read # check out the repository being tested
+    # Pinned to a commit rather than to a branch, for the reason written out in
+    # build.yaml. The trailing comment names the branch the commit came from.
+    uses: jellyfin/jellyfin-meta-plugins/.github/workflows/test.yaml@eb99033a7ff644881b014bc0b4169916c854a68b # master
