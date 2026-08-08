@@ -31,8 +31,15 @@ out with every server release.
 Replaced by an in-process harness that constructs two sets of this plugin's own
 services and connects them over an in-memory transport. A full enrolment, a
 rotation and a revocation run inside one test process, which is the behaviour
-worth asserting on. What that harness cannot see is anything the real server
-does around the plugin, and that limit is stated wherever a test leans on it.
+worth asserting on. That harness is #29.
+
+What it cannot see is anything the real server does around the plugin. The real
+HTTP stack, the real serialiser and the real routing are all absent from it, so
+a message the harness accepts is one this plugin's own types accepted rather
+than one that survived a round trip through the host. Nothing in this policy
+closes that gap. #70 is where it is closed, against a packaged plugin over real
+HTTP, and until that lands the gap is open and the limit is stated wherever a
+test leans on it.
 
 ### A test that drives the dashboard page in a browser
 
