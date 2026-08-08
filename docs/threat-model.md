@@ -203,6 +203,17 @@ material, because no endpoint returns any. Those are owed by issue #36 for the
 mapping being an administrator decision, and by issue #32 for key material never
 leaving the process.
 
+One part of that reach does not look like reach and is worth naming on its own. A
+peer chooses every string it sends, its own display name and the names of its
+users included, and those strings are rendered on an administrator's dashboard,
+inside the web client, on this server's own origin, in a session that can do
+anything. So a hostile peer has a path from a field in its own configuration into
+script running with administrator privilege on this side, and it needs no defect
+in the protocol to take it. Pairing with a server one does not fully trust is a
+thing operators will do, which makes this ordinary rather than exotic. What
+refuses it is how the page renders those strings, and that is issue #52. Nothing
+in the tree refuses it today.
+
 Revocation is the other half of the limit, and how much it achieves is decision
 5. If revocation stops the transfer but leaves what already moved, then a
 hostile peer keeps everything it received before it was caught, and this document
