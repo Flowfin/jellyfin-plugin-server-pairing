@@ -27,6 +27,20 @@ jobs:
     # The called workflow gates its only job on this input matching the
     # repository it is running in, so a name that is not this repository skips
     # the analysis silently and still reports a check run.
+    #
+    # A literal here has gone stale twice, once when this repository stopped
+    # being the template and once when it changed owner, and both times the
+    # symptom was fifty-odd runs reporting a check named `call / Analyze` that
+    # analysed nothing. Passing the context makes the input the repository the
+    # run is in, by construction, so it cannot go stale again.
+    #
+    # What that gives up, stated rather than left to be discovered: the input
+    # exists so the shared workflow can decline to run in a repository it was
+    # not meant for, and `github.repository` satisfies it everywhere. A fork of
+    # this repository will now run the analysis on its own pushes instead of
+    # skipping it. That is the trade taken deliberately. This repository is not
+    # a fork of the template and has no case in which it wants code scanning to
+    # switch itself off quietly.
     uses: jellyfin/jellyfin-meta-plugins/.github/workflows/scan-codeql.yaml@master
     with:
-      repository-name: iderex/jellyfin-plugin-server-pairing
+      repository-name: ${{ github.repository }}
