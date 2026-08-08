@@ -16,7 +16,7 @@ Use GitHub's private vulnerability reporting on this repository instead. It is
 enabled:
 
 ```
-gh api repos/iderex/jellyfin-plugin-server-pairing/private-vulnerability-reporting --jq '.enabled'
+gh api repos/Flowfin/jellyfin-plugin-server-pairing/private-vulnerability-reporting --jq '.enabled'
 true
 ```
 
