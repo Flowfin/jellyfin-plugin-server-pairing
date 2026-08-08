@@ -1,0 +1,61 @@
+# Checks the pull request itself rather than the code in it: that the body says
+# which issue it belongs to, that every commit subject does, and that a manifest
+# version change arrives with a changelog entry. Two more things are printed and
+# never refused, a large diff and a source change with no test change.
+#
+# First-party and deterministic. Nothing in the failing path is a third-party
+# action, nothing is fetched, and there is no review service and no bot: the
+# only action used is the checkout, and everything judged comes from git objects
+# and from the pull request fields passed in below.
+#
+# The judgement lives in .github/pr-hygiene.sh so the command a person runs and
+# the command this job runs are the same bytes, and .github/pr-hygiene-test.sh
+# is where each rule is watched refusing something.
+name: pr-hygiene
+
+on:
+  pull_request:
+    types: [opened, edited, synchronize, reopened]
+
+# Read-only. The check reads the checkout and writes nothing.
+permissions: {}
+
+# Cancel a superseded run on the same pull request. Re-judging is cheap and
+# depends on nothing that a cancelled run leaves behind.
+concurrency:
+  group: pr-hygiene-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  hygiene:
+    name: Pull request hygiene
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read # checkout the history the commit walk reads
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # Full history so the base..head range is walkable; no step pushes, so
+          # do not persist the token.
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Check the pull request
+        # Every value the check reads is passed as an environment variable and
+        # never interpolated into the script, so a body or a branch name a
+        # contributor controls cannot be evaluated as shell.
+        env:
+          PR_BODY: ${{ github.event.pull_request.body }}
+          PR_AUTHOR_TYPE: ${{ github.event.pull_request.user.type }}
+          PR_AUTHOR_ASSOCIATION: ${{ github.event.pull_request.author_association }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: sh .github/pr-hygiene.sh
+
+      - name: Prove the check still refuses what it claims to refuse
+        # The guard's own suite, run here rather than only on somebody's machine,
+        # so a change that quietly stops the check refusing anything reds this
+        # job instead of passing it.
+        run: sh .github/pr-hygiene-test.sh
