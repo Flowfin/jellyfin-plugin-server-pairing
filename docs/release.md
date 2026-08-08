@@ -22,7 +22,7 @@ Not on an earlier one, and not on a branch head that has since moved. Take the
 commit the release is cut from and read its check runs:
 
     RELEASE_SHA=$(git rev-parse HEAD)
-    gh api repos/iderex/jellyfin-plugin-server-pairing/commits/$RELEASE_SHA/check-runs --jq '.check_runs[] | "\(.name) \(.status) \(.conclusion)"'
+    gh api repos/Flowfin/jellyfin-plugin-server-pairing/commits/$RELEASE_SHA/check-runs --jq '.check_runs[] | "\(.name) \(.status) \(.conclusion)"'
 
 A conclusion of `skipped` is not a pass. It is a job that did not look, and it
 reads on the pull request page as a name rather than as an absence, which is
@@ -32,7 +32,7 @@ The set that has to be green is the required set on the default branch, which
 is a repository setting rather than a file in the tree, so it is read rather
 than assumed:
 
-    gh api repos/iderex/jellyfin-plugin-server-pairing/rulesets/20464076 --jq '{enforcement, bypass: .bypass_actors, required: [.rules[]|select(.type=="required_status_checks").parameters.required_status_checks[].context]}'
+    gh api repos/Flowfin/jellyfin-plugin-server-pairing/rulesets/20464076 --jq '{enforcement, bypass: .bypass_actors, required: [.rules[]|select(.type=="required_status_checks").parameters.required_status_checks[].context]}'
 
 ## 2. The cross-version test has been run against the previous protocol version
 
