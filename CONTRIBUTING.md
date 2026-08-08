@@ -86,12 +86,27 @@ A negative statement in a body stays negative through every later edit of that
 body. If a passage says something was not done, it is not rewritten later into
 saying it was.
 
-Nothing enforces any of this today. The check that would read a pull request is
-issue #65 and it is not built, so a pull request that carries none of the above
-passes every route in this repository. The three tiers are written here in the
-shape that issue specifies, so that the check and this file agree when it lands,
-and until then this section describes what is expected rather than what is
-refused.
+The first three are read by [`.github/pr-hygiene.sh`](.github/pr-hygiene.sh),
+which the `pr-hygiene` workflow runs on every pull request and which you can run
+yourself before pushing:
+
+```
+PR_BODY="what you are about to put in the body" \
+PR_AUTHOR_TYPE=User PR_AUTHOR_ASSOCIATION=OWNER \
+BASE_SHA=$(git merge-base origin/master HEAD) HEAD_SHA=$(git rev-parse HEAD) \
+sh .github/pr-hygiene.sh
+```
+
+The refusing tier does not apply to a bot, which fills a template rather than
+writing a body, or to an author from outside this repository, who is meeting
+these rules for the first time at the moment the check reds. Both skips are
+written at the point in the script that takes them.
+
+That check is not in the required set on the default branch, so a red run
+reports and does not block a merge. The required set is a repository setting and
+no change in this tree can add to it. The two annotating rules print and never
+fail, by design rather than by omission. The three items above them that a
+reader judges are refused by nobody at all.
 
 ## One topic per commit and per pull request
 
