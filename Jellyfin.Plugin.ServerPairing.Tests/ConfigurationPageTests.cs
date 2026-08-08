@@ -5,7 +5,7 @@ using System.IO;
 using System.Linq;
 using Xunit;
 
-namespace Jellyfin.Plugin.ServerPairing.Tests.Configuration;
+namespace Jellyfin.Plugin.ServerPairing.Tests;
 
 /// <summary>
 /// The dashboard page runs inside the Jellyfin web client, on the same origin, holding an
