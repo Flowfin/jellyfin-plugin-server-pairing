@@ -42,4 +42,12 @@ internal sealed class MatchingCase
     /// not pin one.
     /// </summary>
     public string? ExpectedMatchedOn { get; init; }
+
+    /// <summary>
+    /// Gets a value indicating whether the document says the match was carried by the
+    /// series identifiers and the numbering rather than by the item's own identifiers.
+    /// Every row pins it, including the rows that match nothing, because a result that
+    /// names no match is a result whose route is false.
+    /// </summary>
+    public bool ExpectedMatchedThroughSeries { get; init; }
 }

@@ -63,7 +63,8 @@ internal static class MatchingCorpus
             LocalCandidates = [Episode(1, 2, (Tvdb, "121361"))],
             Expected = MatchOutcome.Matched,
             ExpectedMatches = [0],
-            ExpectedMatchedOn = MetadataProvider.Tvdb.ToString()
+            ExpectedMatchedOn = MetadataProvider.Tvdb.ToString(),
+            ExpectedMatchedThroughSeries = true
         },
         new MatchingCase
         {
@@ -141,6 +142,50 @@ internal static class MatchingCorpus
             Expected = MatchOutcome.Matched,
             ExpectedMatches = [0],
             ExpectedMatchedOn = MetadataProvider.Imdb.ToString()
+        },
+        new MatchingCase
+        {
+            Situation = "an episode carrying its own identifier, which the series fallback never rescues and never reaches",
+            PeerItem = EpisodeCarrying((Imdb, "tt0959621"), 1, 2, (Tvdb, "121361")),
+            LocalCandidates = [EpisodeCarrying((Imdb, "tt0959621"), 4, 7, (Tvdb, "999999"))],
+            Expected = MatchOutcome.Matched,
+            ExpectedMatches = [0],
+            ExpectedMatchedOn = MetadataProvider.Imdb.ToString()
+        },
+        new MatchingCase
+        {
+            Situation = "an episode with numbering, no identifier of its own and no identifier on its series",
+            PeerItem = Episode(1, 2),
+            LocalCandidates = [Episode(1, 2, (Tvdb, "121361"))],
+            Expected = MatchOutcome.NoIdentifiers
+        },
+        new MatchingCase
+        {
+            Situation = "an episode whose season number the host did not supply",
+            PeerItem = Episode(null, 2, (Tvdb, "121361")),
+            LocalCandidates = [Episode(1, 2, (Tvdb, "121361"))],
+            Expected = MatchOutcome.NoIdentifiers
+        },
+        new MatchingCase
+        {
+            Situation = "an episode whose episode number the host did not supply",
+            PeerItem = Episode(1, null, (Tvdb, "121361")),
+            LocalCandidates = [Episode(1, 2, (Tvdb, "121361"))],
+            Expected = MatchOutcome.NoIdentifiers
+        },
+        new MatchingCase
+        {
+            Situation = "a local candidate that is not an episode while carrying the numbering and the series identifier of one",
+            PeerItem = Episode(1, 2, (Tvdb, "121361")),
+            LocalCandidates = [MovieCarryingSeriesNumbering(1, 2, (Tvdb, "121361"))],
+            Expected = MatchOutcome.NoCandidate
+        },
+        new MatchingCase
+        {
+            Situation = "a local episode missing its episode number whose series identifier contradicts the peer's",
+            PeerItem = Episode(1, 2, (Tvdb, "121361")),
+            LocalCandidates = [Episode(1, null, (Tvdb, "999999"))],
+            Expected = MatchOutcome.NoCandidate
         }
     ];
 
@@ -189,12 +234,47 @@ internal static class MatchingCorpus
         };
 
     private static MatchableItem Episode(
-        int seasonNumber,
-        int episodeNumber,
+        int? seasonNumber,
+        int? episodeNumber,
         params (string Provider, string Value)[] seriesProviderIds)
         => new()
         {
             Kind = MatchableItemKind.Episode,
+            SeasonNumber = seasonNumber,
+            EpisodeNumber = episodeNumber,
+            SeriesProviderIds = seriesProviderIds.ToDictionary(p => p.Provider, p => p.Value)
+        };
+
+    /// <summary>
+    /// An episode that carries an identifier of its own as well as its series identifiers,
+    /// which is what the rows about the fallback not being reached need.
+    /// </summary>
+    private static MatchableItem EpisodeCarrying(
+        (string Provider, string Value) providerId,
+        int? seasonNumber,
+        int? episodeNumber,
+        params (string Provider, string Value)[] seriesProviderIds)
+        => new()
+        {
+            Kind = MatchableItemKind.Episode,
+            ProviderIds = new Dictionary<string, string> { [providerId.Provider] = providerId.Value },
+            SeasonNumber = seasonNumber,
+            EpisodeNumber = episodeNumber,
+            SeriesProviderIds = seriesProviderIds.ToDictionary(p => p.Provider, p => p.Value)
+        };
+
+    /// <summary>
+    /// An item the host did not call an episode, holding every field the episode route
+    /// reads. Nothing stops a caller filling this record that way, so the rows that hold
+    /// the route to episodes need an item shaped like this to hold it against.
+    /// </summary>
+    private static MatchableItem MovieCarryingSeriesNumbering(
+        int? seasonNumber,
+        int? episodeNumber,
+        params (string Provider, string Value)[] seriesProviderIds)
+        => new()
+        {
+            Kind = MatchableItemKind.Movie,
             SeasonNumber = seasonNumber,
             EpisodeNumber = episodeNumber,
             SeriesProviderIds = seriesProviderIds.ToDictionary(p => p.Provider, p => p.Value)
