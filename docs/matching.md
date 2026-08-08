@@ -109,7 +109,30 @@ of a series would otherwise be reported as contradicting every other one.
 
 An episode that has its own identifiers is never rescued by the fallback. If the
 two sides both carry an episode-level identifier and those identifiers disagree,
-that is a disagreement and the series numbering does not overturn it.
+that is a disagreement and the series numbering does not overturn it. The reverse
+holds as well: where the two sides agree on an identifier of their own, the
+fallback is not consulted at all, so the series identifiers may differ and the
+numbering may differ without changing the outcome.
+
+The fallback needs all three parts, and an episode that has none of its own
+identifiers and cannot supply all three is not identifiable by either route. That
+is `NoIdentifiers` rather than a failure to find a candidate, and each of the
+three parts stands on its own: a missing season number, a missing episode number
+and a series carrying no identifier of a matched provider each close the route by
+themselves.
+
+Both sides have to be reachable by the route. An item the host did not call an
+episode is never judged by it, whatever season number, episode number and series
+identifiers it happens to carry, because the route is what the episode kind buys
+and not a second way to compare any two items. A local episode that is missing
+either number is in the same position: the route is closed for that candidate, so
+it is unrelated, and a series identifier it carries that differs from the peer's
+is not read and is not a disagreement.
+
+A match records which of the two routes carried it. That is what tells a caller
+whether the two items were tied together by an identifier of the item itself or
+by its series plus two numbers, which are different strengths of evidence about
+the same claim.
 
 ## Two local items with the same identifier
 
@@ -149,6 +172,16 @@ The cases the corpus has to cover, and what each is for, are in
 its situation, every row is executed, and the expected outcome of each is the
 one this document gives. A row whose expectation cannot be read out of the rules
 above is a row that is testing the code against itself.
+
+Every row also pins the route, including the rows that match nothing, where the
+route a result reports is false. A row that named only the outcome would leave
+the rule about which route carried a match with nothing behind it.
+
+The rules in this section are one row each rather than one row per situation. A
+situation walks several conditions at once, so a row per situation can be green
+while any one of the conditions it walks is inverted, and that is measured rather
+than supposed: three rows walked the episode route and eleven mutations of it
+went unnoticed, which is issue #124 and the run it names.
 
 Adding a provider to the matched list is not a one-line change. Two guards in
 `MatchingCorpusTests` refuse it until the corpus has caught up: one requires a

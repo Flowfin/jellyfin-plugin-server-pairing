@@ -27,6 +27,7 @@ public class ItemMatcherTests
 
         Assert.Equal(row.Expected, match.Outcome);
         Assert.Equal(row.ExpectedMatches, match.Matches);
+        Assert.Equal(row.ExpectedMatchedThroughSeries, match.MatchedThroughSeries);
 
         if (row.ExpectedMatchedOn is not null)
         {
