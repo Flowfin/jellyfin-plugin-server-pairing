@@ -6,6 +6,39 @@
     </PropertyGroup>
 
     <!--
+        The Jellyfin package version, once, for both projects and both server
+        lines. A literal in each PackageReference would be four literals that
+        have to move together, and the two that live in the test project are the
+        ones a change forgets, because nothing about a plugin's own build says
+        the test project references the same server.
+
+        The value is chosen by the target framework because that is what the
+        packages themselves are built for: 10.11.9 carries a net9.0 group and
+        12.0.0-rc3 carries a net10.0 group, read from their nuspecs. Both are
+        built from the tags this repository reads the server source at, which is
+        what makes them the right pair rather than merely a working one:
+
+            curl -s https://api.nuget.org/v3-flatcontainer/jellyfin.controller/10.11.9/jellyfin.controller.nuspec
+            <repository ... commit="e83a7e62f26443f7dd98f126d6955ac1af090125" />
+              <group targetFramework="net9.0">
+            curl -s https://api.nuget.org/v3-flatcontainer/jellyfin.controller/12.0.0-rc3/jellyfin.controller.nuspec
+            <repository ... commit="fc43f151a2418cc112e116050a99dd6318917ab0" />
+              <group targetFramework="net10.0">
+
+        Those two commits are v10.11.9 and v12.0-rc3.
+
+        The conditions are written so a value handed in on the command line wins,
+        which is how a build against a different server version is asked for
+        without a second project file:
+
+            dotnet build -f net9.0 -p:JellyfinPackageVersion=10.11.0
+    -->
+    <PropertyGroup>
+        <JellyfinPackageVersion Condition="'$(JellyfinPackageVersion)' == '' and '$(TargetFramework)' == 'net9.0'">10.11.9</JellyfinPackageVersion>
+        <JellyfinPackageVersion Condition="'$(JellyfinPackageVersion)' == '' and '$(TargetFramework)' == 'net10.0'">12.0.0-rc3</JellyfinPackageVersion>
+    </PropertyGroup>
+
+    <!--
         Analysis settings for every project in the tree, tests included.
         They live here rather than in a single csproj so that a project added
         later inherits them instead of having to remember them.

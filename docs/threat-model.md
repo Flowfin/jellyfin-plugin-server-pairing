@@ -20,16 +20,24 @@ them:
     cd jellyfin
 
 Two tags are used throughout, one from each of the two server lines this plugin
-may end up shipping for:
+ships for:
 
     git rev-parse v10.11.9 v12.0-rc3
     e83a7e62f26443f7dd98f126d6955ac1af090125
     fc43f151a2418cc112e116050a99dd6318917ab0
 
-Whether it ships for both lines or for one is issue #9, which is open and
-blocked on decision 7 in #1. `build.yaml` declares one `targetAbi` and one
-`framework` today. So this sentence says which tags the commands were run at
-and nothing about what the plugin supports.
+Both lines are shipped for, which is issue #9. There is one manifest per line
+and each carries its own floor and its own framework:
+
+    grep -h '^targetAbi:\|^framework:' build.yaml build.net10.0.yaml
+    targetAbi: "10.11.0.0"
+    framework: "net9.0"
+    targetAbi: "12.0.0.0"
+    framework: "net10.0"
+
+Those two tags are still only where the commands below were run, which is a
+narrower thing than what the plugin supports. A reading taken at v10.11.9 says
+nothing about a later release on the same line.
 
 They were also not the newest tag on either line when this was written:
 
