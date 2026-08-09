@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace Jellyfin.Plugin.ServerPairing.Matching;
 
@@ -104,14 +105,7 @@ public static class ItemMatcher
             };
         }
 
-        var throughSeries = true;
-        foreach (var index in matches)
-        {
-            if (routes[index] != Route.Series)
-            {
-                throughSeries = false;
-            }
-        }
+        var throughSeries = matches.All(index => routes[index] == Route.Series);
 
         return new ItemMatch
         {
