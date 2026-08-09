@@ -121,12 +121,10 @@ public class ClockSourceTests
             var lines = File.ReadAllLines(file);
             for (var i = 0; i < lines.Length; i++)
             {
-                foreach (var call in calls)
+                var line = lines[i];
+                foreach (var call in calls.Where(c => line.Contains(c, StringComparison.Ordinal)))
                 {
-                    if (lines[i].Contains(call, StringComparison.Ordinal))
-                    {
-                        found.Add(Path.GetFileName(file) + ":" + (i + 1).ToString(CultureInfo.InvariantCulture) + ": " + call);
-                    }
+                    found.Add(Path.GetFileName(file) + ":" + (i + 1).ToString(CultureInfo.InvariantCulture) + ": " + call);
                 }
             }
         }

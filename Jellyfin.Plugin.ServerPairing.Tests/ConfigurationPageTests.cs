@@ -106,12 +106,10 @@ public class ConfigurationPageTests
             var lines = File.ReadAllLines(file);
             for (var i = 0; i < lines.Length; i++)
             {
-                foreach (var marker in markers)
+                var line = lines[i];
+                foreach (var marker in markers.Where(m => line.Contains(m, StringComparison.Ordinal)))
                 {
-                    if (lines[i].Contains(marker, StringComparison.Ordinal))
-                    {
-                        found.Add(Path.GetFileName(file) + ":" + (i + 1).ToString(CultureInfo.InvariantCulture) + ": " + marker);
-                    }
+                    found.Add(Path.GetFileName(file) + ":" + (i + 1).ToString(CultureInfo.InvariantCulture) + ": " + marker);
                 }
             }
         }
