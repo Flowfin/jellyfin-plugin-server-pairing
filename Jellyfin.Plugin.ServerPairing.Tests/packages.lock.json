@@ -368,7 +368,8 @@
         "type": "Project",
         "dependencies": {
           "Jellyfin.Controller": "[12.0.0-rc3, )",
-          "Jellyfin.Model": "[12.0.0-rc3, )"
+          "Jellyfin.Model": "[12.0.0-rc3, )",
+          "Newtonsoft.Json": "[12.0.1, )"
         }
       }
     },
@@ -734,7 +735,8 @@
         "type": "Project",
         "dependencies": {
           "Jellyfin.Controller": "[10.11.9, )",
-          "Jellyfin.Model": "[10.11.9, )"
+          "Jellyfin.Model": "[10.11.9, )",
+          "Newtonsoft.Json": "[12.0.1, )"
         }
       }
     }
