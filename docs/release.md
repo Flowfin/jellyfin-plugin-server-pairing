@@ -87,6 +87,19 @@ Both currently read `0.0.0.0`, which is the unreleased value rather than an
 agreement worth anything. The check that refuses a disagreement is #71 and does
 not exist, so until it lands this item is two commands read by a person.
 
+Raising a `targetAbi` is the one change here that is not a reading. The floor is
+a promise to load on a server that old, and the only thing standing behind it is
+the `ABI floor build` job compiling this source against the package that carries
+that floor. So a raised floor is released only once that job is green at the new
+value, which means the mapping in `.github/abi-floor.sh` has been moved to the
+new package in the same change:
+
+    sh .github/abi-floor.sh
+
+Lowering one is the same rule pointing the other way and is the harder case: it
+claims support for a server nobody has compiled against yet, and the job is what
+turns that claim into something that has been tried.
+
 ## 6. The threat model and the data statement still describe what the code does
 
 A reading, not a check. Nothing in this repository can decide whether a
