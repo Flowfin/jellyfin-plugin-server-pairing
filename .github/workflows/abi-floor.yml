@@ -1,0 +1,65 @@
+# Compiles the plugin against the oldest server each manifest claims to load on.
+#
+# What it refuses: a call to a host API that does not exist on that floor. The
+# shipping build compiles against a package at or above every floor claimed, so
+# nothing else in this repository can see that difference, and the failure it
+# hides is a plugin that installs on an older server and throws the first time
+# an operator uses it.
+#
+# The judgement lives in .github/abi-floor.sh so the command a person runs and
+# the command this job runs are the same bytes. Which package carries which
+# floor is written there with the measurement behind it.
+#
+# What it does not prove. It compiles rather than tests, and it restores
+# unlocked because the version it hands in is not the one the lock file pins.
+# The shipping graph is proved by the ordinary build, in locked mode, and not
+# here.
+name: abi-floor
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+    branches:
+      - master
+  workflow_dispatch:
+
+# Deny at the workflow level and grant on the job, so what this runs with is
+# written here rather than inherited from the repository's default workflow
+# permission, which is a repository setting no file in this tree can pin.
+permissions: {}
+
+# Cancel a superseded run on the same ref. A floor build reads nothing a
+# cancelled run leaves behind.
+concurrency:
+  group: abi-floor-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  floor:
+    # The check context comes from this name, and issue #63 fixes it here rather
+    # than leaving it to be inferred later: a required context matching no job
+    # blocks every merge and one matching the wrong job blocks nothing. Change it
+    # deliberately or not at all.
+    name: ABI floor build
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read # check out the repository being built
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # No step pushes via git, so do not persist the GITHUB_TOKEN.
+          persist-credentials: false
+
+      - name: Setup .NET
+        # The line global.json pins. Compiling net9.0 needs no .NET 9 SDK and no
+        # .NET 9 runtime, because this job builds and does not run anything.
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Build against every floor the manifests claim
+        run: sh .github/abi-floor.sh
