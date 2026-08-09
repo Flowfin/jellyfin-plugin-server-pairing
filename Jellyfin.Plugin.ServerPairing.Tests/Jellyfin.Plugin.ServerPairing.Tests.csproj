@@ -1,7 +1,9 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net9.0</TargetFramework>
+    <!-- The same two targets the plugin has. A suite that runs on one of them
+         proves the plugin on one server line and says nothing about the other. -->
+    <TargetFrameworks>net9.0;net10.0</TargetFrameworks>
     <RootNamespace>Jellyfin.Plugin.ServerPairing.Tests</RootNamespace>
     <Nullable>enable</Nullable>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
@@ -27,8 +29,8 @@
        plugin loads against the assemblies the server already has. A test process has no
        server, so it needs them at run time and includes them here. -->
   <ItemGroup>
-    <PackageReference Include="Jellyfin.Controller" Version="10.9.11" />
-    <PackageReference Include="Jellyfin.Model" Version="10.9.11" />
+    <PackageReference Include="Jellyfin.Controller" Version="$(JellyfinPackageVersion)" />
+    <PackageReference Include="Jellyfin.Model" Version="$(JellyfinPackageVersion)" />
   </ItemGroup>
 
   <ItemGroup>
