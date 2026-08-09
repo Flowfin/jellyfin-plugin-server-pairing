@@ -1,0 +1,93 @@
+# Builds the package this repository would ship, reads what is inside it, and
+# publishes that reading as a component list a scanner can open.
+#
+# What it refuses: an assembly in the package that build.yaml does not name.
+# The opposite direction, a manifest naming an artefact the package does not
+# hold, is issue #71 and is not judged here.
+#
+# The judgement lives in .github/package-audit.sh so the command a person runs
+# and the command this job runs are the same bytes, and
+# .github/package-audit-test.sh is where each rule is watched refusing
+# something. That suite runs here too, so a change that quietly stops the check
+# refusing anything reds this job instead of passing it.
+#
+# This is a second invocation of the packager rather than a second packaging
+# route: the same action at the same commit the shared build and publish
+# workflows resolve to. Nothing here refuses the two drifting apart, and moving
+# one pin without the other is a change a reader has to catch.
+name: package
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+    branches:
+      - master
+  workflow_dispatch:
+
+# Deny at the workflow level and grant on the job, so what this runs with is
+# written here rather than inherited from the repository's default workflow
+# permission, which is a repository setting no file in this tree can pin.
+permissions: {}
+
+# Cancel a superseded run on the same ref. Re-reading a package is cheap and
+# depends on nothing a cancelled run leaves behind.
+concurrency:
+  group: package-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  package:
+    # The check context comes from this name, so renaming the job removes it
+    # from wherever it is relied on. Change it deliberately or not at all.
+    name: Read the package
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read # check out the repository being packaged
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # No step pushes via git, so do not persist the GITHUB_TOKEN.
+          persist-credentials: false
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+        with:
+          # The line global.json pins. The SDK it resolves to is whatever
+          # global.json's rollForward allows, which is the same resolution the
+          # shared build call makes.
+          dotnet-version: "9.0.x"
+
+      - name: Build the package
+        # The packager the shared build and publish workflows call, at the same
+        # commit, so the bytes read below are the bytes a release would ship.
+        uses: oddstr13/jellyfin-plugin-repository-manager@9497a0a499416cc572ed2e07a391d9f943a37b4d # v1.1.1
+        id: jprm
+        with:
+          # The framework build.yaml declares.
+          dotnet-target: "net9.0"
+
+      - name: Read the package and refuse an assembly the manifest does not name
+        # The path comes from the packager and is passed in the environment
+        # rather than interpolated into the script, so nothing a workflow input
+        # reaches is evaluated as shell.
+        env:
+          PACKAGE: ${{ steps.jprm.outputs.artifact }}
+        run: sh .github/package-audit.sh "$PACKAGE" build.yaml components.cdx.json
+
+      - name: Prove the check still refuses what it claims to refuse
+        run: sh .github/package-audit-test.sh
+
+      - name: Attach the component list to the run
+        # Attached even when the reading refused, because a reader looking at a
+        # refused package wants to see what was in it.
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: component-list
+          retention-days: 30
+          if-no-files-found: error
+          path: components.cdx.json
