@@ -70,6 +70,15 @@ jobs:
           # The framework build.yaml declares.
           dotnet-target: "net9.0"
 
+      - name: Plant an assembly the manifest does not name
+        # NOT FOR MERGING. This branch exists to watch the next step refuse a
+        # real package rather than a fixture, so it puts the test assembly into
+        # the archive the packager just built. build.yaml names one artifact and
+        # this is not it.
+        env:
+          PACKAGE: ${{ steps.jprm.outputs.artifact }}
+        run: zip -j "$PACKAGE" Jellyfin.Plugin.ServerPairing.Tests/bin/Release/net9.0/Jellyfin.Plugin.ServerPairing.Tests.dll
+
       - name: Read the package and refuse an assembly the manifest does not name
         # The path comes from the packager and is passed in the environment
         # rather than interpolated into the script, so nothing a workflow input
