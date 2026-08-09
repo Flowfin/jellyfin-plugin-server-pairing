@@ -25,10 +25,30 @@ the root reaches it rather than finding nothing and exiting 0. What belongs in
 that project, and which three kinds of test this repository refuses outright,
 is in [`docs/testing.md`](docs/testing.md).
 
-Both commands need the SDK that `global.json` pins. Where a different one is
-installed they do not start at all, and the error says which version was asked
-for, so a machine that cannot run the gate says so instead of appearing to pass
-it.
+Both commands need the SDK that `global.json` pins. Run them from the repository
+root, where a machine that does not have that SDK says so instead of appearing
+to pass the gate:
+
+```
+dotnet --version
+A compatible .NET SDK was not found.
+
+Requested SDK version: 9.0.300
+global.json file: .../jellyfin-plugin-server-pairing/global.json
+```
+
+That refusal is a property of the working directory rather than of the projects.
+`global.json` is found by walking up from wherever the command is run, so the
+same solution built from a directory with no `global.json` above it uses
+whatever SDK is installed and never sees the pin:
+
+```
+cd / && dotnet --version
+10.0.301
+```
+
+Both were run on a machine whose only installed SDK is 10.0.301. The first exits
+155 and the second exits 0.
 
 ## No change without an issue
 
