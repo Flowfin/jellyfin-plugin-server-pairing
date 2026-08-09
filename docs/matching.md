@@ -165,6 +165,29 @@ because they are separate problems for whoever is looking at them: one is
 metadata that contradicts itself across two servers, the other is a film one
 server does not have.
 
+## What this costs an operator
+
+The rules above have a consequence an operator meets before they meet any of
+the rules, so it belongs in the document rather than being inferred from a
+counter. An item carrying no value for any matched provider matches nothing,
+ever. It is not matched by title, by year, by runtime or by file name. The
+matcher is never given those fields at all:
+`Jellyfin.Plugin.ServerPairing/Matching/MatchableItem.cs` does not carry them,
+which makes the refusal a property of the type rather than a branch that could
+be relaxed later.
+
+So a library of home video, of personal recordings, of anything ripped without
+metadata, or of anything no provider plugin has identified, will not match, and
+nothing built on this plugin will move anything for it. No setting turns that
+into a guess and none is planned. The attempts at this problem that came before
+matched on file paths or on internal item identifiers, which works in one
+operator's setup and produces wrong results in somebody else's, and a wrong
+match here writes one person's watch state onto another person's film.
+
+An operator watching half a library fail to match is watching this rule work
+rather than watching a fault. Which half, and why, is what the refusal counters
+are for, and the surface that shows them is issue #51.
+
 ## The corpus
 
 The cases the corpus has to cover, and what each is for, are in
