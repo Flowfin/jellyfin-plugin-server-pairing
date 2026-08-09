@@ -1,0 +1,29 @@
+# Not a workflow this repository wants, and not one it merges.
+#
+# It exists on this branch alone to give the workflow audit an input it has to
+# refuse, for the reason the audit names. Issue #67 asks that each inherited
+# guard be shown refusing the smallest input that should be refused, and for
+# the audit that input is an unpinned action reference.
+#
+# Everything else here is deliberately clean, so that the audit's verdict is
+# about the one thing under test: permissions are denied at the workflow level
+# and granted per job, the job is named, and the checkout does not keep its
+# credentials. The trigger is manual and nothing dispatches it, so this file
+# runs nothing.
+name: Unpinned action, for the audit to refuse
+
+on:
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  unpinned:
+    name: Check out with an unpinned action
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read # check out the repository
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
