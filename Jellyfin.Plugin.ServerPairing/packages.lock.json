@@ -26,12 +26,6 @@
           "Jellyfin.Extensions": "12.0.0-rc3"
         }
       },
-      "Newtonsoft.Json": {
-        "type": "Direct",
-        "requested": "[12.0.1, )",
-        "resolved": "12.0.1",
-        "contentHash": "pBR3wCgYWZGiaZDYP+HHYnalVnPJlpP1q55qvVb+adrDHmFMDc1NAKio61xTwftK3Pw5h7TZJPJEEVMd6ty8rg=="
-      },
       "SerilogAnalyzer": {
         "type": "Direct",
         "requested": "[0.15.0, )",
@@ -310,12 +304,6 @@
           "Jellyfin.Extensions": "10.11.9",
           "Microsoft.Extensions.Logging.Abstractions": "9.0.11"
         }
-      },
-      "Newtonsoft.Json": {
-        "type": "Direct",
-        "requested": "[12.0.1, )",
-        "resolved": "12.0.1",
-        "contentHash": "pBR3wCgYWZGiaZDYP+HHYnalVnPJlpP1q55qvVb+adrDHmFMDc1NAKio61xTwftK3Pw5h7TZJPJEEVMd6ty8rg=="
       },
       "SerilogAnalyzer": {
         "type": "Direct",
