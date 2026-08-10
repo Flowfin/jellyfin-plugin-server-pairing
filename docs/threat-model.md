@@ -303,7 +303,8 @@ public key. So the limit is not the entropy of a secret: it is that the window i
 small, single use and fail closed, which is issue #18, and that a key arriving
 inside it still has to survive a comparison performed by two people. Guessing is
 replaced by grinding for a fingerprint collision, and the length that makes that
-useless is pinned in issue #16 along with the reason it is enough. A number
+useless is pinned in [`crypto.md`](crypto.md) along with the reason it is
+enough. A number
 written in this document instead would be the second copy that goes stale.
 
 ## The trust boundaries
@@ -467,7 +468,8 @@ yet. M8 is where the model gets its section on what unpairing and uninstalling
 leave behind.
 
 It does not state a single cryptographic parameter. Every one of them belongs in
-one place, which is issue #16, and a copy here would be the copy that goes stale.
+one place, which is [`crypto.md`](crypto.md), and a copy here would be the copy
+that goes stale.
 
 It does not carry a personal data statement. What fields cross the wire, where
 they come to rest and how an operator removes them is [`data.md`](data.md), which

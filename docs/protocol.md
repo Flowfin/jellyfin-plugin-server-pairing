@@ -30,11 +30,11 @@ below. The payloads of the `exchange` message are defined by that contract in M6
 and this document defines only the envelope they travel in.
 
 Where this document names a digest, a curve or a length, it does so because a
-wire cannot be described without them. Issue #16 is where those choices are
-argued and pinned in one place, and when `docs/crypto.md` lands each line below
-that names one cites it rather than restating it. Until then this document is the
-only place they are written, which is the second copy problem it exists to avoid
-and is why #16 is worth doing next.
+wire cannot be described without them. [`crypto.md`](crypto.md) is where those
+choices are argued and is the authority for every one of them. A value that
+appears in both is a value this document has to move when that one does, and
+there are three: the curve, the digest and the nonce length. Everything else
+cryptographic is cited rather than restated.
 
 ## Vocabulary
 
@@ -81,7 +81,8 @@ fingerprint = derived from
 The two labels are what stops one value from being usable in the place of the
 other, and the zero byte after each label is what stops a label from running into
 the material it prefixes. How much of the fingerprint digest an operator compares,
-and why that length defeats an attacker grinding for a collision, is issue #16.
+and why that length defeats an attacker grinding for a second preimage, is in
+[`crypto.md`](crypto.md).
 
 The identifier is a digest of two public keys, so it is not secret and it names
 no person. That is why [`logging.md`](logging.md) allows it in a log line while
@@ -223,8 +224,9 @@ into a line of its own. Nothing else is: not a header this document does not
 name, not the query string, which is refused rather than covered, and not the
 order or casing of anything.
 
-The algorithm over these bytes, and the key it uses, are issue #16. What this
-document fixes is the bytes.
+The algorithm over these bytes, and which of the two per-direction keys signs
+them, are pinned in [`crypto.md`](crypto.md). What this document fixes is the
+bytes.
 
 `hello` is the one message that cannot carry a pairing identifier, because the
 identifier is derived from both public keys and the sender holds only one of
@@ -394,8 +396,8 @@ The endpoint authorization table, issue #27.
 The bounds of the enrolment window, issue #18. This document names the state it
 puts the pairing in and what closes it; how long it lasts is that issue's.
 
-The cryptographic parameters, issue #16, which is also where the lines above that
-name a primitive move to.
+The cryptographic parameters. [`crypto.md`](crypto.md) holds them, and the three
+this document repeats are named at the top.
 
 The `exchange` payloads, M6.
 
