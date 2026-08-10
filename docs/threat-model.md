@@ -208,6 +208,32 @@ person, and no test can prove a person read a screen. What the page can do is
 make the comparison hard to skip and hard to get wrong, which is the ceremony in
 issue #19 and the wording in issue #54.
 
+#### What an operator who confirms without comparing loses
+
+Said from the operator's side rather than from A2's, because it is the operator
+who decides it and the cost is not obvious from the paragraph above.
+
+Confirming without comparing completes the pairing against whatever public key
+arrived. Where that key is A2's, and A2 substituted one in each direction, both
+servers finish enrolment holding a key A2 also holds. Every request A2 forges
+from then on verifies, in both directions, and everything that crosses is
+readable and rewritable by it.
+
+Nothing later in the protocol catches that. The signature, the freshness window
+and the rotation overlap all authenticate the key that was accepted, so they work
+exactly as designed on behalf of the adversary the comparison was there to
+exclude. A rotation does not recover from it either: the new key is agreed with
+whoever holds the old one.
+
+What is left afterwards is a record of an ordinary enrolment, carrying the
+administrator who confirmed and the instant they did it. There is no later signal
+to notice, and re-pairing is the only repair, so the moment of the comparison is
+the only moment at which this is preventable.
+
+The whole of the confirmation therefore rests on two people each reading a value
+on their own screen and finding it the same. No test in this repository asserts
+that happened, and none can.
+
 ### A3, the peer server, once compromised or once its operator turns hostile
 
 Reach is everything a legitimate peer has, because that is what it is. It holds
