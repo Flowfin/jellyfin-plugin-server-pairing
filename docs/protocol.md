@@ -101,7 +101,7 @@ holds its own and the two are not assumed to agree.
 | `ConfirmedHere` | The administrator on this server compared and confirmed. The peer has not confirmed, or its confirmation has not arrived |
 | `ConfirmedByPeer` | The peer's confirmation arrived and verified. The administrator on this server has not confirmed |
 | `Active` | Both confirmations are in. This is the only state in which an `exchange` is answered |
-| `Rotating` | Active, and a key rotation is inside its overlap window, so two of this side's keys verify. Issue #23 owns the overlap |
+| `Rotating` | Active, and a key rotation is inside its overlap window, so two of this side's keys verify. The overlap is fixed below |
 | `Revoked` | Terminal. Nothing moves out of it, and the record is kept rather than deleted so that a later request naming this identifier is refused rather than treated as new. Issue #24 owns revocation |
 
 `Revoked` being terminal is the whole of it: there is no transition out, and
@@ -261,6 +261,57 @@ Both numbers are constants of the specification rather than secrets, so a caller
 learns nothing by discovering them that reading this document would not have
 told them. Issue #26 owns the clock injection that makes them testable and the
 skew policy the refusal below rests on.
+
+## The rotation overlap
+
+A key that never changes is a key that is eventually copied, so a pairing can
+replace its keys without being re-enrolled. `rotate` carries the replacement
+public key and the instant the superseded key stops verifying, and between those
+two instants both keys verify what arrives. That interval is the overlap.
+
+It exists because the two servers are not online at the same moment. A side that
+rotated cannot know whether the peer received the replacement, so refusing the
+superseded key at the moment of the rotation would end the traffic exactly where
+rotation is supposed to preserve it. During the overlap a request that verified
+under the superseded key is accepted and recorded as such, which is the rotation
+row of [`logging.md`](logging.md) and is how an operator sees a peer that has not
+caught up.
+
+The overlap is at most 86400 seconds. The case it exists for is a home server
+switched off overnight that comes back the next morning; past a day the
+superseded key has stopped being a grace period and has become a second live key
+nobody is watching, which is the thing rotation removes. A `rotate` asking for
+longer, for zero, or for an instant already past is refused and the pairing stays
+on the key it was already using. It is refused rather than shortened, so a side
+that asked for more finds out instead of being quietly given less.
+
+The superseded key stops verifying at the earlier of two things. The overlap
+running out is one. The other is the peer proving it holds the replacement, which
+it does by sending a request that verifies under it, and at that point the
+superseded key has nothing left to be for.
+
+A rotation that does not complete fails the rotation and never the pairing. Every
+refusal above leaves both keys where they were, and a rotation given up halfway
+puts both sides back on the superseded key, which is the only key both are known
+to hold. There is no path that removes a key without leaving one in place.
+
+Two keys per pairing is the ceiling. A second `rotate` arriving while an overlap
+is open is `state`, because accepting it would drop the key the offline peer is
+still using and would spend the overlap on a peer that never heard about the
+first replacement.
+
+The side that rotates signs with the replacement from the moment it accepts it. A
+side that went on signing with the superseded key would be unverifiable to a peer
+that had already caught up, which is the same outage pointed the other way.
+
+Rotation moves no pairing into a state it was not already in. A `rotate` is
+answered in `Active` and nowhere else, so a key rotated on a pairing that answers
+nothing goes on reaching nothing.
+
+What this section does not fix. Whether a rotation is scheduled or started by an
+operator, since the mechanism is the same either way. Where the replacement key
+comes from and what holds it, which is the key store in M4. What is logged at
+each end of the overlap, which is [`logging.md`](logging.md).
 
 ## The transition table
 
