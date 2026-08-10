@@ -78,7 +78,7 @@ public sealed class RequestAuthenticator
             return VerificationOutcome.Refused;
         }
 
-        if (!TryDecode(presentedSignature, out var presented))
+        if (!TryDecodeSignature(presentedSignature, out var presented))
         {
             return VerificationOutcome.Refused;
         }
@@ -86,11 +86,30 @@ public sealed class RequestAuthenticator
         var arriving = _keys.ArrivingKey(request.PairingId);
         var key = arriving.IsEmpty ? _keyForAnAbsentPairing.AsSpan() : arriving.Span;
 
-        var computed = HMACSHA256.HashData(key, CanonicalForm.ForRequest(request));
-
-        return CryptographicOperations.FixedTimeEquals(computed, presented)
+        return Matches(request, presented, key)
             ? VerificationOutcome.Verified
             : VerificationOutcome.Refused;
+    }
+
+    /// <summary>
+    /// Whether a request carries this signature under this key.
+    /// </summary>
+    /// <param name="request">The request, already checked against its field limits.</param>
+    /// <param name="presentedSignature">The decoded signature bytes.</param>
+    /// <param name="key">The key to judge against.</param>
+    /// <returns>True where the signature is the one this key produces over this request.</returns>
+    /// <remarks>
+    /// This is the one place a presented signature is compared, and it compares in fixed time.
+    /// A pairing whose key is being rotated has two keys that can verify what arrives, and the
+    /// overlap in <see cref="KeyOverlap"/> asks this about each of them rather than computing
+    /// its own MAC, so there is one construction of the canonical bytes and one comparison
+    /// rather than two of each drifting apart.
+    /// </remarks>
+    public static bool Matches(PairingRequest request, ReadOnlySpan<byte> presentedSignature, ReadOnlySpan<byte> key)
+    {
+        var computed = HMACSHA256.HashData(key, CanonicalForm.ForRequest(request));
+
+        return CryptographicOperations.FixedTimeEquals(computed, presentedSignature);
     }
 
     /// <summary>
@@ -129,7 +148,7 @@ public sealed class RequestAuthenticator
     /// <param name="presented">The header value.</param>
     /// <param name="bytes">The decoded bytes.</param>
     /// <returns>True where it decoded.</returns>
-    private static bool TryDecode(string presented, out byte[] bytes)
+    public static bool TryDecodeSignature(string presented, out byte[] bytes)
     {
         bytes = new byte[SignatureLength];
 
