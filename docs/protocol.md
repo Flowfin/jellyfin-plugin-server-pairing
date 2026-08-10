@@ -291,9 +291,16 @@ as before rather than refused, because the network drops responses and a peer
 that retries is not an attacker. A repeated `revoke` against `Revoked` is
 `refused` rather than answered, because `Revoked` answers nothing at all.
 
-`revoke` is accepted in every state where a pairing exists, including the
-half-built ones. Revocation is unilateral, which means it does not need the other
-side's cooperation and does not need the pairing to have finished.
+`revoke` is accepted in every state where this side knows the peer's key,
+including the half-built ones from `Pending` onwards. Revocation is unilateral,
+which means it does not need the other side's cooperation and does not need the
+pairing to have finished.
+
+`Offered` is the exception and the table's row for it says so. No peer key has
+arrived there, so an arriving `revoke` carries no signature this side could
+verify, and accepting one would let anyone who can reach the endpoint end an
+enrolment they know nothing about. An administrator on this side ending it is the
+local event below and is not affected.
 
 `exchange` is answered in `Active` and `Rotating` and nowhere else. In the
 half-built states it is `state` rather than `refused`, because a caller that
