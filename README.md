@@ -3,6 +3,17 @@
 > **Part of [Flowfin](https://github.com/Flowfin).** It works with any Jellyfin
 > server, and with the Flowfin clients.
 
+## What this plugin moves between two servers
+
+[`docs/data.md`](docs/data.md) is the personal-data statement: every field that
+crosses between two paired servers, where it comes to rest, and what an operator
+does to remove it. The wire it describes is specified in
+[`docs/protocol.md`](docs/protocol.md), and what an adversary reaches is in
+[`docs/threat-model.md`](docs/threat-model.md).
+
+The rest of this file is still the plugin template's text. Replacing it is issue
+#73.
+
 # So you want to make a Jellyfin plugin
 
 Awesome! This guide is for you. Jellyfin plugins are written using the dotnet standard framework. What that means is you can write them in any language that implements the CLI or the DLI and can compile to net8.0. The examples on this page are in C# because that is what most of Jellyfin is written in, but F#, Visual Basic, and IronPython should all be compatible once compiled.

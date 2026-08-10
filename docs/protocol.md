@@ -1,0 +1,403 @@
+# The pairing protocol
+
+This document fixes the wire before any of it is built, so that the tests are
+derived from a specification rather than from an implementation, and so that
+somebody can disagree with the design without reading code.
+
+Nothing described here exists in the tree. There is no endpoint, no key store and
+no state machine, so every sentence below is a design position and none of it is
+a measured property of something that runs. Where a milestone owes a mechanism,
+the issue is named at the place the mechanism is described. No later edit of this
+file turns any of it into a statement that something has been checked.
+
+It is written under the answers in issue #1, and the four that shape it most are
+worth stating before the tables. Enrolment is static key pairs with a fingerprint
+two operators compare, so no secret is ever transcribed. The pairing is
+symmetric, so the two servers hold the same rights and there is no initiator role
+on the wire. The transport is TLS with the peer certificate pinned, with an
+opt-out that is a setting rather than a second design. There is no unattended
+mode, so a pairing exists only where two people acted.
+
+## What this document does not decide
+
+The endpoint table and the authorization each endpoint requires is issue #27 and
+lives in [`endpoints.md`](endpoints.md). What is here is the message layer that
+those endpoints carry.
+
+The interface a sync plugin codes against is an in-process .NET one, which is
+issue #43, and it is not this wire. A consumer never sees a message described
+below. The payloads of the `exchange` message are defined by that contract in M6,
+and this document defines only the envelope they travel in.
+
+Where this document names a digest, a curve or a length, it does so because a
+wire cannot be described without them. Issue #16 is where those choices are
+argued and pinned in one place, and when `docs/crypto.md` lands each line below
+that names one cites it rather than restating it. Until then this document is the
+only place they are written, which is the second copy problem it exists to avoid
+and is why #16 is worth doing next.
+
+## Vocabulary
+
+A **pairing** is the relationship between two servers. It has an identifier, a
+state on each side, and key material on each side.
+
+A **peer** is the other server in a pairing. Both servers are peers of each
+other; neither is a client.
+
+A **pairing plane request** is a request one server sends to the other under this
+document. It is never a request from a browser and never a request from a
+consumer.
+
+An **enrolment window** is the bounded interval during which a server will accept
+a message from a party it has not yet authenticated. Issue #18 owes the window's
+bounds and its fail-closed behaviour.
+
+## Identity, and where a pairing identifier comes from
+
+Each server holds one long term key pair. The private half is generated on that
+server, never leaves it in any encoding, and lives in the key store that M4 owns.
+The public half is what a peer receives.
+
+The key agreement is `ECDiffieHellman` over NIST P-256, both from the base class
+library. The public half is exchanged in its DER `SubjectPublicKeyInfo` encoding,
+which is what `ExportSubjectPublicKeyInfo` produces, so the bytes two servers
+hash are the bytes the framework already agrees on.
+
+Neither side chooses the pairing identifier. It is derived from the two public
+keys, so two servers that hello each other at the same moment arrive at one
+identifier rather than two:
+
+```
+material = the two SubjectPublicKeyInfo encodings, sorted as byte strings in
+           ascending lexicographic order, concatenated with nothing between them
+
+pairing id  = lowercase hex of the first 16 bytes of
+              SHA-256("jellyfin-server-pairing/id" || 0x00 || material)
+
+fingerprint = derived from
+              SHA-256("jellyfin-server-pairing/fingerprint" || 0x00 || material)
+```
+
+The two labels are what stops one value from being usable in the place of the
+other, and the zero byte after each label is what stops a label from running into
+the material it prefixes. How much of the fingerprint digest an operator compares,
+and why that length defeats an attacker grinding for a collision, is issue #16.
+
+The identifier is a digest of two public keys, so it is not secret and it names
+no person. That is why [`logging.md`](logging.md) allows it in a log line while
+allowing almost nothing else.
+
+## The states
+
+Eight, per pairing, per side. A state is what this server believes; the peer
+holds its own and the two are not assumed to agree.
+
+| State | What is true |
+| --- | --- |
+| `Absent` | No pairing record with this identifier exists here. This is the state of every identifier that was never enrolled and, after the record is deleted, of one that was |
+| `Offered` | An administrator here opened an enrolment window against a peer address. This server's key pair exists; no peer key has arrived |
+| `Pending` | A peer key arrived inside the window and the fingerprint is on the dashboard. Neither operator has confirmed |
+| `ConfirmedHere` | The administrator on this server compared and confirmed. The peer has not confirmed, or its confirmation has not arrived |
+| `ConfirmedByPeer` | The peer's confirmation arrived and verified. The administrator on this server has not confirmed |
+| `Active` | Both confirmations are in. This is the only state in which an `exchange` is answered |
+| `Rotating` | Active, and a key rotation is inside its overlap window, so two of this side's keys verify. Issue #23 owns the overlap |
+| `Revoked` | Terminal. Nothing moves out of it, and the record is kept rather than deleted so that a later request naming this identifier is refused rather than treated as new. Issue #24 owns revocation |
+
+`Revoked` being terminal is the whole of it: there is no transition out, and
+re-pairing two servers means new key material and therefore a different
+identifier.
+
+## The messages
+
+Five request types. Every one is a `POST`, every one carries the authentication
+headers below, and every one has exactly one response shape on success and the
+refusal shape on failure.
+
+| Type | Path | Body | Response body |
+| --- | --- | --- | --- |
+| `hello` | `/ServerPairing/hello` | offered public key, supported version range, peer address this server believes it is talking to | this server's public key, the version it selected, and the pairing identifier the two keys derive |
+| `confirm` | `/ServerPairing/confirm` | the fingerprint digest this side's operator compared | empty |
+| `rotate` | `/ServerPairing/rotate` | the replacement public key and the instant the old one stops verifying | the replacement public key of this side |
+| `revoke` | `/ServerPairing/revoke` | nothing beyond the envelope | empty |
+| `exchange` | `/ServerPairing/exchange` | opaque to this layer; the consumer contract in M6 defines it | opaque to this layer |
+
+Paths are exact. A request whose path carries a trailing slash, a query string,
+or any percent-encoded byte is refused rather than normalised, because two
+implementations that disagree about normalisation interoperate right up until
+they do not.
+
+### Fields and their limits
+
+Every field is checked against its limit before the value is used, and a
+violation is a refusal rather than a truncation.
+
+| Field | Type | Limit |
+| --- | --- | --- |
+| pairing identifier | 32 lowercase hex characters | exactly 32, and `[0-9a-f]` only. 32 zeros on a `hello` and nowhere else |
+| protocol version | unsigned decimal integer, no leading zero | at most 4 digits |
+| version range | two versions, low and high, low not above high | as above, each |
+| timestamp | unsigned decimal integer, seconds since the Unix epoch | at most 20 digits |
+| nonce | 32 lowercase hex characters | exactly 32 |
+| signature | base64, standard alphabet, padded | at most 128 characters |
+| public key | base64 of the DER `SubjectPublicKeyInfo` | at most 512 characters |
+| fingerprint digest | lowercase hex | exactly 64 |
+| peer address | absolute `https` URI, no query, no fragment, no userinfo | at most 255 characters |
+| body, `exchange` | bytes | 1 MiB |
+| body, every other type | bytes | 8 KiB |
+
+A body larger than its limit is refused without being read past the limit, and
+without being parsed at all. That ordering is deliberate: a request that fails
+verification never reaches the deserialiser, which is the limit the threat model
+gives adversary A2 and which issue #20 owes.
+
+The peer address in `hello` is the address the sending server believes it is
+talking to. Comparing it against the address the local administrator entered is
+what holds a peer to the approved address, and that is issue #22.
+
+## What is authenticated, and over exactly which bytes
+
+Every pairing plane request carries five headers. They are custom headers rather
+than `Authorization`, because the host reads `Authorization` for its own token
+and a credential of this plugin's in that header would be handed to the server's
+own authentication before this plugin saw it.
+
+```
+X-Pairing-Id
+X-Pairing-Version
+X-Pairing-Timestamp
+X-Pairing-Nonce
+X-Pairing-Signature
+```
+
+No credential of this plugin's appears in a query string, on either supported
+server line. The reason is in [`endpoints.md`](endpoints.md): a query string is
+written to access logs, proxy logs, browser history and referrer headers, and one
+of the seven token routes the host accepts is a query string on both lines.
+
+The signature covers a canonical byte string built here rather than the request
+as it appears on the wire. Header case, header order, header folding and
+whitespace are all things a proxy is allowed to change, so none of them is
+covered; the values are covered, as written into the lines below.
+
+The canonical byte string for a request is exactly eight lines. Every line is
+US-ASCII, every line ends with one `0x0A`, including the last, and no line
+contains `0x0D`:
+
+```
+1  jellyfin-server-pairing/request
+2  <protocol version, the value in X-Pairing-Version>
+3  <request method, uppercase>
+4  <request path, exactly as sent, with no query string>
+5  <pairing identifier>
+6  <timestamp, the value in X-Pairing-Timestamp>
+7  <nonce, the value in X-Pairing-Nonce>
+8  <lowercase hex SHA-256 of the request body bytes>
+```
+
+Line 1 separates this signature from every other use of the same key, so a
+signature produced here cannot be replayed into another construction. Line 2
+binds the version, so a downgrade cannot happen silently underneath a valid
+signature. Line 8 covers the body by digest rather than by inclusion, so the
+signed material has a fixed length whatever the body is, and the digest of the
+empty string is used where there is no body.
+
+A response carries `X-Pairing-Timestamp`, `X-Pairing-Nonce` and
+`X-Pairing-Signature`, over six lines:
+
+```
+1  jellyfin-server-pairing/response
+2  <protocol version>
+3  <pairing identifier>
+4  <the nonce of the request being answered>
+5  <timestamp, the value in X-Pairing-Timestamp on the response>
+6  <lowercase hex SHA-256 of the response body bytes>
+```
+
+Line 4 is what binds a response to its request, so a captured response cannot be
+replayed against a different one.
+
+So which fields are authenticated has a short answer in both directions. Every
+field of every body is, because the body is covered whole by its digest and a
+single changed byte moves it. The five header values are, because each is written
+into a line of its own. Nothing else is: not a header this document does not
+name, not the query string, which is refused rather than covered, and not the
+order or casing of anything.
+
+The algorithm over these bytes, and the key it uses, are issue #16. What this
+document fixes is the bytes.
+
+`hello` is the one message that cannot carry a pairing identifier, because the
+identifier is derived from both public keys and the sender holds only one of
+them. Its `X-Pairing-Id` is 32 `0` characters, which is what line 5 of its
+canonical form holds, and the receiver returns the derived identifier in the
+response body. Every later message carries the real one.
+
+A `hello` is therefore matched to an enrolment window by the peer address the
+local administrator entered, and by nothing else. It is signed with the private
+half of the key it offers, over the same canonical form, so it proves possession
+of that key and nothing else. That is the whole of what it is allowed to prove:
+the comparison the two operators perform is what turns a key into an identity.
+
+## Freshness
+
+A request is fresh when its timestamp is within 300 seconds of this server's
+clock in either direction, and its nonce has not been seen for this pairing
+inside that window.
+
+The nonce is 16 random bytes from `RandomNumberGenerator`, written as 32
+lowercase hex characters. It is not a counter and carries no meaning; two
+requests that differ in nothing else must differ here.
+
+A nonce is remembered for 600 seconds, which is the window in both directions
+plus the window again. A nonce older than that is dropped, so the store is
+bounded by the request rate rather than by uptime. The store is per pairing and
+is not persisted: a restart forgets it, and a request replayed across a restart
+inside 300 seconds is accepted. That is a real gap, it is named rather than left
+out, and issue #21 is where it is either closed or accepted with a reason.
+
+Both numbers are constants of the specification rather than secrets, so a caller
+learns nothing by discovering them that reading this document would not have
+told them. Issue #26 owns the clock injection that makes them testable and the
+skew policy the refusal below rests on.
+
+## The transition table
+
+Rows are the state on the receiving side. Columns are the request that arrives.
+Every cell is defined, and a cell reading `refused` is a refusal with the
+undistinguished code, not undefined behaviour.
+
+| State | `hello` | `confirm` | `rotate` | `revoke` | `exchange` |
+| --- | --- | --- | --- | --- | --- |
+| `Absent` | `refused` | `refused` | `refused` | `refused` | `refused` |
+| `Offered` | record the peer key, answer with this side's key, go to `Pending` | `refused` | `refused` | `refused` | `refused` |
+| `Pending` | identical key: answer as before, stay. Different key: close the window, go to `Absent`, `refused` | go to `ConfirmedByPeer` | `state` | go to `Revoked` | `state` |
+| `ConfirmedHere` | identical key: answer as before, stay. Different key: close the window, go to `Absent`, `refused` | go to `Active` | `state` | go to `Revoked` | `state` |
+| `ConfirmedByPeer` | identical key: answer as before, stay. Different key: close the window, go to `Absent`, `refused` | stay, answer as before | `state` | go to `Revoked` | `state` |
+| `Active` | `refused` | stay, answer as before | accept the replacement key, go to `Rotating` | go to `Revoked` | answer it |
+| `Rotating` | `refused` | stay, answer as before | `state` | go to `Revoked` | answer it |
+| `Revoked` | `refused` | `refused` | `refused` | `refused` | `refused` |
+
+Four things in that table are worth saying in words, because a reader can find
+them in it but should not have to.
+
+A second `hello` carrying a different key closes the window and destroys the
+half-built pairing. That is the single-use half of issue #18, and it fails closed:
+the operator starts again rather than choosing between two keys.
+
+A repeated `confirm` and a repeated `hello` with the identical key are answered
+as before rather than refused, because the network drops responses and a peer
+that retries is not an attacker. A repeated `revoke` against `Revoked` is
+`refused` rather than answered, because `Revoked` answers nothing at all.
+
+`revoke` is accepted in every state where a pairing exists, including the
+half-built ones. Revocation is unilateral, which means it does not need the other
+side's cooperation and does not need the pairing to have finished.
+
+`exchange` is answered in `Active` and `Rotating` and nowhere else. In the
+half-built states it is `state` rather than `refused`, because a caller that
+reaches those states has already verified, and telling a verified peer that the
+pairing is not finished tells it nothing it could not infer.
+
+## Local events
+
+The table above covers what arrives. Five things happen on this side and move a
+pairing without any message arriving.
+
+| Event | From | To |
+| --- | --- | --- |
+| An administrator opens a window against a peer address | `Absent` | `Offered` |
+| An administrator confirms the fingerprint | `Pending` | `ConfirmedHere` |
+| An administrator confirms the fingerprint | `ConfirmedByPeer` | `Active` |
+| The enrolment window expires | `Offered`, `Pending`, `ConfirmedHere`, `ConfirmedByPeer` | `Absent` |
+| An administrator revokes | `Offered`, `Pending`, `ConfirmedHere`, `ConfirmedByPeer`, `Active`, `Rotating` | `Revoked` |
+| The rotation overlap closes | `Rotating` | `Active` |
+
+An administrator confirming sends a `confirm` to the peer. A failure to deliver
+it does not move this side back: the peer's own retry, or the operator's, is what
+completes the pairing, and the window expiring is what ends it if neither does.
+
+An administrator revoking sends a `revoke` to the peer and moves to `Revoked`
+whether or not that delivery succeeds. Revocation that waits for the peer is
+revocation an unreachable peer can refuse.
+
+## The error taxonomy
+
+Every refusal on the pairing plane is HTTP 403 with a body of exactly one JSON
+object with exactly one member:
+
+```
+{"code":"refused"}
+```
+
+The shape never varies. Only the code varies, and it varies only for a caller
+that has already proved it holds the key, or that is inside a window an
+administrator opened deliberately.
+
+| Code | What caused it | Who can ever see it | Distinguishable from its neighbours |
+| --- | --- | --- | --- |
+| `refused` | An unknown pairing identifier, a signature that does not verify, a body over its limit, a malformed header value, a request in a state that does not accept it from an unverified caller, a revoked pairing, a request when no pairing exists, a second `hello` with a different key | anyone | No, and deliberately so. Every one of those causes produces the same bytes |
+| `clock` | The signature verified and the timestamp is outside the freshness window | only a caller holding a verifying key | Yes |
+| `version` | No version in common | a caller inside an open enrolment window, or a caller holding a verifying key | Yes, to those callers only |
+| `state` | The signature verified and the message is not accepted in this state | only a caller holding a verifying key | Yes |
+| `malformed` | The signature verified and the body does not parse, or a field is outside its limit | only a caller holding a verifying key | Yes |
+
+The single `refused` code is what makes probing useless. A caller naming a
+pairing that does not exist learns the same as one naming a pairing that does and
+signing badly, which is what stops an unauthenticated caller from learning
+whether this plugin is installed or whether it has ever been paired. That is the
+general position issue #28 owns.
+
+One distinction is kept on purpose and it is worth arguing rather than assuming.
+`clock` is reported instead of being folded into `refused`, which hands a caller
+one bit: whether their timestamp was inside this server's window. The bit is
+worth giving away. The window is a constant of this document rather than a
+secret, so the same bit is available by reading. And the alternative costs an
+operator an evening debugging a signature error that is really a clock error, on
+two home servers one of which has no time source. The bit is only ever handed to
+a caller that already holds the key, because verification runs first.
+
+`version` is the one code a caller can see without holding a key, and only
+because an enrolment window is open, which is a door an administrator opened on
+purpose and which closes on a timer.
+
+The timing of a refusal is one class. Every cause above is answered after the
+same work, so a caller cannot separate them by measurement where the codes are
+identical. Nothing in the tree enforces that today and issue #28 owes the test.
+
+## Versions
+
+`X-Pairing-Version` carries one unsigned integer. Version 1 is this document.
+
+`hello` carries a range: the lowest and highest versions the sender speaks. The
+receiver selects the highest version inside both ranges and answers with it, and
+that selected version is fixed for the life of the pairing. It appears on every
+later request, and line 2 of the canonical form binds it, so neither side can
+move it without the other noticing.
+
+Where the ranges do not overlap, the answer is `version`, and to a caller that is
+neither inside an open window nor holding a key it is `refused` like everything
+else.
+
+A request on an `Active` pairing carrying a version other than the selected one
+is `state`. A pairing is not renegotiated; two servers that want a different
+version rotate or re-pair.
+
+A version this server does not know is not a version it guesses at. There is no
+best-effort parse of an unknown version and no forward compatibility rule beyond
+the range, because a message a server does not understand is one it cannot make a
+security decision about.
+
+## What is not decided here
+
+The endpoint authorization table, issue #27.
+
+The bounds of the enrolment window, issue #18. This document names the state it
+puts the pairing in and what closes it; how long it lasts is that issue's.
+
+The cryptographic parameters, issue #16, which is also where the lines above that
+name a primitive move to.
+
+The `exchange` payloads, M6.
+
+Whether the nonce store survives a restart, issue #21, which is named above as an
+accepted gap rather than left silent.
