@@ -470,5 +470,7 @@ It does not state a single cryptographic parameter. Every one of them belongs in
 one place, which is issue #16, and a copy here would be the copy that goes stale.
 
 It does not carry a personal data statement. What fields cross the wire, where
-they come to rest and how an operator removes them is issue #14, which needs the
-protocol document first.
+they come to rest and how an operator removes them is [`data.md`](data.md), which
+is complete against the wire in [`protocol.md`](protocol.md) and carries the one
+gap that document leaves: the payload of an `exchange` is owed by M6 and is not
+listed anywhere yet.
