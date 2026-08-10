@@ -67,30 +67,32 @@ checked. Each mechanism named below says which milestone owes it. When a
 mechanism lands, the sentence naming it should be rewritten to carry the test
 that proves it bites.
 
-## Where the open decisions change this model
+## What the answers settled
 
-Nine decisions are open in issue #1, and five of them change what is written
-here. The model is written so that it holds under either answer, and the places
-where the answers diverge are called out rather than smoothed over.
+Issue #1 opened nine forks in the plan. The answers that reach this document are
+recorded here rather than argued again, and every section below is written under
+them. No section holds a fork open.
 
-| Decision | What changes in this document |
+| Answer | What it settles here |
 | --- | --- |
-| 1, how the two servers authenticate at enrolment | Whether the enrolment secret is an asset at all. Under a transcribed shared code it is the highest value asset for the length of the window. Under static key pairs with a fingerprint comparison there is no transcribed secret, and the asset becomes a long term private key that never leaves its server |
-| 2, symmetric or initiator and responder | How much surface each server exposes to the other, and therefore how much a hostile peer reaches |
-| 3, what the transport may be | Whether request and response bodies are readable on the path, which is the difference between the passive network adversary reaching nothing and reaching the mapping table |
-| 4, what the mapping table stores | Whether peer usernames are personal data at rest on both servers or only opaque identifiers with a display cache |
-| 5, what happens to data that already moved on revocation | Whether revocation is a stop or an undo, which is the limit on what revocation achieves against a hostile peer |
+| Enrolment is static key pairs with a fingerprint the two operators compare | There is no transcribed secret at any point, so nothing that could be read over a shoulder or left in a clipboard exists to be stolen. The asset the answer creates instead is a long term private key that never leaves the server that generated it. Authenticity rests on somebody actually comparing two fingerprints, which is a property of the dashboard and not of the cryptography |
+| The pairing is symmetric | Both servers hold the same rights and expose the same surface, so a hostile peer's reach is bounded by the mapping table rather than by which side started the pairing. Which side pulls or pushes is a setting of the sync plugin above this one |
+| The transport is TLS with the peer certificate pinned at enrolment, and the exception is a setting | Bodies are not readable on the path on an installation nobody has changed. An operator can turn the requirement off, and the setting says what that costs at the point of ticking it. That case is named below as the exception it is, not as one of two equal branches |
+| The mapping table holds opaque identifiers and a display cache | No peer username is at rest as truth on either server, so a reader of the table gets identifiers and a cache that may be discarded at any time |
+| Revocation deletes what came from the peer | Revocation is an undo on the side that performs it rather than a stop, which is what bounds the limit against a hostile peer, and it is why the consumer contract requires provenance on every synced row |
+| There is no unattended pairing mode | The human comparison is the only path to a pairing, so the trust root above has no weaker sibling to be modelled beside it. An operator who wants to pair from a script cannot |
 
-Nothing below assumes an answer to any of them. Where a section would read
-differently under one answer, it says which.
+Where a sentence below is true only because of one of these, it names the answer
+rather than a decision number.
 
 ## The assets
 
 | Asset | Where it lives | Who can read it on a normally configured server | Adversaries |
 | --- | --- | --- | --- |
+| The long term private key of this server | The key store, generated here and never transmitted anywhere in any form. M4 fixes the path and the format | The server process, and anything that can read that file as the user the server runs as | A5, A6 |
 | Per pairing key material | The key store, a file this plugin owns, deliberately outside the plugin configuration directory. M4 fixes the path and the format | The server process, and anything that can read that file as the user the server runs as | A2, A5, A6 |
-| The enrolment secret, while a window is open | In memory on both servers, in the operator's clipboard, and on two dashboard screens. Never on disk. Exists only under decision 1 shape A | The two administrators performing the enrolment, and anything reading either dashboard session | A1, A2, A4, A7 |
-| The user mapping table | Plugin state on each server. Whether it holds peer usernames or opaque identifiers is decision 4 | Administrators through the dashboard, and anything that can read the file it is stored in | A1, A3, A4, A5, A6 |
+| The peer's public key, while an enrolment window is open | In flight between the two servers, and on both dashboards as the fingerprint the two operators compare. It is not secret and never was, and what it needs is integrity rather than confidentiality | Anyone on the path, and both administrators | A2, A7 |
+| The user mapping table | Plugin state on each server. It holds opaque identifiers and a display cache, and no peer username as truth | Administrators through the dashboard, and anything that can read the file it is stored in | A1, A3, A4, A5, A6 |
 | The peer address and identity | Plugin state on each server, entered by an administrator | Administrators through the dashboard | A1, A3, A6 |
 | The audit trail | The server log directory. The fields are fixed by [what this plugin logs](logging.md) rather than restated here | Anyone who can read the server log, which in practice includes everyone who reads a forum thread an operator pasted it into | A5, A6 |
 
@@ -167,19 +169,26 @@ names either the mechanism that holds it or the milestone that owes one.
 
 ### A1, someone on the network path, passive
 
-Reach is every byte crossing between the two servers. Under decision 3 answered
-permissively, that is the whole pairing plane in the clear, including the
-mapping table as it is transferred and the peer's protocol version. It also
-includes the fact that a pairing exists between these two addresses and when it
-is used.
+Reach on an installation nobody has changed is that a pairing exists between
+these two addresses, and when it is used. TLS is required and the peer
+certificate is pinned at enrolment, so the bodies are not readable on the path
+and what is left over is traffic timing, which is out of scope.
 
-The limit is that no request this adversary observes can be replayed to useful
-effect once the replay defences of M3 land, and that observing a request does
-not yield the key that authenticated it, because the authentication is a
-signature over a canonical form rather than a bearer token in a header. Both
-halves are owed by M3 and neither is enforced today. Under decision 3 answered
-with required TLS and a pinned peer certificate, this adversary's reach collapses
-to traffic timing, which is out of scope.
+Reach where an operator has turned the transport requirement off is the whole
+pairing plane in the clear: the mapping table as it is transferred, the agreed
+protocol version, and every other field the protocol defines. That is a setting
+with a safe default rather than a second design, it has to name what it costs
+where the operator ticks it, and the shape it takes is issue #50. An operator who
+has not ticked it is in the paragraph above.
+
+The limit in both cases is that no request this adversary observes can be
+replayed to useful effect once the replay defences of M3 land, and that observing
+a request does not yield the key that authenticated it, because the
+authentication is a signature over a canonical form rather than a bearer token in
+a header. Both halves are owed by M3 and neither is enforced today. The transport
+requirement itself is owed by M3 as well and is not enforced today either, so the
+first paragraph above describes a design position rather than a measured
+property.
 
 ### A2, someone on the network path, active
 
@@ -190,11 +199,14 @@ adversary can present any pairing identifier and any body.
 The limit is that a forged request has to carry a signature over the canonical
 form, computed with a key this adversary does not have, and that a request
 failing verification never reaches the deserialiser. Both are owed by issue #20.
-Against enrolment specifically, the limit is decision 1: under shape A this
-adversary sees the enrolment traffic but not the transcribed code, and under
-shape B it can substitute its own public key and is caught only if the operator
-actually compares the fingerprint. That is the one place in this design where
-the mechanism is a person, and no test can prove a person read a screen.
+Against enrolment specifically, the limit is the fingerprint comparison. This
+adversary can substitute its own public key in either direction and there is no
+transcribed code it has to guess to do it, so what catches it is two
+administrators reading the fingerprints their own dashboards show and finding
+them different. That is the one place in this design where the mechanism is a
+person, and no test can prove a person read a screen. What the page can do is
+make the comparison hard to skip and hard to get wrong, which is the ceremony in
+issue #19 and the wording in issue #54.
 
 ### A3, the peer server, once compromised or once its operator turns hostile
 
@@ -222,10 +234,17 @@ thing operators will do, which makes this ordinary rather than exotic. What
 refuses it is how the page renders those strings, and that is issue #52. Nothing
 in the tree refuses it today.
 
-Revocation is the other half of the limit, and how much it achieves is decision
-5. If revocation stops the transfer but leaves what already moved, then a
-hostile peer keeps everything it received before it was caught, and this document
-will say so in those words once the decision is made.
+Revocation is the other half of the limit, and it is worth being exact about
+which way it runs. On the side that performs it, revocation deletes what came
+from the peer rather than stopping the transfer and leaving it in place. That
+deletion is not something this plugin performs itself: it happens in the sync
+plugin that stored the rows, which is why the consumer contract requires every
+synced row to carry its provenance, and that requirement is issue #57.
+
+It is not an undo in the other direction, and no wording should suggest that it
+is. Whatever this server sent to a hostile peer before it was caught is on that
+peer's disk, and nothing this plugin can send gets it back. What revocation
+bounds is the future, plus this side's copy of the past.
 
 ### A4, a signed in user on either server who is not an administrator
 
@@ -279,11 +298,13 @@ owed by issue #28.
 
 Reach while an enrolment window is open is larger, because the window is the one
 moment the plugin accepts something from a party it has not yet authenticated.
-The limit is that the window is small, single use and fail closed, which is
-issue #18, and that under decision 1 shape A the transcribed code is long enough
-that guessing it inside the window is not a strategy. How long is not settled
-here. Issue #16 pins the parameters, and a number written in this document
-instead would be the second copy that goes stale.
+There is no transcribed code to guess, because what the window accepts is a
+public key. So the limit is not the entropy of a secret: it is that the window is
+small, single use and fail closed, which is issue #18, and that a key arriving
+inside it still has to survive a comparison performed by two people. Guessing is
+replaced by grinding for a fingerprint collision, and the length that makes that
+useless is pinned in issue #16 along with the reason it is enough. A number
+written in this document instead would be the second copy that goes stale.
 
 ## The trust boundaries
 
@@ -386,8 +407,9 @@ encoding to anybody, which is issue #32, so holding one pairing's key does not
 lead to another's.
 
 It does not survive revocation. Revocation is unilateral, immediate and
-terminal, which is issue #24. What it does not undo is the data that already
-moved, and that is decision 5.
+terminal, which is issue #24, and on the side that performs it what came from the
+peer is deleted rather than left in place. What no revocation reaches is what
+this server already sent the other way, which is on the peer's disk.
 
 It does not reach the past. A captured request cannot be replayed outside a
 small timestamp window and cannot be replayed twice inside one, which is issue
@@ -434,8 +456,9 @@ administrator who wants to send their users' data to a server they control does
 not need this plugin's help, and no mechanism here would stop them.
 
 Traffic analysis. That two servers talk to each other, how often, and how much
-they send is visible to the network path under every answer to decision 3,
-including required TLS. This design does not attempt to hide it.
+they send stays visible to the network path with the required TLS in place. It is
+what is left when the bodies are not readable, and this design does not attempt
+to hide it.
 
 ## What this document does not yet do
 
