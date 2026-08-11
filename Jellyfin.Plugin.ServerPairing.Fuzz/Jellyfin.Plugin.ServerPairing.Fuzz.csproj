@@ -1,0 +1,48 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    The coverage-guided fuzz harness for the parse and validate path, issue #69.
+
+    It is deliberately absent from Jellyfin.Plugin.ServerPairing.sln, so `dotnet build`,
+    `dotnet test`, the mutation run and the packaging job never restore SharpFuzz and never
+    build this project. That is what keeps the packaged plugin free of it: the harness cannot
+    reach a package it is not built into. Building it is by path, which is what the fuzz
+    workflow does.
+
+    One target framework rather than the plugin's two. The code under test is the same
+    managed source on both server lines, the path this drives touches no host API, and a
+    second leg would double the run for inputs that reach identical IL. The plugin project
+    still multi-targets; this picks its net10.0 build.
+  -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <RootNamespace>Jellyfin.Plugin.ServerPairing.Fuzz</RootNamespace>
+    <AssemblyName>Jellyfin.Plugin.ServerPairing.Fuzz</AssemblyName>
+    <OutputType>Exe</OutputType>
+    <Nullable>enable</Nullable>
+    <IsPackable>false</IsPackable>
+    <IsPublishable>false</IsPublishable>
+    <!-- Nothing ships from here, so no public API is documented and CS1591 is not a gate.
+         The test project takes the same position for the same reason. -->
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+
+    <!-- The resolved graph is written to packages.lock.json and committed, so a change to
+         it arrives in a diff. Restore then runs locked here as it does for the two projects
+         in the solution. -->
+    <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
+    <RestoreLockedMode>true</RestoreLockedMode>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- SharpFuzz rewrites the target assembly to emit libFuzzer coverage feedback and drives
+         it from the managed side. The package itself compiles on any platform, so this project
+         builds on Windows; the `sharpfuzz` instrumentation command and the libFuzzer runtime
+         are Linux only, which is where the fuzzing runs and why the smoke mode below exists. -->
+    <PackageReference Include="SharpFuzz" Version="2.3.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../Jellyfin.Plugin.ServerPairing/Jellyfin.Plugin.ServerPairing.csproj" />
+  </ItemGroup>
+
+</Project>
