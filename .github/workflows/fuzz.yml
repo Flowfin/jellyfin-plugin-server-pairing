@@ -1,0 +1,205 @@
+# Coverage-guided fuzzing of the parse and validate path, issue #69.
+#
+# This plugin reads bytes another server chose. Three surfaces turn those bytes
+# into something with meaning and each one is a leg here: the message envelope,
+# the canonical form reconstruction, and the field decoder that turns a
+# peer-supplied address into a destination this server will send to. Examples
+# somebody thought of are the wrong instrument for that, which is why the suite
+# and this run answer different questions.
+#
+# NON-GATING BY CONSTRUCTION. There is no pull_request and no push trigger, so
+# this cannot report on a pull request head and cannot become a required check
+# by accident. A required context naming a job that never runs on a head would
+# hold every merge open, which is the failure #67 names.
+#
+# A crasher is a defect in the code under test. It is triaged, minimised and
+# repaired in the parser, never by widening a filter in the harness: a harness
+# that catches its own findings reports none. The run therefore archives every
+# reproducer and the corpus libFuzzer grew, and goes red when a reproducer
+# exists, as a notification rather than as a gate.
+#
+# What must also be red is a run that proved nothing. A broken instrumentation
+# step or a corpus that stopped being read would otherwise end green with no
+# work behind it, so the smoke step runs the seeds through the target before
+# libFuzzer is involved and has no continue-on-error, and the corpus upload sets
+# if-no-files-found: error.
+name: Fuzz the wire parser
+
+on:
+  schedule:
+    # Fridays. Offset from the scorecard (27 4 * * 1), the link check
+    # (41 3 * * 2), the mutation run (17 5 * * 3) and the code scan
+    # (24 2 * * 4), so no two scheduled runs contend for a runner.
+    - cron: "53 4 * * 5"
+  workflow_dispatch:
+    inputs:
+      max_total_time:
+        description: "Seconds libFuzzer runs per target."
+        required: false
+        default: "600"
+
+# Read-only. This reads the source, runs a harness over it and uploads
+# artifacts. It writes nothing to the repository, to a release or to the
+# security dashboard.
+permissions:
+  contents: read
+
+# A newer run on the same ref supersedes an in-flight one. This is analysis
+# rather than a publish, so cancelling a superseded run is safe.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  fuzz:
+    name: Fuzz the ${{ matrix.target }} surface
+    runs-on: ubuntu-latest
+    # Bounded below by -max_total_time, which is 600 seconds by default, plus
+    # the restore, the build, the clang compile and the instrumentation. The
+    # ceiling is per leg rather than for the matrix, so adding a target adds a
+    # parallel leg rather than time to this one. What would move it is a
+    # dispatch asking for a max_total_time near an hour.
+    timeout-minutes: 45
+    permissions:
+      contents: read
+    strategy:
+      # One leg finding a crasher is a finding. It must not cancel the others,
+      # which are asking different questions.
+      fail-fast: false
+      matrix:
+        target: [envelope, canonical, address]
+    env:
+      # The managed harness libFuzzer drives, and the plugin assembly SharpFuzz
+      # rewrites in place. The harness loads the instrumented copy out of its
+      # own output directory.
+      FUZZ_DLL: Jellyfin.Plugin.ServerPairing.Fuzz/bin/Release/net10.0/Jellyfin.Plugin.ServerPairing.Fuzz.dll
+      PLUGIN_DLL: Jellyfin.Plugin.ServerPairing.Fuzz/bin/Release/net10.0/Jellyfin.Plugin.ServerPairing.dll
+      # The native shim that hosts the runtime and bridges the managed entry
+      # point to libFuzzer, compiled from source at an immutable commit so the
+      # thing driving the run is the same thing every week.
+      LIBFUZZER_DOTNET_REF: c33d28305eba24261ce1945a39576e659f437b90
+      # The SharpFuzz command line version, which has to be the version the
+      # harness references. Instrumenting with one and running against another
+      # is the failure that looks like a fuzzer finding nothing.
+      SHARPFUZZ_VERSION: 2.3.0
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # No step here pushes over git, so the token is not persisted into
+          # .git/config where a later step could read it.
+          persist-credentials: false
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+        with:
+          # global.json pins the SDK, so no version is named here. A machine
+          # without it says which version was asked for instead of appearing to
+          # pass.
+          global-json-file: global.json
+          cache: true
+          cache-dependency-path: '**/packages.lock.json'
+
+      - name: Restore the harness
+        # By path. The harness is not in the solution, which is what keeps it
+        # out of every other job and out of the package. --locked-mode fails
+        # where the committed lock file would change, as it does everywhere
+        # else in this tree.
+        run: dotnet restore Jellyfin.Plugin.ServerPairing.Fuzz/Jellyfin.Plugin.ServerPairing.Fuzz.csproj --locked-mode
+
+      - name: Build the harness
+        run: dotnet build Jellyfin.Plugin.ServerPairing.Fuzz/Jellyfin.Plugin.ServerPairing.Fuzz.csproj -c Release --no-restore
+
+      - name: Drive the seeds without libFuzzer
+        # The wiring proof, and it runs before anything native is involved. It
+        # replays every seed through the selected target once and fails the job
+        # on a finding or on an empty corpus, so a leg that reaches libFuzzer
+        # has already been shown to read its seeds and drive the path.
+        env:
+          SERVERPAIRING_FUZZ_SMOKE: "1"
+          SERVERPAIRING_FUZZ_TARGET: ${{ matrix.target }}
+          TARGET: ${{ matrix.target }}
+        run: dotnet "$FUZZ_DLL" "Jellyfin.Plugin.ServerPairing.Fuzz/corpus/${TARGET}"
+
+      - name: Install clang
+        # -fsanitize=fuzzer pulls libFuzzer out of the clang runtime, so no
+        # separate libFuzzer package is needed.
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends clang
+
+      - name: Build the libFuzzer shim
+        env:
+          REF: ${{ env.LIBFUZZER_DOTNET_REF }}
+        run: |
+          curl -fsSL -o libfuzzer-dotnet.cc \
+            "https://raw.githubusercontent.com/Metalnem/libfuzzer-dotnet/${REF}/libfuzzer-dotnet.cc"
+          clang -O2 -fsanitize=fuzzer libfuzzer-dotnet.cc -o libfuzzer-dotnet
+
+      - name: Install the SharpFuzz command line
+        env:
+          VERSION: ${{ env.SHARPFUZZ_VERSION }}
+        run: |
+          dotnet tool install --global SharpFuzz.CommandLine --version "${VERSION}"
+          echo "$HOME/.dotnet/tools" >> "$GITHUB_PATH"
+
+      - name: Instrument the plugin assembly
+        run: sharpfuzz "$PLUGIN_DLL"
+
+      - name: Fuzz
+        # continue-on-error so a crasher, which exits non-zero, does not end the
+        # job before the archives are written. The report step below is what
+        # turns a real finding red.
+        continue-on-error: true
+        env:
+          TARGET: ${{ matrix.target }}
+          MAX_TOTAL_TIME: ${{ github.event.inputs.max_total_time }}
+          SERVERPAIRING_FUZZ_TARGET: ${{ matrix.target }}
+        run: |
+          duration="${MAX_TOTAL_TIME:-600}"
+          mkdir -p "findings/${TARGET}"
+          ./libfuzzer-dotnet \
+            -timeout=25 \
+            -max_total_time="${duration}" \
+            -print_final_stats=1 \
+            -artifact_prefix="findings/${TARGET}/" \
+            --target_path=dotnet \
+            --target_arg="${PWD}/${FUZZ_DLL}" \
+            "Jellyfin.Plugin.ServerPairing.Fuzz/corpus/${TARGET}"
+
+      - name: Archive the reproducers
+        # The reproducer is the finding. Upload always; a clean run writes none
+        # and that is the expected case rather than an error.
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: fuzz-crashers-${{ matrix.target }}
+          path: findings/${{ matrix.target }}/
+          if-no-files-found: ignore
+          retention-days: 90
+
+      - name: Archive the evolved corpus
+        # What libFuzzer grew this run. It reseeds the next one and it is the
+        # record of the coverage reached. if-no-files-found: error because an
+        # empty corpus here means the run read nothing, which is the green that
+        # proves nothing.
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: fuzz-corpus-${{ matrix.target }}
+          path: Jellyfin.Plugin.ServerPairing.Fuzz/corpus/${{ matrix.target }}/
+          if-no-files-found: error
+          retention-days: 90
+
+      - name: Report
+        env:
+          TARGET: ${{ matrix.target }}
+        run: |
+          if [ -n "$(find "findings/${TARGET}" -type f -print -quit 2>/dev/null)" ]; then
+            echo "::error::A reproducer was written on the '${TARGET}' surface. Download fuzz-crashers-${TARGET}, minimise it, and repair the parser. Do not change the harness to accept it."
+            {
+              echo "## Fuzz finding: ${TARGET}"
+              echo "libFuzzer wrote a reproducer to \`findings/${TARGET}/\`, archived as \`fuzz-crashers-${TARGET}\`."
+              echo "This run is a notification. It gates no merge."
+            } >> "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi
+          echo "No reproducer on the '${TARGET}' surface this run."

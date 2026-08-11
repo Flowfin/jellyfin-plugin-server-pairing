@@ -1,0 +1,3 @@
+# Seeds are exact bytes. Nothing here is normalised on the way into or out of git,
+# because a fuzz seed whose line endings moved is a different input.
+* -text -diff
