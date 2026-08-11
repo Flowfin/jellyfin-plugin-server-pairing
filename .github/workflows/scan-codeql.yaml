@@ -1,51 +1,104 @@
-name: '🔬 Run CodeQL'
+# Code scanning over this plugin's own C#.
+#
+# This workflow used to call jellyfin/jellyfin-meta-plugins/scan-codeql.yaml.
+# That analysis ran, but every setting on it lives in a repository nobody
+# here can change: the query pack, the severity threshold, and above all the
+# path filter. Its findings therefore included the generated sources under
+# obj/ and bin/, files that are not in this tree and that nobody reading the
+# report can edit. Writing the workflow here puts the configuration beside
+# the code it reads. The build and test calls have the same shape and are
+# recorded as #62; they are separate work.
+#
+# The push trigger skips documentation-only changes, because a push to master
+# gates nothing and the baseline simply stays at the previous analysis. The
+# pull request trigger is never filtered: a filter there does not make the
+# check red, it stops the check reporting at all, so a documentation-only
+# pull request would go out with no verdict on it. The filter for what the
+# analysis READS sits at the init step below.
+name: Code scanning
 
-# No path filter. The analysis is cheap enough to run on every change, and a
-# filtered workflow reports nothing at all on the changes it skips, which turns
-# into a merge that never completes on the day this context is required. #62
-# removed the same filter from the build and test workflows for that reason.
 on:
   push:
-    branches: [ master ]
+    branches: [master]
+    paths-ignore:
+      - "**/*.md"
   pull_request:
-    branches: [ master ]
+    branches: [master]
+  # A weekly run so a query pack that learns something new says so against a
+  # tree nobody has touched, rather than waiting for the next change.
   schedule:
-    - cron: '24 2 * * 4'
+    - cron: "43 3 * * 4"
   workflow_dispatch:
 
-# The called workflow declares no permissions of its own, so it runs with what
-# this file grants it. The default workflow permission on this repository is
-# read, and uploading the analysis needs security-events: write, so that scope
-# is granted on the job that needs it and the top level stays empty.
+# Nothing at workflow level; the job below asks for what it needs and no more.
 permissions: {}
 
+# A new push replaces the run under way. An analysis of a superseded tree says
+# nothing about the branch as it now stands.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
-  call:
+  analyze:
+    # This name is the check context. Changing it removes a context rather
+    # than renaming one, so it is changed only together with whatever
+    # requires it.
+    name: Code scanning (csharp)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
     permissions:
-      contents: read # check out the repository being analysed
-      security-events: write # upload the analysis into the code-scanning tab
-    # The called workflow gates its only job on this input matching the
-    # repository it is running in, so a name that is not this repository skips
-    # the analysis silently and still reports a check run.
-    #
-    # A literal here has gone stale twice, once when this repository stopped
-    # being the template and once when it changed owner, and both times the
-    # symptom was fifty-odd runs reporting a check named `call / Analyze` that
-    # analysed nothing. Passing the context makes the input the repository the
-    # run is in, by construction, so it cannot go stale again.
-    #
-    # What that gives up, stated rather than left to be discovered: the input
-    # exists so the shared workflow can decline to run in a repository it was
-    # not meant for, and `github.repository` satisfies it everywhere. A fork of
-    # this repository will now run the analysis on its own pushes instead of
-    # skipping it. That is the trade taken deliberately. This repository is not
-    # a fork of the template and has no case in which it wants code scanning to
-    # switch itself off quietly.
-    #
-    # Pinned to a commit rather than to a branch. The ref belongs to another
-    # organisation, and a branch is whatever it points at when the run starts,
-    # so a change there reaches this repository's analysis with no diff here.
-    # The trailing comment names the branch the commit was taken from.
-    uses: jellyfin/jellyfin-meta-plugins/.github/workflows/scan-codeql.yaml@eb99033a7ff644881b014bc0b4169916c854a68b # master
-    with:
-      repository-name: ${{ github.repository }}
+      contents: read
+      # The upload of the analysis, which is the whole output of this job.
+      security-events: write
+      # What the uploader reads to find the workflow run it reports against.
+      actions: read
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # Nothing here pushes, so the token is not kept in .git/config.
+          persist-credentials: false
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+        with:
+          # Both server lines the solution targets. global.json picks the
+          # 10.0 SDK from these; the 9.0 install carries the targeting pack.
+          dotnet-version: |
+            9.0.x
+            10.0.x
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@e4fba868fa4b1b91e1fdab776edc8cfbe6e9fb81 # v4.37.3
+        with:
+          languages: csharp
+          # The default pack finds security faults. This one adds the quality
+          # queries beside them, which is what the other plugins run, and
+          # comparing plugins is only meaningful if they run the same set.
+          queries: +security-and-quality
+          # Path filtering for the ANALYSIS. This block is the reason the
+          # workflow lives here: the shared workflow it replaces has no way
+          # to carry it. The generated sources under obj/ are not in the
+          # tree, and nobody can change them.
+          config: |
+            paths-ignore:
+              - "**/obj/**"
+              - "**/bin/**"
+
+      - name: Build what is scanned
+        # Built by name rather than by autobuild. Autobuild guesses, and a
+        # guess that quietly compiles less than the tree holds is an analysis
+        # of part of the source reported as an analysis of it. A build that
+        # fails stops the job instead of producing an analysis of whatever
+        # did compile.
+        run: |
+          set -euo pipefail
+          dotnet restore Jellyfin.Plugin.ServerPairing.sln
+          dotnet build Jellyfin.Plugin.ServerPairing.sln --configuration Release --no-restore
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@e4fba868fa4b1b91e1fdab776edc8cfbe6e9fb81 # v4.37.3
+        with:
+          category: "/language:csharp"
