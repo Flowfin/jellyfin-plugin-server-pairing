@@ -1,3 +1,4 @@
+using Jellyfin.Plugin.ServerPairing.Protocol;
 using MediaBrowser.Controller;
 using MediaBrowser.Controller.Plugins;
 using Microsoft.Extensions.DependencyInjection;
@@ -19,7 +20,9 @@ public class PluginServiceRegistrator : IPluginServiceRegistrator
     /// <inheritdoc />
     public void RegisterServices(IServiceCollection serviceCollection, IServerApplicationHost applicationHost)
     {
-        // This plugin adds no service yet. The registrations arrive with the types that
-        // need them, and they arrive here rather than in a static initialiser.
+        // The outbound side, once, with the handler the plugin runs against a real peer. It
+        // is registered here so that the client carrying the timeouts and the redirect
+        // refusal is the client every caller gets, rather than one each caller builds.
+        serviceCollection.AddSingleton(_ => new PeerChannel(PeerChannel.CreateHandler()));
     }
 }

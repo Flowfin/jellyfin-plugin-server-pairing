@@ -155,6 +155,41 @@ The peer address in `hello` is the address the sending server believes it is
 talking to. Comparing it against the address the local administrator entered is
 what holds a peer to the approved address, and that is issue #22.
 
+### The forms a peer address may take
+
+A list rather than a pattern. Everything outside these four forms is refused,
+including forms a permissive parser would accept, because the address decides
+where this server sends an authenticated request and a pattern that passes the
+examples somebody tried is not a decision anybody made.
+
+| Form | Accepted | Refused, and why |
+| --- | --- | --- |
+| domain name | `https://peer.example.org` | `https://peer.example.org/pairing`, a path. The plane owns its paths and appends them |
+| domain name and port | `https://peer.example.org:8920` | `https://peer.example.org:0`, not a port a peer listens on |
+| IPv4 literal | `https://192.0.2.10` | `https://operator@192.0.2.10`, a credential in front of the host |
+| bracketed IPv6 literal | `https://[2001:db8::10]:8920` | `https://2001:db8::10`, unbracketed, which no absolute URI parse reads as that address |
+
+A domain name is ASCII letters, digits, hyphens and the dots between labels. A
+name outside that is refused rather than converted, because two spellings that
+render alike and resolve differently are the mistake an operator cannot see on
+the page they approve it on.
+
+Two spellings of one address are one address: the default port, a trailing
+slash and the case of the host are all removed before two addresses are
+compared, so an administrator who typed `https://peer.example.org:443/` approved
+the same peer as one who typed `https://peer.example.org`.
+
+Plaintext is refused with no way round it today. Decision 3 in #1 allows an
+operator acknowledgement that would permit something else, and that
+acknowledgement is a setting with a safe default, a range and a refusal, which
+is issue #50 and does not exist yet. Until it does, `https` is the only scheme.
+
+Nothing on this plane follows a redirect. A `3xx` answer is refused where it
+arrives rather than followed, because following one sends an authenticated
+request to an address no administrator approved. Every response is read against
+the limit for its message type and the read stops one byte past it, so a peer
+that answers endlessly costs this server that limit and no more.
+
 ## What is authenticated, and over exactly which bytes
 
 Every pairing plane request carries five headers. They are custom headers rather
