@@ -159,6 +159,34 @@ What disable, uninstall and reinstall leave behind is issue #58, and reporting
 and removing what is held about one user is issue #60. Both are M8, and neither
 is answered by this document.
 
+## Changing a mapping does not move what already moved
+
+Remapping is not revocation and does not behave like it. An administrator who
+maps a local user to the wrong peer user, notices, and corrects the mapping has
+changed where the next transfer goes. Everything that already arrived under the
+old mapping is still on the local user it arrived on, and nothing about the
+correction touches it.
+
+That is the same asymmetry as the section above, one level down. Revocation ends
+a relationship and takes this side's copy of what came through it. Changing a
+mapping ends nothing, so there is no event under which a consumer could be told
+to remove anything, and there is no record of the old mapping for it to remove
+things by unless somebody kept one.
+
+The consequence for an operator is the part worth stating plainly, because it is
+the case where a correction reads like a repair and is not one. Data that landed
+on the wrong local user stays on that user until somebody removes it by hand,
+using whatever the sync plugin that wrote it offers. This plugin cannot do it and
+will not pretend to: it holds the mapping and the pairing, and the rows are
+somebody else's.
+
+The rules that decide when a mapping may change at all, including that a second
+mapping for either side is refused rather than replacing the first, are issue
+#37. Saying this consequence at the moment of remapping, on the page rather than
+in this document, is issue #40 for the surface and issue #54 for the wording.
+Neither exists, and until they do an operator meets this sentence only if they
+read this file.
+
 ## What this document does not do
 
 It does not list the fields of an `exchange`, for the reason given above.
