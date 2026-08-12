@@ -57,9 +57,27 @@ the sentence says so in those words.
 
 ## What exists today
 
-The tree holds a plugin skeleton and a test project. There is no pairing, no key
-store, no endpoint and no dashboard page. So no adversary described below is
-currently refused by anything, because there is nothing yet for them to reach.
+The tree holds a plugin skeleton, a test project and the protocol core: the
+state machine, the canonical form and its field limits, the freshness window
+with its nonce store, the key overlap, the peer address and the request
+authenticator.
+
+```
+git ls-tree -r --name-only origin/master -- Jellyfin.Plugin.ServerPairing/Protocol | wc -l
+25
+```
+
+There is still no pairing, no key store, no endpoint and no dashboard page:
+
+```
+git grep -l "ControllerBase" origin/master -- Jellyfin.Plugin.ServerPairing ; echo "exit=$?"
+exit=1
+```
+
+So no adversary described below is currently refused by anything, because
+nothing an adversary can send reaches any of those types. What landed is the
+specification expressed in code and proved against itself, which is a different
+statement from a mechanism standing between an attacker and this server.
 
 That is not a caveat on one section, it is the state of the whole document, and
 no later edit of this file turns it into a statement that any of this has been
