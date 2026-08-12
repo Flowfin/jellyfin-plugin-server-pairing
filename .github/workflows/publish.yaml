@@ -334,7 +334,34 @@ jobs:
         with:
           dotnet-target: "net9.0"
 
-      - name: Check both release inputs exist
+      - name: Read the package and write the component list beside it
+        env:
+          ARTIFACT: ${{ steps.jprm.outputs.artifact }}
+        # The same script the package check runs on every pull request, over the
+        # archive this run is about to publish. Two things come out of it: the
+        # refusal, when the archive holds an assembly build.yaml does not name, and
+        # the component list, read out of the archive rather than out of the project
+        # file. An operator installs the bytes in the archive, so the list an
+        # operator is given is generated from those bytes.
+        #
+        # The refusal is here rather than only on the pull request because this is
+        # the last moment before a package becomes something people have installed,
+        # and the pull-request run judged a package built from the branch rather than
+        # from the tag.
+        #
+        # Written beside the archive rather than in the workspace root, so the three
+        # release inputs share one directory. The upload below takes the common
+        # ancestor of its paths as the artifact root, and a file outside that
+        # directory moves the root, which would land the archive one directory deep
+        # for every later job that globs for it.
+        #
+        # .github/package-audit-test.sh is not run here. It watches the script refuse
+        # each thing it claims to refuse, and it runs in the package workflow on every
+        # pull request, so a release run repeating it would prove the same thing about
+        # the same bytes at the cost of the release path.
+        run: sh .github/package-audit.sh "$ARTIFACT" build.yaml "${ARTIFACT}.cdx.json"
+
+      - name: Check every release input exists
         env:
           ARTIFACT: ${{ steps.jprm.outputs.artifact }}
         # if-no-files-found on the upload below fires only when no pattern matches at
@@ -342,13 +369,13 @@ jobs:
         # release one asset short. Named here, one file at a time.
         run: |
           set -euo pipefail
-          for file in "${ARTIFACT}" "${ARTIFACT}.meta.json"; do
+          for file in "${ARTIFACT}" "${ARTIFACT}.meta.json" "${ARTIFACT}.cdx.json"; do
             if [ ! -f "${file}" ]; then
-              echo "::error::The packaging step did not produce ${file}. Both the archive and the metadata written beside it are release assets."
+              echo "::error::The build job did not produce ${file}. The archive, the metadata written beside it and the component list read out of it are all release assets."
               exit 1
             fi
           done
-          ls -l "${ARTIFACT}" "${ARTIFACT}.meta.json"
+          ls -l "${ARTIFACT}" "${ARTIFACT}.meta.json" "${ARTIFACT}.cdx.json"
 
       - name: Hand the package to the later jobs
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
@@ -356,12 +383,16 @@ jobs:
           name: build-artifact
           retention-days: 30
           if-no-files-found: error
-          # The archive and the metadata the packager writes beside it. The metadata
-          # travels with the release so a catalog can be built from the package that
-          # was actually shipped instead of from a file read back out of the tree.
+          # The archive, the metadata the packager writes beside it, and the component
+          # list read out of the archive. The metadata travels with the release so a
+          # catalog can be built from the package that was actually shipped instead of
+          # from a file read back out of the tree, and the component list travels with
+          # it so somebody deciding whether to install this can see what is inside
+          # without downloading and opening the archive.
           path: |
             ${{ steps.jprm.outputs.artifact }}
             ${{ steps.jprm.outputs.artifact }}.meta.json
+            ${{ steps.jprm.outputs.artifact }}.cdx.json
 
   attest:
     name: Attest build provenance
