@@ -186,6 +186,20 @@ internal static class MatchingCorpus
             PeerItem = Episode(1, 2, (Tvdb, "121361")),
             LocalCandidates = [Episode(1, null, (Tvdb, "999999"))],
             Expected = MatchOutcome.NoCandidate
+        },
+        new MatchingCase
+        {
+            Situation = "two local copies of one episode, one reached by its own identifier and one only through its series",
+            PeerItem = EpisodeCarrying((Tvdb, "7654321"), 2, 5, (Imdb, "tt0903747")),
+            LocalCandidates =
+            [
+                EpisodeCarrying((Tvdb, "7654321"), 2, 5, (Imdb, "tt0903747")),
+                Episode(2, 5, (Imdb, "tt0903747"))
+            ],
+            Expected = MatchOutcome.Matched,
+            ExpectedMatches = [0, 1],
+            ExpectedMatchedOn = MetadataProvider.Imdb.ToString(),
+            ExpectedMatchedThroughSeries = false
         }
     ];
 
