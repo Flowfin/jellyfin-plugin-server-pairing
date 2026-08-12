@@ -49,6 +49,24 @@ public class ItemMatcherTests
     }
 
     /// <summary>
+    /// A name that is absent, empty or nothing but whitespace is not a provider, so it
+    /// sits outside the order rather than at the top of it. The distinction is not
+    /// cosmetic: <c>Comparable</c> drops an entry whose precedence is below zero, so an
+    /// answer on the other side of zero would let a nameless key be compared as though it
+    /// were the highest-precedence provider in the list.
+    /// </summary>
+    /// <param name="providerName">The name to ask about.</param>
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData(" ")]
+    [InlineData("\t")]
+    public void ABlankProviderNameIsOutsideThePrecedenceOrder(string? providerName)
+    {
+        Assert.Equal(-1, MatchedProviders.PrecedenceOf(providerName));
+    }
+
+    /// <summary>
     /// Precedence is an order over identifiers, so the list has to have one. A duplicate
     /// entry would make the order undecidable for the provider that appears twice.
     /// </summary>
