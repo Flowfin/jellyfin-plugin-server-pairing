@@ -4,11 +4,31 @@ This document fixes the wire before any of it is built, so that the tests are
 derived from a specification rather than from an implementation, and so that
 somebody can disagree with the design without reading code.
 
-Nothing described here exists in the tree. There is no endpoint, no key store and
-no state machine, so every sentence below is a design position and none of it is
-a measured property of something that runs. Where a milestone owes a mechanism,
-the issue is named at the place the mechanism is described. No later edit of this
-file turns any of it into a statement that something has been checked.
+Part of what this document describes now exists in the tree, and the part that
+does not is what a reader has to be told about first. The types that hold the
+state machine, the canonical form, the field limits, the freshness window with
+its nonce store, the key overlap and the peer address are here:
+
+```
+git ls-tree -r --name-only origin/master -- Jellyfin.Plugin.ServerPairing/Protocol | wc -l
+25
+```
+
+Nothing reaches any of them from outside this server. There is no endpoint:
+
+```
+git grep -l "ControllerBase" origin/master -- Jellyfin.Plugin.ServerPairing ; echo "exit=$?"
+exit=1
+```
+
+and there is no key store, so no request has ever been signed by this plugin
+against a key it holds. Every sentence below about the wire is therefore still a
+design position rather than a measured property of something that runs, and the
+sentences about the state machine and the canonical form are the specification
+the landed types are checked against rather than a reading of them. Where a
+milestone owes a mechanism, the issue is named at the place the mechanism is
+described. No later edit of this file turns any of it into a statement that
+something has been checked.
 
 It is written under the answers in issue #1, and the four that shape it most are
 worth stating before the tables. Enrolment is static key pairs with a fingerprint

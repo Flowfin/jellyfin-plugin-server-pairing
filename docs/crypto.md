@@ -4,10 +4,28 @@ Every cryptographic choice this plugin makes is here. A later issue does not get
 to make one quietly, and where a number belongs to this document a second copy of
 it somewhere else is a defect rather than a convenience.
 
-Nothing described here is implemented. There is no key store, no enrolment and no
-signed request in this tree, so every line below is a choice recorded before the
-code rather than a reading of code that exists. One thing here is asserted by a
-test today and it is named where it is.
+Two of the choices below are implemented and the rest are not, which is a
+different sentence from the one this paragraph carried while none of them were.
+The message authentication and the fixed-time comparison are in the tree:
+
+```
+git grep -ln "HMACSHA256" origin/master -- Jellyfin.Plugin.ServerPairing
+origin/master:Jellyfin.Plugin.ServerPairing/Protocol/RequestAuthenticator.cs
+```
+
+The key pair, the agreement and the derivation are not. Nothing in either project
+calls them:
+
+```
+git grep -lE "HKDF|ECDiffieHellman|SubjectPublicKeyInfo" origin/master -- Jellyfin.Plugin.ServerPairing Jellyfin.Plugin.ServerPairing.Tests
+origin/master:Jellyfin.Plugin.ServerPairing/Protocol/KeyOverlap.cs
+```
+
+and the one file that matches names the derivation in a comment rather than
+calling it. There is still no key store and no enrolment, so no key described
+here has ever been derived, held or destroyed by this plugin. Every line below
+about those is a choice recorded before the code rather than a reading of code
+that exists.
 
 ## The rule this document exists to state
 
@@ -236,5 +254,16 @@ be looking.
 It does not describe how the key store holds any of this. That is M4, and issue
 #31 is where what protects it at rest, and what does not, is answered.
 
-Nothing here except the comparison rule is asserted by a test, because there is
-nothing yet to assert it against.
+Two things here are asserted by a test rather than one. The comparison rule is
+refused by `SecretComparisonTests`, and the tag length this document fixes is
+read out of this document by `PairingCredentialTests` and asserted against what
+the pairing plane accepts as a credential:
+
+```
+git grep -ln "crypto.md" origin/master -- Jellyfin.Plugin.ServerPairing.Tests
+origin/master:Jellyfin.Plugin.ServerPairing.Tests/Protocol/PairingCredentialTests.cs
+origin/master:Jellyfin.Plugin.ServerPairing.Tests/SecretComparisonTests.cs
+```
+
+The rest is not asserted anywhere, because there is nothing yet to assert it
+against.

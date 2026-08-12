@@ -25,30 +25,40 @@ the root reaches it rather than finding nothing and exiting 0. What belongs in
 that project, and which three kinds of test this repository refuses outright,
 is in [`docs/testing.md`](docs/testing.md).
 
-Both commands need the SDK that `global.json` pins. Run them from the repository
-root, where a machine that does not have that SDK says so instead of appearing
-to pass the gate:
+Both commands need an SDK that `global.json` accepts. What it pins comes with the
+command that prints it, because a version asserted in a sentence is the copy that
+goes stale while the file moves:
 
 ```
-dotnet --version
-A compatible .NET SDK was not found.
-
-Requested SDK version: 9.0.300
-global.json file: .../jellyfin-plugin-server-pairing/global.json
+cat global.json
+{
+  "sdk": {
+    "version": "10.0.100",
+    "rollForward": "latestFeature"
+  }
+}
 ```
 
-That refusal is a property of the working directory rather than of the projects.
-`global.json` is found by walking up from wherever the command is run, so the
-same solution built from a directory with no `global.json` above it uses
-whatever SDK is installed and never sees the pin:
+Run them from the repository root. `global.json` is found by walking up from
+wherever the command is run, so the same solution built from a directory with no
+`global.json` above it never sees the pin at all, and a machine whose SDK the pin
+would refuse would build there and appear to pass the gate.
+
+The refusal itself is a claim here rather than a measurement. On the machine this
+was written on the only installed SDK is 10.0.301, which `rollForward:
+latestFeature` accepts, so the pinned version cannot be made to refuse anything
+without removing an SDK:
 
 ```
-cd / && dotnet --version
+cd .../jellyfin-plugin-server-pairing && dotnet --version ; echo "exit=$?"
 10.0.301
+exit=0
 ```
 
-Both were run on a machine whose only installed SDK is 10.0.301. The first exits
-155 and the second exits 0.
+An earlier version of this passage pasted a refusal naming SDK 9.0.300, which is
+what `global.json` pinned before the plugin was multi-targeted. Neither the
+output nor the exit code reproduced at this commit, which is the reason the
+version is now read out of the file instead of quoted beside it.
 
 ## No change without an issue
 
