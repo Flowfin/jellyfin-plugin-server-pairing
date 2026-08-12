@@ -16,6 +16,12 @@ been walked against a real release. The last done condition of #79 is that the
 first one is performed against this list and that whatever turns out to be
 missing is added to it in the same change.
 
+How a release is actually published, what the publish run refuses on its own and
+what it produces, is [`RELEASING.md`](RELEASING.md). This list is what a person
+decides before pushing the tag; that document is what happens after. Nothing the
+publish run refuses by itself is restated here, because a rule written in two
+places is a rule that only moves in one of them.
+
 ## 1. The gate is green on the commit being released
 
 Not on an earlier one, and not on a branch head that has since moved. Take the
@@ -51,10 +57,23 @@ exactly why they are on this list. A finding from either is triaged before the
 release, not left pending, since a pending finding at release is a finding
 nobody has decided about.
 
-Decided by the mutation run in #68 and the fuzz run in #69. Neither exists, so
-this item is unmet for the first release. When they land, the dispatch is read
-from the workflow's own run history for the range since the previous release
-tag rather than from anyone's recollection.
+Both landed after this list was written, so this item is now read rather than
+recorded as unmet:
+
+    git ls-tree -r --name-only origin/master -- .github/workflows | grep -E 'stryker-mutation|fuzz'
+    .github/workflows/fuzz.yml
+    .github/workflows/stryker-mutation.yml
+
+The dispatch is read from each workflow's own run history over the range since
+the previous release tag, rather than from anyone's recollection:
+
+    gh run list --workflow=stryker-mutation.yml --limit 5
+    gh run list --workflow=fuzz.yml --limit 5
+
+Neither has a `pull_request` trigger, so neither reports on a change on its way
+in and a release is the moment somebody has to look. There is no previous
+release tag to bound the range with, so for the first release the range is the
+whole history of each workflow.
 
 ## 4. The changelog entry exists and marks any protocol or contract change
 
@@ -84,8 +103,25 @@ does not load.
     grep -n '<Version>\|<AssemblyVersion>\|<FileVersion>' Directory.Build.props
 
 Both currently read `0.0.0.0`, which is the unreleased value rather than an
-agreement worth anything. The check that refuses a disagreement is #71 and does
-not exist, so until it lands this item is two commands read by a person.
+agreement worth anything.
+
+The comparison is no longer only those two greps. A script that reads every
+manifest against the build it describes is in the tree:
+
+    git ls-tree -r --name-only origin/master -- .github/manifest-check.sh
+    .github/manifest-check.sh
+
+and nothing in a workflow runs it, so it is a command a person runs before
+cutting a release rather than a check that has already refused something on the
+way in:
+
+    git grep -l manifest-check origin/master -- .github/workflows ; echo "exit=$?"
+    exit=1
+
+    sh .github/manifest-check.sh
+
+Putting it in front of a package is #71, which is open. Until that lands, this
+item is the script above plus a reading of its output.
 
 Raising a `targetAbi` is the one change here that is not a reading. The floor is
 a promise to load on a server that old, and the only thing standing behind it is
@@ -107,9 +143,15 @@ document still describes the code, and pretending otherwise would put a tick
 next to the item on this list that most deserves attention.
 
 The threat model is [`docs/threat-model.md`](threat-model.md) and it is read in
-full against what the release actually does. The personal-data statement is #14
-and does not exist yet, so for the first release that half is read against the
-`description` field in `build.yaml` and recorded as the weaker thing it is.
+full against what the release actually does. The personal-data statement landed
+under #14 and is read the same way:
+
+    git ls-tree -r --name-only origin/master -- docs/data.md
+    docs/data.md
+
+Its own opening says nothing it describes has ever moved between two servers, so
+the reading before the first release is whether that is still the truthful
+sentence, rather than whether the field list matches an observed transfer.
 
 [`docs/logging.md`](logging.md) is read the same way, because what a release
 writes into a log is part of what it moves.
@@ -124,10 +166,15 @@ The operator guide is #75 and does not exist yet.
 
 ## What this list cannot decide
 
-Items 2, 3, 4 and 7 name work that has not landed, and item 6 names one
-document that has not been written. A release cut against this list today would
-meet items 1 and 5 and would record the rest as not run, which is the honest
-state and not a reason to tick them.
+Items 2, 4 and 7 name work that has not landed: the cross-version test in #59,
+the changelog in #76 and the operator guide in #75 are all open. A release cut
+against this list today would read items 1, 3, 5 and 6, and would record those
+three as not run, which is the honest state and not a reason to tick them.
+
+Items 3 and 6 were in that unmet list when this document was written and are not
+any more. Both moved because the thing they name landed, so the sentence that
+described them as absent had to move with it rather than be left to be
+discovered by whoever cuts the first release.
 
 Items 6 and 7 stay readings after everything else lands. They are on the list
 in that form deliberately, so that a person reads them before a release instead

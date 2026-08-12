@@ -120,8 +120,42 @@ Total tests: 9
 ```
 
 No display is attached to that image and no step in the job attaches one. What
-this shows is that the nine tests in the tree today run and pass there. It is
-not a statement about tests that do not exist yet: nothing in the suite yet
-exercises certificate pinning, the two-instance harness or the dashboard page,
-so none of the three replacements above has been carried out in code. Each
-arrives with the issue that builds the thing it replaces.
+this shows is that the nine tests in the tree at `d070084` ran and passed there.
+
+The suite has grown a long way past nine since, so read the count as a
+measurement of that run rather than of the tree:
+
+```
+git ls-files -- '*Tests*' | wc -l
+23
+```
+
+That is files rather than tests, and it is not the same measurement. What the
+job reports today is not re-read here, so the sentence above is a statement
+about `d070084` and about nothing later.
+
+None of that changes what the run shows about the runner, which is what this
+section is for.
+
+Of the three replacements above, one has been partly carried out and two have
+not. Nothing generates a certificate in memory and hands it to pinning code:
+
+```
+git grep -nE "CertificateRequest|X509" -- '*Tests*' ; echo "exit=$?"
+exit=1
+```
+
+The two-instance harness is #29, which is open, and there is nothing here that
+runs a full enrolment, a rotation and a revocation in one test process.
+
+The dashboard replacement has two halves and only the first of them exists. The
+page is read as text by `ConfigurationPageTests`, which refuses a reference to
+an external host in it, so that half is carried out. The controller-level tests
+for every endpoint behind the page have no controller to be about:
+
+```
+git grep -l "ControllerBase" -- Jellyfin.Plugin.ServerPairing ; echo "exit=$?"
+exit=1
+```
+
+Each of the rest arrives with the issue that builds the thing it replaces.
