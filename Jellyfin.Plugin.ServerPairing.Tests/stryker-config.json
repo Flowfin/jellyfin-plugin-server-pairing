@@ -3,7 +3,12 @@
     "project": "Jellyfin.Plugin.ServerPairing.csproj",
     "target-framework": "net9.0",
     "mutate": [
-      "Matching/*.cs"
+      "Matching/*.cs",
+      "Protocol/RequestAuthenticator.cs",
+      "Protocol/CanonicalForm.cs",
+      "Protocol/FieldShape.cs",
+      "Protocol/FreshnessWindow.cs",
+      "Protocol/PairingStateMachine.cs"
     ],
     "reporters": [
       "html",
