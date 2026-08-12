@@ -9,9 +9,20 @@
 # The scope is what exists. Issue #68 names four areas: the request
 # authenticator and its canonical form, the freshness check and the nonce store,
 # the pairing state machine's transition table, and the item matcher with its
-# precedence rules. Only the last one is in the tree, so the mutate list in
-# Jellyfin.Plugin.ServerPairing.Tests/stryker-config.json names it and nothing
-# else. Each of the other three joins that list with the change that adds it.
+# precedence rules. All four are now in the tree, and the mutate list in
+# Jellyfin.Plugin.ServerPairing.Tests/stryker-config.json names the files that
+# hold them and nothing else.
+#
+# FieldShape.cs is in that list and is not named by the issue in its own words.
+# It is the field-limit table the authenticator applies before it computes
+# anything, so a request refused for its shape is refused there rather than in
+# RequestAuthenticator.cs, and leaving it out would measure the authenticator
+# without the half of it that runs first.
+#
+# What is deliberately outside the list is as much a decision as what is in it.
+# KeyOverlap.cs, PeerAddress.cs, PeerChannel.cs and PairingRequest.cs are
+# protocol types this issue does not scope itself to, so they are not mutated and
+# their absence from a report is not evidence about them either way.
 #
 # The score is reported and never gated:
 #   - There is no pull_request trigger, so this workflow cannot run as a check on
@@ -57,12 +68,13 @@ concurrency:
 
 jobs:
   mutation:
-    name: Mutate the item matcher
+    name: Mutate the protocol core and the item matcher
     runs-on: ubuntu-latest
-    # The matcher is a few hundred lines and the suite it is measured against
-    # runs in under a second, so the real run is minutes. The limit is set well
+    # The scoped files are around a thousand lines and the suite they are
+    # measured against runs in about a second, so the real run is minutes: the
+    # widened scope took 00:01:31 on a developer machine. The limit is set well
     # above that so a run that hangs is killed rather than left, and so the
-    # limit is not the thing that has to move the first time the scope grows.
+    # limit is not the thing that has to move the next time the scope grows.
     timeout-minutes: 60
     steps:
       - name: Checkout code
