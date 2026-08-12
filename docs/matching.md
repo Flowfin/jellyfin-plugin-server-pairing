@@ -134,6 +134,13 @@ whether the two items were tied together by an identifier of the item itself or
 by its series plus two numbers, which are different strengths of evidence about
 the same claim.
 
+A match can name more than one candidate, and those candidates need not have
+arrived by the same route. The record says the series route where every named
+candidate came by it, so one candidate tied by an identifier of its own is
+enough for the answer to be no. It is a statement about the whole result rather
+than about any one member of it, and a caller that needs to know how a
+particular candidate was reached cannot read that off this record.
+
 ## Two local items with the same identifier
 
 A film held twice, in two qualities, is two items on the local server carrying
