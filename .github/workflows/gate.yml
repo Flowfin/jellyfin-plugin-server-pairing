@@ -1,0 +1,113 @@
+# The build and test job this repository owns, rather than a call into a shared
+# workflow it does not control.
+#
+# What it does that the shared calls do not:
+#
+#   - restores with --locked-mode on the command line, so a drifted lock file
+#     fails the restore rather than resolving quietly. Both projects also set
+#     RestoreLockedMode, and the switch is here as well so the property being
+#     dropped from a project file does not silently widen this job.
+#   - refuses a package carrying a known advisory, read out of the SDK's own
+#     listing by .github/vulnerable-check.sh, whose own cases run here too.
+#   - passes -warnaserror on the command line as well as inheriting
+#     TreatWarningsAsErrors from Directory.Build.props, for the same reason as
+#     the locked restore.
+#   - runs the tests once per target framework the plugin ships rather than once
+#     for whichever the SDK picks.
+#
+# What it does NOT do, and what has to happen elsewhere. This job is not in the
+# required set on the default branch, so it reports and blocks nothing:
+#
+#     gh api repos/Flowfin/jellyfin-plugin-server-pairing/rulesets/20464076 \
+#       --jq '[.rules[] | select(.type=="required_status_checks") | .parameters.required_status_checks[].context]'
+#     ["call / build","call / test","Reject Trojan Source Unicode"]
+#
+# The required set is a repository setting and no file in this tree reaches it,
+# which is issue #62's own last done condition. This job is the first step of the
+# order that issue records as the safe one: add the context and get it green,
+# require it, remove the shared calls, then unrequire their contexts. Removing
+# .github/workflows/build.yaml and .github/workflows/test.yaml before their two
+# contexts leave the required set would leave the default branch waiting for two
+# statuses nothing reports, which blocks every merge. So the shared calls stay
+# here and this job runs beside them.
+name: gate
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+    branches:
+      - master
+  workflow_dispatch:
+
+# Deny at the workflow level and grant on the job, so what this runs with is
+# written here rather than inherited from the repository's default workflow
+# permission, which is a repository setting no file in this tree can pin.
+permissions: {}
+
+concurrency:
+  group: gate-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # The listing this job refuses on is read by its words, so the language it is
+  # printed in is part of the check. Pinned here rather than assumed from the
+  # runner, because a runner whose locale moved would print sentences
+  # vulnerable-check.sh does not recognise. It refuses those rather than passing
+  # them, so the failure is loud, but the pin is what stops it happening.
+  DOTNET_CLI_UI_LANGUAGE: en
+  DOTNET_NOLOGO: "true"
+  DOTNET_CLI_TELEMETRY_OPTOUT: "true"
+
+jobs:
+  gate:
+    # The check context comes from this name, so renaming the job removes it
+    # from wherever it is relied on, including from a required set it is added
+    # to later. Change it deliberately or not at all.
+    name: Build and test
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read # check out the repository being built
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # No step pushes via git, so do not persist the GITHUB_TOKEN.
+          persist-credentials: false
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+        with:
+          # Two runtimes rather than one. The SDK global.json pins builds both
+          # target frameworks, and running the net9.0 tests needs the 9 runtime
+          # on the machine as well.
+          dotnet-version: |
+            9.0.x
+            10.0.x
+
+      - name: Restore, locked
+        run: dotnet restore Jellyfin.Plugin.ServerPairing.sln --locked-mode
+
+      - name: List what the graph carries, and refuse a known advisory
+        # The listing is written to a file rather than piped, so the step that
+        # judges it is separate from the step that produced it and a failure in
+        # either is readable on its own. The SDK exits 0 on a vulnerable graph,
+        # which is why the judgement is on the words.
+        run: |
+          dotnet list Jellyfin.Plugin.ServerPairing.sln package --vulnerable --include-transitive > vulnerable.txt
+          cat vulnerable.txt
+          sh .github/vulnerable-check.sh vulnerable.txt
+
+      - name: Prove the check still refuses what it claims to refuse
+        run: sh .github/vulnerable-check-test.sh
+
+      - name: Build, warnings as errors
+        run: dotnet build Jellyfin.Plugin.ServerPairing.sln --no-restore -c Release -warnaserror
+
+      - name: Test on net9.0
+        run: dotnet test Jellyfin.Plugin.ServerPairing.sln --no-build -c Release -f net9.0
+
+      - name: Test on net10.0
+        run: dotnet test Jellyfin.Plugin.ServerPairing.sln --no-build -c Release -f net10.0
