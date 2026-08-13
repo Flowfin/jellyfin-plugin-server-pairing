@@ -38,12 +38,27 @@ serialising them by hand is what keeps the release order readable.
 ## What the run produces
 
 The workflow builds the plugin from the tagged commit, creates the GitHub release
-for the tag, and attaches four files:
+for the tag, and attaches five files:
 
 - the plugin archive
 - the packaging metadata written beside it, `<archive>.zip.meta.json`
+- the component list read out of the archive, `<archive>.zip.cdx.json`
 - one `.md5` file, the checksum of the archive
 - one `.sha256` file for the same archive
+
+The component list is where to look for what is inside the archive without
+downloading and opening it. It is CycloneDX 1.6, one component per file in the
+archive with the SHA-256 of that file's bytes, and it is generated from the
+archive this run built rather than from the project file, so a file that arrived
+without anyone deciding to ship it is in the list. What it does not carry is a
+version or a package identity per component: reading those means reading
+assembly metadata out of a `.dll`, which needs a runtime the script that writes
+the list does not have.
+
+The same reading refuses the release, below, when the archive holds an assembly
+`build.yaml` does not name. It is the script `.github/package-audit.sh`, which
+the package check also runs on every pull request, so the list attached to a
+release and the list attached to a pull-request run come out of the same bytes.
 
 The `.md5` is the value a Jellyfin catalog serves as the plugin checksum. There is
 exactly one per release so that no generator can pair a checksum with the wrong
@@ -80,7 +95,12 @@ is gone and no catalog is fed until a manifest generator is added.
   cannot restore against a reviewed dependency graph. Create one with
   `dotnet restore <project> -p:RestorePackagesWithLockFile=true` and commit it.
 - The version stamped into the assembly is not the version in `build.yaml`.
-- The build produced no archive, or more than one, or no packaging metadata.
+- The archive holds an assembly that `build.yaml` does not name in its artefact
+  list, or it could not be read at all: an archive that will not extract, one
+  with no entries, one with no assembly in it, or a manifest with no artefact
+  list. Each of those is a reading that failed rather than a clean package.
+- The build produced no archive, or no packaging metadata, or no component list.
+- The build produced more than one archive.
 - A release already exists for the tag.
 
 All of these fail before anything is published.
