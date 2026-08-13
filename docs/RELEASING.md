@@ -12,7 +12,15 @@ name.
 
 ## Cutting a release
 
-1. Update `version` in `build.yaml` on the release branch and merge it.
+1. Write the entry first, then move the number, in one change on the release
+   branch, and merge it. The entry goes under a new `## X.Y.Z.W` heading in
+   [`../CHANGELOG.md`](../CHANGELOG.md), the same words go into the `changelog`
+   field of `build.yaml` and `build.net10.0.yaml`, and `version` in both
+   manifests and the three version fields in `Directory.Build.props` move to
+   match. A version raised in one commit and described in another leaves a
+   published version with no record of what it changed, and the record cannot be
+   reconstructed once the release is out. What each part of the number promises
+   is in [`versioning.md`](versioning.md).
 2. Check that the commit you want to release is on that branch.
 3. Push the tag for that commit:
 
