@@ -37,3 +37,9 @@ No release has been published from this repository, and nothing in the tree yet
 changes what an operator sees on a server that installs the plugin. The first
 release replaces this section with what it carries, and the `changelog` field in
 `build.yaml` and `build.net10.0.yaml` carries the same words.
+
+- [protocol] A refused request can now say that its nonce was already seen, or
+  that the pairing has no room to remember another one, instead of both arriving
+  as the one undistinguished refusal. Nothing implements either code yet, so a
+  server installed today answers exactly as it did before, and the line is here
+  because the specification of the wire moved.

@@ -8,7 +8,8 @@ namespace Jellyfin.Plugin.ServerPairing.Protocol;
 /// by a caller holding the pairing's key. That is what makes it safe for them to differ: the
 /// error taxonomy in <c>docs/protocol.md</c> allows a distinguishable code to a caller that
 /// already proved it holds the key, and allows none to anyone else. Which code each of these
-/// becomes on the wire is issue #28 and is not decided here.
+/// becomes on the wire is fixed by that taxonomy rather than here, and nothing in this tree
+/// performs the mapping, because there is no endpoint that would.
 /// </remarks>
 public enum FreshnessOutcome
 {
