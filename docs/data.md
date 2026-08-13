@@ -5,11 +5,14 @@ data. An operator should not have to work that out from the source, so it is
 written here.
 
 This is a statement about the design in [`protocol.md`](protocol.md), not about
-something running. There is no pairing, no key store and no endpoint in this
-tree, so nothing below has ever moved between two servers. Every field named here
-is a field the specification defines, and the milestone that owes the code is
-named where it matters. No later edit of this file turns any of it into a
-statement that a transfer was observed.
+something running. Nothing below has ever moved between two servers: there is no
+endpoint for a request to arrive at and no key store for one to be signed
+against, and what the tree does hold instead is in
+[what exists today](threat-model.md#what-exists-today) with the command for each
+half rather than counted a second time here. Every field named here is a field
+the specification defines, and the milestone that owes the code is named where it
+matters. No later edit of this file turns any of it into a statement that a
+transfer was observed.
 
 ## The list of fields that cross the wire
 

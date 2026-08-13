@@ -89,8 +89,8 @@ analysis.
 
 The threat model is also the place to check before reporting anything else. It
 says which mechanisms exist, which are owed by a milestone, and which are
-design positions with nothing behind them yet, and at the time of writing it
-opens by saying that none of the mechanisms it describes is enforced, because
-there is no pairing, no key store and no endpoint in the tree. A report that a
-mechanism named there does not refuse anything is a report that the tree already
-makes in words.
+design positions with nothing behind them yet:
+[what exists today](docs/threat-model.md#what-exists-today) carries that
+division, with the command behind each half, and it is not copied here so that
+there is no second version of it to go stale. A report that a mechanism named
+there does not refuse anything is a report that the tree already makes in words.
