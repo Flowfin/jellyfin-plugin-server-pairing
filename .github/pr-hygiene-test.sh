@@ -104,6 +104,16 @@ printf 'changed test\n' >"$tmp/test2.cs"
 test2_blob=$(blob_of "$tmp/test2.cs")
 printf 'entry\n' >"$tmp/changelog.md"
 changelog_blob=$(blob_of "$tmp/changelog.md")
+printf -- '- [protocol] Version 1 is no longer accepted.\n' >"$tmp/changelog-protocol.md"
+changelog_protocol_blob=$(blob_of "$tmp/changelog-protocol.md")
+printf -- '- [contract] The consumer contract gained a member.\n' >"$tmp/changelog-contract.md"
+changelog_contract_blob=$(blob_of "$tmp/changelog-contract.md")
+printf 'the wire\n' >"$tmp/protocol.md"
+protocol_blob=$(blob_of "$tmp/protocol.md")
+printf 'the contract\n' >"$tmp/consumer-interface.md"
+contract_blob=$(blob_of "$tmp/consumer-interface.md")
+printf 'canonical form\n' >"$tmp/canonical.cs"
+canonical_blob=$(blob_of "$tmp/canonical.cs")
 awk 'BEGIN { for (i = 0; i < 401; i++) print "a line that is long enough to count" }' >"$tmp/big.txt"
 big_blob=$(blob_of "$tmp/big.txt")
 
@@ -125,6 +135,49 @@ bumped_changelog_tree=$(printf '100644 blob %s\tCHANGELOG.md\n' "$changelog_blob
 big_tree=$(printf '100644 blob %s\tbig.txt\n' "$big_blob" |
     root_tree "$base_manifest" "$source_blob" "$test_blob")
 
+# The protocol and contract cases. A document under `docs/` and a file under the
+# plugin's `Protocol/` directory are the two arms of the protocol pattern, so
+# both are walked rather than one standing in for the other.
+docs_tree_of() {
+    printf '100644 blob %s\t%s\n' "$1" "$2" | git mktree
+}
+
+# The same root shape as root_tree, with the plugin subtree carrying one file
+# under Protocol/. Written out rather than folded into root_tree, which builds a
+# flat plugin subtree that every other fixture here depends on.
+protocol_source_root() {
+    inner=$(printf '100644 blob %s\tCanonicalForm.cs\n' "$canonical_blob" | git mktree)
+    plugin=$(printf '100644 blob %s\tPlugin.cs\n040000 tree %s\tProtocol\n' "$source_blob" "$inner" | git mktree)
+    tests=$(printf '100644 blob %s\tPluginTests.cs\n' "$test_blob" | git mktree)
+    {
+        printf '100644 blob %s\tbuild.yaml\n' "$base_manifest"
+        printf '040000 tree %s\tJellyfin.Plugin.ServerPairing\n' "$plugin"
+        printf '040000 tree %s\tJellyfin.Plugin.ServerPairing.Tests\n' "$tests"
+    } | git mktree
+}
+
+protocol_doc_tree=$(printf '040000 tree %s\tdocs\n' "$(docs_tree_of "$protocol_blob" protocol.md)" |
+    root_tree "$base_manifest" "$source_blob" "$test_blob")
+protocol_marked_tree=$({
+    printf '100644 blob %s\tCHANGELOG.md\n' "$changelog_protocol_blob"
+    printf '040000 tree %s\tdocs\n' "$(docs_tree_of "$protocol_blob" protocol.md)"
+} | root_tree "$base_manifest" "$source_blob" "$test_blob")
+protocol_unmarked_tree=$({
+    printf '100644 blob %s\tCHANGELOG.md\n' "$changelog_blob"
+    printf '040000 tree %s\tdocs\n' "$(docs_tree_of "$protocol_blob" protocol.md)"
+} | root_tree "$base_manifest" "$source_blob" "$test_blob")
+protocol_wrong_marker_tree=$({
+    printf '100644 blob %s\tCHANGELOG.md\n' "$changelog_contract_blob"
+    printf '040000 tree %s\tdocs\n' "$(docs_tree_of "$protocol_blob" protocol.md)"
+} | root_tree "$base_manifest" "$source_blob" "$test_blob")
+protocol_source_tree=$(protocol_source_root)
+contract_doc_tree=$(printf '040000 tree %s\tdocs\n' "$(docs_tree_of "$contract_blob" consumer-interface.md)" |
+    root_tree "$base_manifest" "$source_blob" "$test_blob")
+contract_marked_tree=$({
+    printf '100644 blob %s\tCHANGELOG.md\n' "$changelog_contract_blob"
+    printf '040000 tree %s\tdocs\n' "$(docs_tree_of "$contract_blob" consumer-interface.md)"
+} | root_tree "$base_manifest" "$source_blob" "$test_blob")
+
 good=$(commit_of "Change the plugin (#65)" "$base" "$both_tree")
 unreferenced=$(commit_of "Change the plugin" "$base" "$both_tree")
 bumped=$(commit_of "Bump the manifest version (#65)" "$base" "$bumped_tree")
@@ -132,6 +185,13 @@ bumped_entry=$(commit_of "Bump the manifest version (#65)" "$base" "$bumped_entr
 bumped_changelog=$(commit_of "Bump the manifest version (#65)" "$base" "$bumped_changelog_tree")
 big=$(commit_of "Add a large file (#65)" "$base" "$big_tree")
 source_only=$(commit_of "Change only the plugin source (#65)" "$base" "$source_only_tree")
+protocol_doc=$(commit_of "Change the protocol document (#76)" "$base" "$protocol_doc_tree")
+protocol_marked=$(commit_of "Change the protocol document (#76)" "$base" "$protocol_marked_tree")
+protocol_unmarked=$(commit_of "Change the protocol document (#76)" "$base" "$protocol_unmarked_tree")
+protocol_wrong_marker=$(commit_of "Change the protocol document (#76)" "$base" "$protocol_wrong_marker_tree")
+protocol_source=$(commit_of "Change the protocol source (#76)" "$base" "$protocol_source_tree")
+contract_doc=$(commit_of "Change the consumer contract (#76)" "$base" "$contract_doc_tree")
+contract_marked=$(commit_of "Change the consumer contract (#76)" "$base" "$contract_marked_tree")
 
 passes=0
 failures=0
@@ -187,6 +247,30 @@ expect "a manifest version change with a manifest changelog entry passes" \
 
 expect "a manifest version change with a CHANGELOG.md change passes" \
     0 "CHANGELOG.md changed with it" "Closes #65." User OWNER "$bumped_changelog"
+
+expect "a protocol document change with no changelog line is refused" \
+    1 "the protocol changed and CHANGELOG.md gained no [protocol] line" "Closes #76." User OWNER "$protocol_doc"
+
+expect "a protocol source change with no changelog line is refused" \
+    1 "the protocol changed and CHANGELOG.md gained no [protocol] line" "Closes #76." User OWNER "$protocol_source"
+
+expect "a protocol change with an unmarked changelog line is refused" \
+    1 "the protocol changed and CHANGELOG.md gained no [protocol] line" "Closes #76." User OWNER "$protocol_unmarked"
+
+expect "a protocol change carrying the other marker is refused" \
+    1 "the protocol changed and CHANGELOG.md gained no [protocol] line" "Closes #76." User OWNER "$protocol_wrong_marker"
+
+expect "a protocol change with a marked changelog line passes" \
+    0 "the protocol changed and CHANGELOG.md gained a [protocol] line" "Closes #76." User OWNER "$protocol_marked"
+
+expect "a contract change with no changelog line is refused" \
+    1 "the contract changed and CHANGELOG.md gained no [contract] line" "Closes #76." User OWNER "$contract_doc"
+
+expect "a contract change with a marked changelog line passes" \
+    0 "the contract changed and CHANGELOG.md gained a [contract] line" "Closes #76." User OWNER "$contract_marked"
+
+expect "a pull request touching neither says so" \
+    0 "nothing in this pull request changes the protocol" "Closes #65." User OWNER "$good"
 
 expect "a large diff annotates and does not fail" \
     0 "over the 400 that are comfortable to read" "Closes #65." User OWNER "$big"
