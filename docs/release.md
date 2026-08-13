@@ -81,18 +81,47 @@ A change to the wire protocol or to the consumer contract is the thing an
 operator on the other side of a pairing needs to see, so it is marked rather
 than left to be inferred from a list of commits.
 
-There is no changelog file in this repository:
+The changelog and the policy the version number follows are both in the tree:
 
-    ls CHANGELOG.md
-    ls: cannot access 'CHANGELOG.md': No such file or directory
+    git ls-tree -r --name-only origin/master -- CHANGELOG.md docs/versioning.md
+    CHANGELOG.md
+    docs/versioning.md
 
-`build.yaml` carries a `changelog` field, and it holds a placeholder rather
-than an entry:
+So this item is a reading of a file rather than a note about a missing one. What
+it asks: the version being released has a heading of its own, spelled the same
+way as `version` in `build.yaml`, and every line that changes what the two
+servers say to each other carries `[protocol]` while every line that changes the
+interface a consumer compiles against carries `[contract]`.
+[`../CHANGELOG.md`](../CHANGELOG.md) states that format at its own top and
+[`versioning.md`](versioning.md) says what each kind of change does to the
+number.
 
-    grep -n -A2 'changelog' build.yaml
+One leg of the hygiene check reads those two markers on the way in:
 
-The versioning policy and the changelog are #76, and where the changelog lives
-is settled there rather than here.
+    git grep -n 'marked_change' origin/master -- .github/pr-hygiene.sh
+    origin/master:.github/pr-hygiene.sh:190:marked_change() {
+    origin/master:.github/pr-hygiene.sh:213:marked_change protocol "$protocol_paths"
+    origin/master:.github/pr-hygiene.sh:214:marked_change contract "$contract_paths"
+
+It refuses a pull request that touches the protocol or the contract and adds no
+line carrying the marker for what it touched. That is a bound on what reaches
+the file, not a reading of the entry being released, and it is a weaker bound
+than it looks: `Pull request hygiene` is not in the required set read by item 1
+above, so the leg reports and does not stop a merge. The entry in front of a
+release is still read by a person.
+
+`build.yaml` carries a `changelog` field and it still holds the placeholder the
+first release replaces:
+
+    git show origin/master:build.yaml | grep -n -A2 'changelog'
+    28:changelog: >
+    29-  No release has been published from this repository yet. The first release
+    30-  replaces this entry with what it changed.
+
+`build.net10.0.yaml` carries the same field with the same words, and both take
+the entry from the changelog rather than a second wording.
+[`RELEASING.md`](RELEASING.md) fixes the order between writing the entry and
+moving the number, and that order is not restated here.
 
 ## 5. The manifest, the assembly version and the changelog agree
 
@@ -166,15 +195,15 @@ The operator guide is #75 and does not exist yet.
 
 ## What this list cannot decide
 
-Items 2, 4 and 7 name work that has not landed: the cross-version test in #59,
-the changelog in #76 and the operator guide in #75 are all open. A release cut
-against this list today would read items 1, 3, 5 and 6, and would record those
-three as not run, which is the honest state and not a reason to tick them.
+Items 2 and 7 name work that has not landed: the cross-version test in #59 and
+the operator guide in #75 are both open. A release cut against this list today
+would read items 1, 3, 4, 5 and 6, and would record those two as not run, which
+is the honest state and not a reason to tick them.
 
-Items 3 and 6 were in that unmet list when this document was written and are not
-any more. Both moved because the thing they name landed, so the sentence that
-described them as absent had to move with it rather than be left to be
-discovered by whoever cuts the first release.
+Items 3, 4 and 6 were in that unmet list when this document was written and are
+not any more. Each moved because the thing it names landed, so the sentence that
+described it as absent had to move with it rather than be left to be discovered
+by whoever cuts the first release.
 
 Items 6 and 7 stay readings after everything else lands. They are on the list
 in that form deliberately, so that a person reads them before a release instead
