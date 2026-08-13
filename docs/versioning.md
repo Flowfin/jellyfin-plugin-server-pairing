@@ -24,7 +24,8 @@ accepts.
 
 ## Where the plugin version is written
 
-Four places, and they say the same thing at every commit:
+Three files carrying five fields between them, and they say the same thing at
+every commit:
 
     grep -n '^version:' build.yaml build.net10.0.yaml
     build.yaml:9:version: "0.0.0.0"
@@ -149,8 +150,8 @@ marked lines carry the difference.
 
 The changelog entry and the version bump are one change, in this order: write
 the entry, copy it into the `changelog` field of both manifests, then raise the
-version in the four places above. [`RELEASING.md`](RELEASING.md) carries that as
-the first step of cutting a release.
+version in the five fields above. [`RELEASING.md`](RELEASING.md) carries that as
+the first step of cutting a release, and it names the same five.
 
 A version raised in one commit and described in another leaves a published
 version whose entry has to be reconstructed from a list of commits, which is the
