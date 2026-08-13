@@ -192,6 +192,84 @@ public class RequestAuthenticationTests
     }
 
     /// <summary>
+    /// A pairing the key source does not hold is judged against a key nobody outside this
+    /// process has, so a request signed under the empty key is refused.
+    /// </summary>
+    /// <remarks>
+    /// The neighbouring case above asserts that an unknown pairing and a bad signature are one
+    /// outcome, and it holds whether the absent pairing is answered with a drawn key or with
+    /// the empty span that arrived. This one does not. An empty key makes the tag a value any
+    /// caller can compute for a request of their choosing, so the absent-pairing branch would
+    /// be one a stranger can satisfy rather than one that costs the same as a present pairing.
+    /// </remarks>
+    [Fact]
+    public void AnAbsentPairingIsNotVerifiableUnderTheEmptyKey()
+    {
+        var request = Exchange();
+        var signedUnderNothing = RequestAuthenticator.Sign(request, ReadOnlySpan<byte>.Empty);
+
+        var knowsAnotherPairing = new RequestAuthenticator(
+            new KnownKeys("00000000000000000000000000000000", RandomNumberGenerator.GetBytes(32)));
+
+        Assert.Equal(VerificationOutcome.Refused, knowsAnotherPairing.Verify(request, signedUnderNothing));
+    }
+
+    /// <summary>
+    /// A signature that is well-formed base64 of the wrong length does not decode, asserted on
+    /// the decoder rather than through a verification.
+    /// </summary>
+    /// <remarks>
+    /// Reached through <see cref="RequestAuthenticator.Verify"/> the outcome is
+    /// <see cref="VerificationOutcome.Refused"/> whether the length is checked or not, because
+    /// a short tag fails the comparison anyway. The direct call is what separates the two, and
+    /// the length half of this method's summary is unproved without it.
+    /// </remarks>
+    /// <param name="presented">Base64 that decodes to fewer than the tag length.</param>
+    [Theory]
+    [InlineData("AAAA")]
+    [InlineData("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==")]
+    public void BaseSixtyFourOfTheWrongLengthDoesNotDecode(string presented)
+    {
+        Assert.False(RequestAuthenticator.TryDecodeSignature(presented, out _));
+    }
+
+    /// <summary>
+    /// The same decoder accepts base64 of exactly the tag length, which is the floor under the
+    /// two refusals above: without it they would pass against a decoder that refuses
+    /// everything.
+    /// </summary>
+    [Fact]
+    public void BaseSixtyFourOfTheTagLengthDecodes()
+    {
+        var tag = RandomNumberGenerator.GetBytes(RequestAuthenticator.SignatureLength);
+
+        Assert.True(RequestAuthenticator.TryDecodeSignature(Convert.ToBase64String(tag), out var decoded));
+        Assert.Equal(tag, decoded);
+    }
+
+    /// <summary>
+    /// Signing a request that fails its field limits throws rather than producing a tag over
+    /// what is left of it.
+    /// </summary>
+    /// <remarks>
+    /// The same table the verifier refuses is signed here, so the two sides of this type agree
+    /// about which requests exist. The message is asserted because it is the whole of what a
+    /// caller gets: the parameter name says which argument was wrong and nothing about why.
+    /// </remarks>
+    /// <param name="malformed">A request no signature can rescue.</param>
+    [Theory]
+    [MemberData(nameof(MalformedRequests))]
+    public void SigningAMalformedRequestThrowsRatherThanSigningWhatIsLeft(PairingRequest malformed)
+    {
+        var key = RandomNumberGenerator.GetBytes(32);
+
+        var thrown = Assert.Throws<ArgumentException>(() => RequestAuthenticator.Sign(malformed, key.AsSpan()));
+
+        Assert.Equal("request", thrown.ParamName);
+        Assert.Contains("covered field", thrown.Message, StringComparison.Ordinal);
+    }
+
+    /// <summary>
     /// A request missing a covered field is refused before a signature is computed over it,
     /// so no key is ever fetched for it. The key source counts its own calls.
     /// </summary>
