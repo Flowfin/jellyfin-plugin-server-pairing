@@ -43,3 +43,8 @@ release replaces this section with what it carries, and the `changelog` field in
   as the one undistinguished refusal. Nothing implements either code yet, so a
   server installed today answers exactly as it did before, and the line is here
   because the specification of the wire moved.
+- [protocol] An enrolment window now has bounds: it lasts ten minutes, it closes
+  the moment one peer key is accepted through it, and it closes after three
+  failed attempts. A peer that arrives late, twice, or after guessing is refused
+  in the one shape a stranger is always refused in. Nothing opens a window yet,
+  so a server installed today answers exactly as it did before.
