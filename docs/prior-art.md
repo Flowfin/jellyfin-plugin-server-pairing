@@ -184,38 +184,45 @@ that side doing anything.
 
 Not taken: the transitive part. Some device-enrolment systems let an already
 enrolled device vouch for a new one, so trust spreads without a human at each
-new edge. This plugin does not, because #9 in the decision list holds the scope
-at two servers and one operator pair, and an enrolment that can be delegated is
-an enrolment whose root is no longer the thing #19 makes it.
+new edge. This plugin does not, because decision 9 in #1 holds the scope at two
+servers and one operator pair, and an enrolment that can be delegated is an
+enrolment whose root is no longer the thing #19 makes it. Every other `#`
+reference in this file is an issue; that one was a decision number written the
+same way.
 
 ### A short authentication string compared by a human out of band
 
-Taken in part, and the part is fixed while the string is not. Whatever enrolment
-shape is chosen, an operator compares or transcribes something out of band, and
+Taken, and the string is fixed. It is a fingerprint of the two exchanged public
+keys, compared on both dashboards, rather than a code transcribed in one
+direction. That was the open half of decision 1 in #1 when this section was
+written, and the answer is stated where the protocol is specified rather than
+restated here:
+
+    git grep -n "Enrolment is static key pairs" origin/master -- docs/protocol.md
+    origin/master:docs/protocol.md:34:worth stating before the tables. Enrolment is static key pairs with a fingerprint
+
 #54 holds the wording and the readability of that comparison. The known failure
 mode is the one to design against rather than the cryptography: a human who
 clicks confirm without comparing, which is why #54 is about the wording and not
 only about the value.
 
-Not settled here: whether the string is a fingerprint of two exchanged public
-keys, compared on both dashboards, or a generated code transcribed in one
-direction. That is decision 1 in #1 and this document does not answer it.
-
-Not taken either way: a number of digits chosen for convenience. The length is a
-security parameter rather than a usability one, and #16 is where it is pinned
-with the rest of the cryptographic building blocks.
+Not taken: a number of digits chosen for convenience. The length is a security
+parameter rather than a usability one, and it is pinned with the rest of the
+cryptographic building blocks in [`crypto.md`](crypto.md), which also argues why
+a longer fingerprint is worse rather than safer.
 
 ### Static public keys exchanged with no certificate authority
 
-Not settled here. This is shape B of decision 1 in #1. What can be said without
-answering it is that no shape under consideration introduces a certificate
-authority or any third party, because there is none available to two servers run
-by two people, and that #16 pins whatever primitives the answer needs.
+Taken. This was shape B of decision 1 in #1 and it is the shape that was chosen,
+so the long term key pair and the exchanged public keys are what enrolment rests
+on. No certificate authority and no third party enters at any point, because
+there is none available to two servers run by two people, and the primitives are
+pinned in [`crypto.md`](crypto.md) rather than named here.
 
-Taken regardless of the shape: the peer is held to the address the operator
-approved rather than to whatever address later claims to be it, which is #22.
-That is the part of the no-authority design that does not depend on the key
-question, and it is the part the three prior projects have no equivalent of.
+Taken alongside it, and independent of the key question: the peer is held to the
+address the operator approved rather than to whatever address later claims to be
+it, which is #22. That is the part the three prior projects have no equivalent
+of.
 
 ### One-time codes that are single-use, short-lived and rate-limited
 
@@ -231,7 +238,20 @@ to prevent from the other end.
 
 ## What this document does not settle
 
-Decision 1 in #1 is open, so this document names the shapes under consideration
-and does not choose between them. Two of the four outside patterns above are
-recorded as taken with the part that depends on that decision marked as not
-settled, and neither is written as though the choice had been made.
+Nothing here chooses anything. Where a pattern above turns on a fork in the
+plan, the section names the fork and points at the document that carries the
+answer instead of restating it.
+
+Three passages in this file said decision 1 in #1 was open and named the two
+shapes without choosing. It was answered after they were written:
+
+    gh issue view 1 --repo Flowfin/jellyfin-plugin-server-pairing --json comments \
+      --jq '[.comments[] | select(.body | contains("## Decision 1:")) | .createdAt] | .[]'
+    2026-08-09T02:07:17Z
+
+so they now state the answer. None of them was wrong when it was written, which
+is the ordinary way a document here goes stale.
+
+What this document still does not do is read the three prior projects against
+what this plugin has since built. Every reading of them above is of their own
+documentation at a named blob, and none has been taken again.

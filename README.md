@@ -118,6 +118,19 @@ been no release.
 - [`docs/prior-art.md`](docs/prior-art.md), what the earlier attempts at this
   problem did and where each of them stops
 - [`docs/release.md`](docs/release.md), the checklist a release is cut against
+- [`docs/RELEASING.md`](docs/RELEASING.md), how a release is actually published
+  and what the run refuses on its own
+- [`docs/versioning.md`](docs/versioning.md), what each part of the version
+  number promises and how long a protocol version is accepted
+
+What changed in each released version is [`CHANGELOG.md`](CHANGELOG.md), which
+also states its own format and the two markers a consumer author scans for.
+
+That list is every document under `docs/`, and it is checkable rather than
+trusted:
+
+    git ls-files 'docs/*.md' | wc -l
+    12
 
 ## Contributing
 
