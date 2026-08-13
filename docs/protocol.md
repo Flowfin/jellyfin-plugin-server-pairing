@@ -312,6 +312,22 @@ is not persisted: a restart forgets it, and a request replayed across a restart
 inside 300 seconds is accepted. That is a real gap, it is named rather than left
 out, and issue #21 is where it is either closed or accepted with a reason.
 
+The store is bounded by count as well as by age, and this document said only the
+second until now. A pairing may hold 4096 remembered nonces at once, and a fresh
+request arriving with no room left is refused rather than remembered, because
+dropping a nonce that is still inside the window is the replay the store exists
+to refuse. All three numbers are constants of the landed type, and the two this
+paragraph adds are read out of it rather than asserted beside it:
+
+```
+git grep -n "const int RememberedSeconds\|const int NoncesPerPairing" -- Jellyfin.Plugin.ServerPairing/Protocol/FreshnessWindow.cs
+Jellyfin.Plugin.ServerPairing/Protocol/FreshnessWindow.cs:43:    public const int RememberedSeconds = 600;
+Jellyfin.Plugin.ServerPairing/Protocol/FreshnessWindow.cs:55:    public const int NoncesPerPairing = 4096;
+```
+
+What that refusal says on the wire is the taxonomy below. What the count should
+be is issue #21's along with the restart question, and it is not settled here.
+
 Both numbers are constants of the specification rather than secrets, so a caller
 learns nothing by discovering them that reading this document would not have
 told them. Issue #26 owns the clock injection that makes them testable and the
@@ -455,6 +471,8 @@ administrator opened deliberately.
 | `version` | No version in common | a caller inside an open enrolment window, or a caller holding a verifying key | Yes, to those callers only |
 | `state` | The signature verified and the message is not accepted in this state | only a caller holding a verifying key | Yes |
 | `malformed` | The signature verified and the body does not parse, or a field is outside its limit | only a caller holding a verifying key | Yes |
+| `replay` | The signature verified, the timestamp is inside the window, and this nonce has already been seen for this pairing | only a caller holding a verifying key | Yes |
+| `busy` | The signature verified, the request is fresh, and this pairing has no room left to remember another nonce | only a caller holding a verifying key | Yes |
 
 The single `refused` code is what makes probing useless. A caller naming a
 pairing that does not exist learns the same as one naming a pairing that does and
@@ -470,6 +488,35 @@ secret, so the same bit is available by reading. And the alternative costs an
 operator an evening debugging a signature error that is really a clock error, on
 two home servers one of which has no time source. The bit is only ever handed to
 a caller that already holds the key, because verification runs first.
+
+`replay` and `busy` are the last two rows of the table and the newest, and they
+were reached by the landed freshness window before this table had a code for
+either. Both are only ever seen by a caller that already verified, for the same
+reason `clock` is, and both hand over one bit this document states in the
+freshness section above rather than keeps: how long a nonce is remembered, and
+how many one pairing may hold at once.
+
+`replay` says the nonce arrived twice. Folding it into `refused` is defensible,
+because a caller replaying a request it captured learns nothing it did not
+already have. It is not taken, because this is the refusal an operator most needs
+told apart from a bad signature. A peer that resends has a retry loop or
+something recording between the two servers, and neither of those reads as a key
+problem to the person who has to find it.
+
+`busy` is the refusal that is not about the request. Everything in it was right,
+and this server refused it because a bound of its own was reached. Under one
+undistinguished code the peer is told what a stranger is told and the operator is
+told nothing, so a pairing that works stops working for a cause neither side can
+see, which is the failure the whole list is written against. `busy` says the
+bound was reached here. It is also the only code a caller can act on: the same
+request is accepted once the remembered span rolls, and sending it again
+immediately is not.
+
+The per-pairing rate limit issue #28 owes is a separate mechanism from that
+bound, and whether the two become one limit or two is that issue's to settle. Two
+independent limits on one plane sharing one code between them is the state to
+avoid, and naming the bound here is what makes the choice visible when the limit
+is built.
 
 `version` is the one code a caller can see without holding a key, and only
 because an enrolment window is open, which is a door an administrator opened on
