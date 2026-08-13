@@ -43,6 +43,25 @@ does to remove it. The wire it describes is specified in
 The fields themselves are not listed here. They are in the document that owns
 them, and a second copy in this file is the copy that would go stale.
 
+Ending a pairing removes what arrived from the other server, on the side that
+ends it. That is worth reading before pairing rather than afterwards, because
+what it does not reach is the half operators assume it does: whatever this
+server has already sent is sitting on the other machine, and nothing sent from
+here brings it back or deletes it there. The other operator ending the pairing
+on their side is what removes it, and they are as able to do that as you are.
+
+The removal on this side is not performed by this plugin. It holds the pairing
+and the mapping table; a sync plugin holds whatever it wrote from a transfer, so
+it is the one that deletes those rows when the pairing ends. That is a
+requirement this plugin's contract puts on every sync plugin built against it
+rather than a hope, and it is why every synced row has to record the pairing it
+arrived under. The longer version is in [`docs/data.md`](docs/data.md), which
+also says what it does not answer: what disabling or uninstalling the plugin
+leaves behind is not settled anywhere yet.
+
+Neither of those happens yet, for the same reason nothing in the next section
+does.
+
 ## Pairing
 
 Two administrators, one at each server, and a value each of them compares

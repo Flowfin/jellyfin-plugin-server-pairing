@@ -91,12 +91,18 @@ proves nothing about the check.
 
 ## What a pull request carries
 
-Three things are wrong often enough, and cheaply enough to detect, that they are
+Four things are wrong often enough, and cheaply enough to detect, that they are
 meant to stop a pull request rather than earn a note:
 
 - the body references the issue it belongs to, by number
 - every commit subject references an issue
 - a change to the version in the manifest comes with a changelog entry
+- a change to the wire protocol or to the consumer contract comes with a
+  changelog line marked `[protocol]` or `[contract]`, so the operator on the far
+  side of a pairing and the author of a plugin built on this one can each find
+  what affects them. [`CHANGELOG.md`](CHANGELOG.md) states the markers and
+  [`docs/versioning.md`](docs/versioning.md) states what each kind does to the
+  version number
 
 Three more belong in the body and are judged by a reader rather than by a
 machine:
@@ -116,7 +122,7 @@ A negative statement in a body stays negative through every later edit of that
 body. If a passage says something was not done, it is not rewritten later into
 saying it was.
 
-The first three are read by [`.github/pr-hygiene.sh`](.github/pr-hygiene.sh),
+The first four are read by [`.github/pr-hygiene.sh`](.github/pr-hygiene.sh),
 which the `pr-hygiene` workflow runs on every pull request and which you can run
 yourself before pushing:
 

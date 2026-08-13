@@ -166,6 +166,53 @@ else
     fail=1
 fi
 
+# Refuses: a change to the wire protocol or to the consumer contract arrives
+# with a changelog line marked as one. The version bump rule above catches what
+# a release changes; this catches it at the moment it is written, which is the
+# only moment anybody remembers which protocol version it was about.
+#
+# The two audiences are why the marker exists rather than the entry alone. An
+# operator on the far side of a pairing and an author of a plugin built on this
+# one both scan for their own kind, and neither reads a list of commits.
+# CHANGELOG.md states the markers and docs/versioning.md states what each kind
+# does to the version.
+#
+# Only added lines count. A line already in the file, or one being deleted,
+# says nothing about the change in front of it.
+#
+# The paths are declared here rather than derived, and two of the four do not
+# exist in the tree yet: the consumer contract is M6 and this is the guard
+# waiting for it. A contract that lands somewhere else walks past this, so the
+# issue that creates it moves this list in the same change.
+protocol_paths='^docs/protocol\.md$|^Jellyfin\.Plugin\.ServerPairing/Protocol/'
+contract_paths='^docs/consumer-interface\.md$|^Jellyfin\.Plugin\.ServerPairing/Contract/'
+
+marked_change() {
+    kind=$1
+    paths=$2
+
+    if ! printf '%s\n' "$changed" | grep -qE "$paths"; then
+        echo "ok    nothing in this pull request changes the ${kind}"
+        return
+    fi
+
+    if ! added=$(git diff --unified=0 "$from" "$HEAD_SHA" -- CHANGELOG.md); then
+        echo "::error::Could not read CHANGELOG.md between ${from} and ${HEAD_SHA}."
+        exit 1
+    fi
+
+    if printf '%s\n' "$added" | grep -q "^+.*\[${kind}\]"; then
+        echo "ok    the ${kind} changed and CHANGELOG.md gained a [${kind}] line"
+        return
+    fi
+
+    echo "FAIL  the ${kind} changed and CHANGELOG.md gained no [${kind}] line"
+    fail=1
+}
+
+marked_change protocol "$protocol_paths"
+marked_change contract "$contract_paths"
+
 # Annotates: a large diff. A legitimate change can be large.
 if ! numstat=$(git diff --numstat "$from" "$HEAD_SHA"); then
     echo "::error::Could not measure the diff between ${from} and ${HEAD_SHA}."

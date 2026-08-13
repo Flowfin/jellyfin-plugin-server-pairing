@@ -108,9 +108,9 @@ rather than a decision number.
 | Asset | Where it lives | Who can read it on a normally configured server | Adversaries |
 | --- | --- | --- | --- |
 | The long term private key of this server | The key store, generated here and never transmitted anywhere in any form. M4 fixes the path and the format | The server process, and anything that can read that file as the user the server runs as | A5, A6 |
-| Per pairing key material | The key store, a file this plugin owns, deliberately outside the plugin configuration directory. M4 fixes the path and the format | The server process, and anything that can read that file as the user the server runs as | A2, A5, A6 |
+| Per pairing key material | The key store, a file this plugin owns, deliberately outside the plugin configuration directory. M4 fixes the path and the format | The server process, and anything that can read that file as the user the server runs as | A2, A5, A6, A8 |
 | The peer's public key, while an enrolment window is open | In flight between the two servers, and on both dashboards as the fingerprint the two operators compare. It is not secret and never was, and what it needs is integrity rather than confidentiality | Anyone on the path, and both administrators | A2, A7 |
-| The user mapping table | Plugin state on each server. It holds opaque identifiers and a display cache, and no peer username as truth | Administrators through the dashboard, and anything that can read the file it is stored in | A1, A3, A4, A5, A6 |
+| The user mapping table | Plugin state on each server. It holds opaque identifiers and a display cache, and no peer username as truth | Administrators through the dashboard, and anything that can read the file it is stored in | A1, A3, A4, A5, A6, A8 |
 | The peer address and identity | Plugin state on each server, entered by an administrator | Administrators through the dashboard | A1, A3, A6 |
 | The audit trail | The server log directory. The fields are fixed by [what this plugin logs](logging.md) rather than restated here | Anyone who can read the server log, which in practice includes everyone who reads a forum thread an operator pasted it into | A5, A6 |
 
@@ -181,7 +181,7 @@ which is what most operators do, and that is the case adversary A6 covers.
 
 ## The adversaries
 
-Seven, each with a reach and a limit. The reach is what the adversary can do
+Eight, each with a reach and a limit. The reach is what the adversary can do
 without any further access. The limit is what they cannot do, and every limit
 names either the mechanism that holds it or the milestone that owes one.
 
@@ -351,6 +351,52 @@ useless is pinned in [`crypto.md`](crypto.md) along with the reason it is
 enough. A number
 written in this document instead would be the second copy that goes stale.
 
+### A8, a consumer plugin on this server, once compromised
+
+The sync plugins this one exists to carry are the consumers, and each of them is
+another plugin in the same process, loaded by the same server, running as the
+same user. This adversary is one of them after it has been taken over, whether
+by a release somebody replaced, by a dependency of its own, or by a defect in it
+that an attacker reached first.
+
+Reach through the contract is what the contract hands out, and no more than
+that: its own payloads, the pairings it was registered for, and the mappings an
+administrator made on those pairings. A consumer hands over a payload and a
+purpose and this plugin does the signing, the freshness and the transport, so it
+never holds key material, never names a destination, and cannot create, confirm
+or revoke a pairing, because those are operator actions. Another consumer's
+payloads are not its to read. The contract that says all of this is issue #43,
+and issue #45 owes the reflection test that keeps saying it as the contract
+grows.
+
+The limit is narrower than that list makes it sound, and what narrows it is the
+boundary rather than the contract. A consumer is not separated from this plugin
+by anything the runtime enforces, so a compromised one can read this process's
+memory, and per pairing key material is in that memory while a request is being
+signed. What the contract bounds is what a consumer obtains by asking. It does
+not bound what a plugin already inside the process takes without asking, and no
+list of members ever will.
+
+So the contract is worth having against a consumer that is careless rather than
+hostile, and against the day a consumer's own logs, crash dumps or state become
+somebody else's. Handing a credential to a second plugin would put the key in a
+second process's logs and a second author's care by construction, and not handing
+it over is the difference. That is a smaller claim than isolation and it is the
+one this design can carry.
+
+Nothing above is refused today. There is no contract and no document describing
+one:
+
+```
+git cat-file -e origin/master:docs/consumer-interface.md
+fatal: path 'docs/consumer-interface.md' does not exist in 'origin/master'
+```
+
+```
+git grep -lniE "IPairingConsumer|IServerPairingContract|RegisterConsumer" origin/master -- Jellyfin.Plugin.ServerPairing ; echo "exit=$?"
+exit=1
+```
+
 ## The trust boundaries
 
 Four, and each one is a place where something crosses from a party that is
@@ -374,7 +420,8 @@ plugin in the same process, so it is not separated from this one by anything the
 runtime enforces. The boundary is therefore a contract rather than a wall, and
 what makes it worth anything is that the contract cannot express key material at
 all. Issue #45 owes the proof that it cannot. Until then this boundary is an
-intention.
+intention. A8 is the adversary that crosses it, and it is where what a contract
+can and cannot hold against a plugin in this one's process is written out.
 
 Between the dashboard and the endpoints behind it. The dashboard is markup the
 server serves to a browser, so nothing it does is trusted and every check it
