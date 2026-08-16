@@ -28,7 +28,7 @@ and a field added there without a row here is a defect in this file.
 | `X-Pairing-Id` | The pairing identifier, a digest of the two servers' public keys | No. It is a digest of two public keys and names no person | In the pairing record on both sides, for the life of the pairing, and in the log, where [`logging.md`](logging.md) allows it by name |
 | `X-Pairing-Version` | The protocol version selected at enrolment | No | In the pairing record on both sides, for the life of the pairing |
 | `X-Pairing-Timestamp` | Seconds since the Unix epoch, for freshness | No | Nowhere. It is checked and dropped |
-| `X-Pairing-Nonce` | 16 random bytes, hex | No | In the nonce store for 600 seconds, in memory, per pairing |
+| `X-Pairing-Nonce` | 16 random bytes, hex | No | In the nonce store, in memory, per pairing, for the span [`protocol.md`](protocol.md) fixes and reads out of the constant that decides it |
 | `X-Pairing-Signature` | The signature over the canonical form | No | Nowhere. It is verified and dropped, and [`logging.md`](logging.md) forbids it in a log at any level |
 
 ### On every response
@@ -131,9 +131,10 @@ in [`threat-model.md`](threat-model.md).
 A pairing that both administrators built can be ended by either of them alone.
 Revocation is unilateral, immediate and terminal, which is issue #24.
 
-None of those five is enforced by anything in this tree today. The mechanism is a
-specification and the issues that owe the code, and this paragraph is the whole of
-that disclosure.
+None of those three is enforced by anything in this tree today, and neither is
+the reading of the transition table above them. The mechanism is a specification
+and the issues that owe the code, and this paragraph is the whole of that
+disclosure.
 
 ## Removing what moved
 
