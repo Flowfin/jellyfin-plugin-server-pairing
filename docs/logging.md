@@ -70,9 +70,25 @@ byte it is looking for, and it fails on any of them appearing anywhere in the
 captured output.
 
 That test does not exist. When this was written there was also no test project
-to put it in; one landed afterwards, in `87cee9c`, so the missing piece is now
-only the thing being logged. There is no enrolment, no rotation and no
-revocation to drive, so there is nothing for a capturing logger to capture.
+to put it in; one landed afterwards, in `87cee9c`.
+
+The reason given here after that was that there is no enrolment, no rotation and
+no revocation to drive. That is no longer the reason. A rotation and a revocation
+are both in the tree:
+
+    git grep -n "public RotationOutcome Rotate" origin/master -- Jellyfin.Plugin.ServerPairing/Protocol/KeyOverlap.cs
+    origin/master:Jellyfin.Plugin.ServerPairing/Protocol/KeyOverlap.cs:146:    public RotationOutcome Rotate(ReadOnlySpan<byte> replacement, DateTimeOffset at, DateTimeOffset supersededStopsAt)
+
+    git grep -n "AdministratorRevoked = " origin/master -- Jellyfin.Plugin.ServerPairing/Protocol/LocalEvent.cs
+    origin/master:Jellyfin.Plugin.ServerPairing/Protocol/LocalEvent.cs:31:    AdministratorRevoked = 3,
+
+What is missing is the logging itself. Nothing in the plugin takes a logger, so a
+capturing logger would be handed a run that writes nothing and would pass on an
+empty set, which is worse than having no test:
+
+    git grep -nE "ILogger|_logger" origin/master -- Jellyfin.Plugin.ServerPairing ; echo "exit=$?"
+    exit=1
+
 Until the test exists, both lists above are a design statement and nothing
 refuses a call site that violates them. This paragraph is the whole of that
 disclosure and no later edit of this file turns it into a statement that the

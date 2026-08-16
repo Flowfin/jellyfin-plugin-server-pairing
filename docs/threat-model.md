@@ -209,13 +209,28 @@ where the operator ticks it, and the shape it takes is issue #50. An operator wh
 has not ticked it is in the paragraph above.
 
 The limit in both cases is that no request this adversary observes can be
-replayed to useful effect once the replay defences of M3 land, and that observing
-a request does not yield the key that authenticated it, because the
-authentication is a signature over a canonical form rather than a bearer token in
-a header. Both halves are owed by M3 and neither is enforced today. The transport
-requirement itself is owed by M3 as well and is not enforced today either, so the
-first paragraph above describes a design position rather than a measured
-property.
+replayed to useful effect, and that observing a request does not yield the key
+that authenticated it, because the authentication is a signature over a canonical
+form rather than a bearer token in a header. Both halves have a type in the tree
+rather than being owed by a milestone:
+
+    git ls-tree -r --name-only origin/master -- Jellyfin.Plugin.ServerPairing/Protocol/FreshnessWindow.cs Jellyfin.Plugin.ServerPairing/Protocol/RequestAuthenticator.cs
+    Jellyfin.Plugin.ServerPairing/Protocol/FreshnessWindow.cs
+    Jellyfin.Plugin.ServerPairing/Protocol/RequestAuthenticator.cs
+
+The transport requirement has one too, and it holds it more tightly than the
+design finally will. Plaintext is refused outright, because the operator
+acknowledgement that would ever allow it is a setting that does not exist:
+
+    git grep -n "SchemeNotAllowed = " origin/master -- Jellyfin.Plugin.ServerPairing/Protocol/PeerAddressOutcome.cs
+    origin/master:Jellyfin.Plugin.ServerPairing/Protocol/PeerAddressOutcome.cs:37:    SchemeNotAllowed = 4,
+
+None of that is enforced against this adversary, and that has not changed.
+Nothing routes a request from outside this process to any of the three types,
+because there is no endpoint, so what they bound today is a caller the test
+project stands in for. The first paragraph above therefore still describes a
+design position rather than a measured property, and this sentence is meant to
+stay until something reaches those types from the network.
 
 ### A2, someone on the network path, active
 
@@ -225,7 +240,24 @@ adversary can present any pairing identifier and any body.
 
 The limit is that a forged request has to carry a signature over the canonical
 form, computed with a key this adversary does not have, and that a request
-failing verification never reaches the deserialiser. Both are owed by issue #20.
+failing verification never reaches the deserialiser. Both are in the tree, and
+the second is an ordering inside one method rather than a rule somebody has to
+remember at each call site:
+
+    git grep -n "public VerificationOutcome VerifyThenRead" origin/master -- Jellyfin.Plugin.ServerPairing/Protocol/RequestAuthenticator.cs
+    origin/master:Jellyfin.Plugin.ServerPairing/Protocol/RequestAuthenticator.cs:129:    public VerificationOutcome VerifyThenRead<T>(
+
+Two tests hold it, and the pair is what makes either worth anything. One counts
+the reader's calls at zero on a request that fails, the other counts them at one
+on a request that verifies, so a reader nobody ever calls fails the second
+instead of passing the first:
+
+    git grep -n "public void TheBodyIsNeverReadOnARequestThatFailsVerification\|public void TheBodyIsReadOnceOnARequestThatVerifies" origin/master -- Jellyfin.Plugin.ServerPairing.Tests/Protocol/RequestAuthenticationTests.cs
+    origin/master:Jellyfin.Plugin.ServerPairing.Tests/Protocol/RequestAuthenticationTests.cs:138:    public void TheBodyIsNeverReadOnARequestThatFailsVerification()
+    origin/master:Jellyfin.Plugin.ServerPairing.Tests/Protocol/RequestAuthenticationTests.cs:157:    public void TheBodyIsReadOnceOnARequestThatVerifies()
+
+Nothing hands this type a request from the network, for the reason under A1, so
+what it bounds today is a caller the test project stands in for.
 Against enrolment specifically, the limit is the fingerprint comparison. This
 adversary can substitute its own public key in either direction and there is no
 transcribed code it has to guess to do it, so what catches it is two
