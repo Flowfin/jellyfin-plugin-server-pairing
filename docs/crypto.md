@@ -18,11 +18,14 @@ calls them:
 
 ```
 git grep -lE "HKDF|ECDiffieHellman|SubjectPublicKeyInfo" origin/master -- Jellyfin.Plugin.ServerPairing Jellyfin.Plugin.ServerPairing.Tests
+origin/master:Jellyfin.Plugin.ServerPairing.Tests/Wording/CeremonyWordingTests.cs
 origin/master:Jellyfin.Plugin.ServerPairing/Protocol/KeyOverlap.cs
 ```
 
-and the one file that matches names the derivation in a comment rather than
-calling it. There is still no key store and no enrolment, so no key described
+and neither file calls any of them. The first is a list of words the ceremony
+wording may not use, where two of these names are there to be kept off an
+operator's screen, and the second names the derivation in a comment. There is
+still no key store and no enrolment, so no key described
 here has ever been derived, held or destroyed by this plugin. Every line below
 about those is a choice recorded before the code rather than a reading of code
 that exists.
@@ -267,15 +270,18 @@ looking for them.
 It does not describe how the key store holds any of this. That is M4, and issue
 #31 is where what protects it at rest, and what does not, is answered.
 
-Two things here are asserted by a test rather than one. The comparison rule is
-refused by `SecretComparisonTests`, and the tag length this document fixes is
-read out of this document by `PairingCredentialTests` and asserted against what
-the pairing plane accepts as a credential:
+Three things here are asserted by a test. The comparison rule is refused by
+`SecretComparisonTests`, the tag length this document fixes is read out of this
+document by `PairingCredentialTests` and asserted against what the pairing plane
+accepts as a credential, and the grouping this document pins as part of the
+construction is read by `CeremonyWordingTests`, which also refuses the names in
+this document appearing in a sentence an operator reads:
 
 ```
 git grep -ln "crypto.md" origin/master -- Jellyfin.Plugin.ServerPairing.Tests
 origin/master:Jellyfin.Plugin.ServerPairing.Tests/Protocol/PairingCredentialTests.cs
 origin/master:Jellyfin.Plugin.ServerPairing.Tests/SecretComparisonTests.cs
+origin/master:Jellyfin.Plugin.ServerPairing.Tests/Wording/CeremonyWordingTests.cs
 ```
 
 The rest is not asserted anywhere, because there is nothing yet to assert it
