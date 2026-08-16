@@ -135,22 +135,36 @@ Both currently read `0.0.0.0`, which is the unreleased value rather than an
 agreement worth anything.
 
 The comparison is no longer only those two greps. A script that reads every
-manifest against the build it describes is in the tree:
+manifest against the build it describes is in the tree, and a workflow runs it:
 
-    git ls-tree -r --name-only origin/master -- .github/manifest-check.sh
-    .github/manifest-check.sh
+    git grep -l manifest-check origin/master -- .github/workflows
+    .github/workflows/gate.yml
 
-and nothing in a workflow runs it, so it is a command a person runs before
-cutting a release rather than a check that has already refused something on the
-way in:
+It runs in the `Build and test` job on every pull request, ahead of the restore,
+because every value it reads comes out of a tracked file and needs no SDK. Its
+own cases run beside it in the same job, so a change that quietly stops it
+refusing anything reds that job rather than passing it.
 
-    git grep -l manifest-check origin/master -- .github/workflows ; echo "exit=$?"
-    exit=1
+That is a change of kind for this item and not only of wording. A manifest
+naming a framework the project does not build, a version the assembly does not
+carry, a floor above the package the build compiles at, or an identifier the
+source does not hold, is now refused on the way in rather than caught by
+somebody remembering to look. Whether the refusal stands in front of a merge is
+the required set, read by the command in item 1 rather than assumed here.
+
+Running it before a tag is still worth the second it costs, because the one
+comparison the job cannot make is the one a release most needs:
 
     sh .github/manifest-check.sh
+    ./build.net10.0.yaml: version 0.0.0.0, floor 12.0.0.0 on net10.0, 1 artefact(s)
+    ./build.yaml: version 0.0.0.0, floor 10.11.0.0 on net9.0, 1 artefact(s)
+    manifest-check: 10 comparison(s), 0 disagreement(s). The artefact list was not compared: no --output was given.
 
-Putting it in front of a package is #71, which is open. Until that lands, this
-item is the script above plus a reading of its output.
+The last line is the bound and the script prints it on every run. The artefact
+list is compared only against a build output, which that job does not produce,
+so a manifest naming an assembly the package does not hold walks past it there.
+Reading it here, against the output the release actually builds, is what covers
+that.
 
 Raising a `targetAbi` is the one change here that is not a reading. The floor is
 a promise to load on a server that old, and the only thing standing behind it is
