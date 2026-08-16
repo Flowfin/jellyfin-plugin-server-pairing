@@ -7,11 +7,12 @@ somebody can disagree with the design without reading code.
 Part of what this document describes now exists in the tree, and the part that
 does not is what a reader has to be told about first. The types that hold the
 state machine, the canonical form, the field limits, the freshness window with
-its nonce store, the key overlap and the peer address are here:
+its nonce store, the key overlap, the peer address, the enrolment window and
+the version negotiation are here:
 
 ```
 git ls-tree -r --name-only origin/master -- Jellyfin.Plugin.ServerPairing/Protocol | wc -l
-25
+34
 ```
 
 Nothing reaches any of them from outside this server. There is no endpoint:
@@ -565,8 +566,7 @@ origin/master:Jellyfin.Plugin.ServerPairing/Protocol/EnrolmentWindow.cs:58:    p
 origin/master:Jellyfin.Plugin.ServerPairing/Protocol/EnrolmentWindow.cs:69:    public const int FailuresAllowed = 3;
 ```
 
-Making the first of those a setting rather than a constant is issue #18 and is
-what that issue is still open on.
+Making the first of those a setting rather than a constant is issue #18.
 
 The cryptographic parameters. [`crypto.md`](crypto.md) holds them, and the three
 this document repeats are named at the top.
