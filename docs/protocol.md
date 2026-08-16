@@ -69,8 +69,9 @@ document. It is never a request from a browser and never a request from a
 consumer.
 
 An **enrolment window** is the bounded interval during which a server will accept
-a message from a party it has not yet authenticated. Issue #18 owes the window's
-bounds and its fail-closed behaviour.
+a message from a party it has not yet authenticated. Its bounds and its
+fail-closed edges are in the tree, in `EnrolmentWindow`, and the numbers are
+argued at each constant rather than restated here.
 
 ## Identity, and where a pairing identifier comes from
 
@@ -553,8 +554,19 @@ security decision about.
 
 The endpoint authorization table, issue #27.
 
-The bounds of the enrolment window, issue #18. This document names the state it
-puts the pairing in and what closes it; how long it lasts is that issue's.
+The bounds of the enrolment window. This document names the state it puts the
+pairing in and what closes it; how long it lasts, how many failures it takes and
+the longest lifetime a caller may ask for are constants on `EnrolmentWindow`:
+
+```
+git grep -nE "public const int (LifetimeSeconds|MaximumLifetimeSeconds|FailuresAllowed)" origin/master -- Jellyfin.Plugin.ServerPairing/Protocol/EnrolmentWindow.cs
+origin/master:Jellyfin.Plugin.ServerPairing/Protocol/EnrolmentWindow.cs:47:    public const int LifetimeSeconds = 600;
+origin/master:Jellyfin.Plugin.ServerPairing/Protocol/EnrolmentWindow.cs:58:    public const int MaximumLifetimeSeconds = 1800;
+origin/master:Jellyfin.Plugin.ServerPairing/Protocol/EnrolmentWindow.cs:69:    public const int FailuresAllowed = 3;
+```
+
+Making the first of those a setting rather than a constant is issue #18 and is
+what that issue is still open on.
 
 The cryptographic parameters. [`crypto.md`](crypto.md) holds them, and the three
 this document repeats are named at the top.
