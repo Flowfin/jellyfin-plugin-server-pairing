@@ -9,6 +9,14 @@
 #     dropped from a project file does not silently widen this job.
 #   - refuses a package carrying a known advisory, read out of the SDK's own
 #     listing by .github/vulnerable-check.sh, whose own cases run here too.
+#   - refuses a manifest that disagrees with the build it describes, by
+#     .github/manifest-check.sh, whose own cases run here too. It reads tracked
+#     files and needs no SDK, so it runs before the restore: a manifest naming a
+#     framework the project does not build, a version the assembly does not
+#     carry, a floor above the package the build compiles at, or an identifier
+#     the source does not hold, fails this job before anything is downloaded.
+#     The artefact list is the one comparison that needs a build output and it
+#     is not made here; the script says on every run that it was not made.
 #   - passes -warnaserror on the command line as well as inheriting
 #     TreatWarningsAsErrors from Directory.Build.props, for the same reason as
 #     the locked restore.
@@ -76,6 +84,15 @@ jobs:
         with:
           # No step pushes via git, so do not persist the GITHUB_TOKEN.
           persist-credentials: false
+
+      - name: Compare every manifest against the build it describes
+        # Before the restore rather than after the build, because every value it
+        # reads is in a tracked file and a disagreement caught here costs a
+        # checkout instead of a package that installs and does not load.
+        run: sh .github/manifest-check.sh
+
+      - name: Prove that check still refuses what it claims to refuse
+        run: sh .github/manifest-check-test.sh
 
       - name: Setup .NET
         uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
