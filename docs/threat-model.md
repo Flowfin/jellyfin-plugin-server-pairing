@@ -163,8 +163,31 @@ and that policy is the administrator role:
 
 So a key on the configuration object would be plaintext XML on the filesystem
 and would be readable by any administrator through an endpoint this plugin does
-not control and cannot refuse. Keeping key material off that object is what M4
-owes, and the assertion that makes it hold is the reflection test in issue #30.
+not control and cannot refuse. Nothing can put one there. The walk that refuses
+it reads the compiled type graph from the configuration object, through declared
+and inherited members at any depth, and refuses a member whose type is a run of
+bytes or comes from the cryptography namespace:
+
+    git grep -n "public void NoMemberReachableFromThePluginConfigurationCanHoldKeyMaterial" origin/master -- Jellyfin.Plugin.ServerPairing.Tests/ConfigurationKeyMaterialTests.cs
+    origin/master:Jellyfin.Plugin.ServerPairing.Tests/ConfigurationKeyMaterialTests.cs:68:    public void NoMemberReachableFromThePluginConfigurationCanHoldKeyMaterial()
+
+Two assertions stand under that one, because a walk that reached nothing and a
+configuration with nothing wrong on it produce the same empty result, and so
+does a refusal that has stopped refusing anything:
+
+    git grep -n "public void TheWalkReachesEverySettingOnTheConfiguration\|public void EveryShapeAKeyIsPassedAroundInIsRefused" origin/master -- Jellyfin.Plugin.ServerPairing.Tests/ConfigurationKeyMaterialTests.cs
+    origin/master:Jellyfin.Plugin.ServerPairing.Tests/ConfigurationKeyMaterialTests.cs:89:    public void TheWalkReachesEverySettingOnTheConfiguration()
+    origin/master:Jellyfin.Plugin.ServerPairing.Tests/ConfigurationKeyMaterialTests.cs:111:    public void EveryShapeAKeyIsPassedAroundInIsRefused()
+
+What that settles is one object and not the asset. It refuses key material
+reaching the thing the host serialises; it says nothing about how a key is held
+once there is somewhere to hold it, because there is no store:
+
+    git ls-tree -r --name-only origin/master -- Jellyfin.Plugin.ServerPairing/KeyStore docs/keystore.md ; echo "exit=$?"
+    exit=0
+
+Empty output, exit zero. The store, the path it lives at and what protects it at
+rest are what M4 still owes, in issues #30, #31 and #35.
 
 ### What the server's own backup does and does not take
 
@@ -352,9 +375,13 @@ section below.
 The limit is that the secret is per pairing, so it authorises one pairing and
 not the server, and that the log is not a place any of these secrets appears.
 The logging half is fixed by [what this plugin logs](logging.md), including the
-test that is owed to make the list hold rather than assert it. The config file
-half is issue #30. The backup half is measured above for the server's own backup
-service and is not true for a filesystem backup of the whole data directory.
+test that is owed to make the list hold rather than assert it. The plugin's own
+configuration file cannot be the config file in that sentence, for the reason
+under why the key store is not the plugin configuration above: nothing reachable
+from the object the host writes there can hold key material, and a test refuses
+it. Which file it can be instead is the key store's, and that is issue #30. The
+backup half is measured above for the server's own backup service and is not
+true for a filesystem backup of the whole data directory.
 
 ### A6, someone who can read the server filesystem, including a backup archive
 
