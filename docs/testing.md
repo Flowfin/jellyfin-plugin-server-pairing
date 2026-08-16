@@ -123,16 +123,19 @@ No display is attached to that image and no step in the job attaches one. What
 this shows is that the nine tests in the tree at `d070084` ran and passed there.
 
 The suite has grown a long way past nine since, so read the count as a
-measurement of that run rather than of the tree:
+measurement of that run rather than of the tree. Counted at `34766d0`, which is
+the commit this paragraph was last read at rather than whatever the reader has:
 
 ```
-git ls-files -- '*Tests*' | wc -l
-23
+git ls-tree -r --name-only 34766d0 | grep -c Tests
+25
 ```
 
-That is files rather than tests, and it is not the same measurement. What the
-job reports today is not re-read here, so the sentence above is a statement
-about `d070084` and about nothing later.
+That is files rather than tests, and it is not the same measurement. It also
+moves whenever a test file lands, so a reader finding a different number has
+found a later tree rather than an error, and the number that matters here is the
+nine. What the job reports today is not re-read here, so the sentence above is a
+statement about `d070084` and about nothing later.
 
 None of that changes what the run shows about the runner, which is what this
 section is for.

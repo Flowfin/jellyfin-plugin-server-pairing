@@ -80,7 +80,7 @@ protocol nobody has written yet.
 | What | Bytes | Where it is used |
 | --- | --- | --- |
 | A request nonce | 16 | Every pairing plane request, [`protocol.md`](protocol.md) |
-| An enrolment window token, where one is needed to name a window locally | 16 | Issue #18 |
+| An enrolment window token, if one is ever needed to name a window locally | 16 | Nothing. The landed window is named by the peer address an administrator entered and by nothing else |
 | Any other value this plugin has to be unable to predict | 16, and never fewer | wherever it arises |
 
 Sixteen bytes is 128 bits. The nonce has to be unique inside a window of a few
@@ -91,6 +91,18 @@ and using more would be a number nobody could justify when asked.
 There is no long-lived secret drawn from this generator, because there is no
 transcribed secret in this design at all. That follows from the enrolment answer
 in issue #1 and is the reason this table is as short as it is.
+
+The middle row is a length held for a value nothing draws. The window that landed
+holds no random bytes at all, because the identifier it would otherwise be named
+by does not exist while it is open:
+
+```
+git grep -n "held against the address an administrator entered" origin/master -- Jellyfin.Plugin.ServerPairing/Protocol/EnrolmentWindow.cs
+origin/master:Jellyfin.Plugin.ServerPairing/Protocol/EnrolmentWindow.cs:16:/// A window is held against the address an administrator entered and against nothing else,
+```
+
+The row stays because the length is what a token would have to be if one is ever
+wanted, and it says what it is rather than reading as a value in use.
 
 ## The long term key pair
 
@@ -217,8 +229,9 @@ network key is one a person actually reads.
 
 The grouping is part of the pinned construction rather than presentation, because
 a fingerprint shown as an unbroken run of characters is one people compare
-badly. What the page says around it is issue #54, and the comparison being
-performed at all is the one mechanism in this design that is a person.
+badly. The sentences said around it are in the tree, in `CeremonyWording`, and
+the page that would show them is issue #49. The comparison being performed at all
+is the one mechanism in this design that is a person.
 
 ## What is deliberately absent
 
@@ -247,9 +260,9 @@ truncated and a derived key is never shortened.
 ## What this document does not do
 
 It does not state the enrolment window's length, the timestamp window or the
-nonce lifetime. The first is issue #18 and the other two are in
-[`protocol.md`](protocol.md), which is where a reader implementing the wire will
-be looking.
+nonce lifetime. All three are constants in the protocol code, and
+[`protocol.md`](protocol.md) is where a reader implementing the wire will be
+looking for them.
 
 It does not describe how the key store holds any of this. That is M4, and issue
 #31 is where what protects it at rest, and what does not, is answered.

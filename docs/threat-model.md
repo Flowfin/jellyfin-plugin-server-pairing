@@ -59,12 +59,21 @@ the sentence says so in those words.
 
 The tree holds a plugin skeleton, a test project and the protocol core: the
 state machine, the canonical form and its field limits, the freshness window
-with its nonce store, the key overlap, the peer address and the request
-authenticator.
+with its nonce store, the key overlap, the peer address, the request
+authenticator and the enrolment window.
 
 ```
 git ls-tree -r --name-only origin/master -- Jellyfin.Plugin.ServerPairing/Protocol | wc -l
-25
+29
+```
+
+The sentences an operator would read during the comparison are in the tree as
+well, as text with nothing rendering it:
+
+```
+git ls-tree -r --name-only origin/master -- Jellyfin.Plugin.ServerPairing/Wording
+Jellyfin.Plugin.ServerPairing/Wording/CeremonyWording.cs
+Jellyfin.Plugin.ServerPairing/Wording/DestructiveWording.cs
 ```
 
 There is still no pairing, no key store, no endpoint and no dashboard page:
@@ -344,12 +353,30 @@ Reach while an enrolment window is open is larger, because the window is the one
 moment the plugin accepts something from a party it has not yet authenticated.
 There is no transcribed code to guess, because what the window accepts is a
 public key. So the limit is not the entropy of a secret: it is that the window is
-small, single use and fail closed, which is issue #18, and that a key arriving
-inside it still has to survive a comparison performed by two people. Guessing is
-replaced by grinding for a fingerprint collision, and the length that makes that
-useless is pinned in [`crypto.md`](crypto.md) along with the reason it is
-enough. A number
+small, single use and fail closed, and that a key arriving inside it still has to
+survive a comparison performed by two people. Guessing is replaced by grinding
+for a fingerprint collision, and the length that makes that useless is pinned in
+[`crypto.md`](crypto.md) along with the reason it is enough. A number
 written in this document instead would be the second copy that goes stale.
+
+Those three bounds are a landed type rather than a milestone that owes one, which
+is the rewrite this document asks for above at the point a mechanism arrives.
+`EnrolmentWindow` opens only on an administrator's event, closes on the first
+acceptance, closes on a timer, and stops answering after a small number of
+failures counted against the window rather than against a source address:
+
+```
+git grep -nE "public const int (LifetimeSeconds|MaximumLifetimeSeconds|FailuresAllowed)" origin/master -- Jellyfin.Plugin.ServerPairing/Protocol/EnrolmentWindow.cs
+origin/master:Jellyfin.Plugin.ServerPairing/Protocol/EnrolmentWindow.cs:47:    public const int LifetimeSeconds = 600;
+origin/master:Jellyfin.Plugin.ServerPairing/Protocol/EnrolmentWindow.cs:58:    public const int MaximumLifetimeSeconds = 1800;
+origin/master:Jellyfin.Plugin.ServerPairing/Protocol/EnrolmentWindow.cs:69:    public const int FailuresAllowed = 3;
+```
+
+The paragraph above this section still holds over it. Nothing routes a stranger's
+bytes to that type, so what it bounds today is a caller the test project stands
+in for. What issue #18 is still open on is the lifetime living in the
+configuration, where a value above the maximum is refused as the configuration is
+read rather than as the type is constructed.
 
 ### A8, a consumer plugin on this server, once compromised
 
