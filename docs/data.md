@@ -159,9 +159,55 @@ bytes are on the peer's disk and nothing this plugin can send gets them back.
 That is stated in [`threat-model.md`](threat-model.md) in the same words and it is
 not softened here.
 
-What disable, uninstall and reinstall leave behind is issue #58, and reporting
-and removing what is held about one user is issue #60. Both are M8, and neither
-is answered by this document.
+What disable, uninstall and reinstall leave behind is issue #58, which is M8 and
+is not answered by this document.
+
+## Reporting and removing what is held about one user
+
+The section above removes what moved through a pairing. An operator asked by one
+person in a household what is held about them, and to remove it, is asking a
+narrower question that crosses every pairing at once. Issue #60 owes the two
+administrative operations that answer it. Neither exists, and this section states
+what they cover so that the code obeys it rather than the scope being read back
+off the code afterwards.
+
+Nothing in this plugin holds a person's name. What the report covers, for one
+local user, on every pairing that user is mapped on, is what the sections above
+say is at rest here:
+
+- the mapping, which is one local user identifier and one opaque peer user
+  identifier
+- the cached peer display name beside it, said in the output to be a cache rather
+  than the peer user's name, because it is a copy that may be discarded at any
+  moment, nothing is decided from it, and it is never the identity a request is
+  authorised against
+- the pairing each mapping belongs to, by its identifier
+
+Counting the cache as data held about that user is the part that is easy to
+leave out. A report that lists the opaque identifier and omits the readable name
+beside it has left out the only field in the table that names a person.
+
+What the removal covers, once per pairing the user is mapped on:
+
+- the mapping and its display cache, both removed rather than marked
+- the consumer event that tells a sync plugin to delete what it stored under that
+  pairing for that user, which is the same direction revocation takes above and
+  is settled in issue #1
+- an audit entry, for the report as well as for the removal, because a report of
+  what is held about a person is itself an act worth being able to find later
+
+There is no operator choice at removal time and no confirmation offering to stop
+the transfer and leave the rows in place, for the reason the section above gives.
+
+What only the peer operator can do is the half this plugin cannot reach, and it
+is the same asymmetry as revocation, one level down from a pairing to a person. A
+mapping names a user on each side. Removing it here removes this server's half
+and asks the consumers on this server to delete what they wrote; what the peer
+server holds about that user, including whatever this server already sent under
+the mapping, stays on the peer's disk. Nothing in the specification asks a peer
+to delete on behalf of a person, and no operation this issue adds gets those
+bytes back. An operator answering the person in front of them is told that half
+plainly rather than being left to read a completed removal as a total one.
 
 ## Changing a mapping does not move what already moved
 
