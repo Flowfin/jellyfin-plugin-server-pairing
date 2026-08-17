@@ -12,9 +12,21 @@ the item is unmet rather than passed. Nothing on this list is satisfied by
 having been true at an earlier commit.
 
 No release has been published from this repository yet, so nothing below has
-been walked against a real release. The last done condition of #79 is that the
-first one is performed against this list and that whatever turns out to be
-missing is added to it in the same change.
+been walked against a real release. That is read rather than remembered:
+
+    gh api repos/Flowfin/jellyfin-plugin-server-pairing/releases --jq 'length'
+    0
+    git ls-remote --tags origin | wc -l
+    0
+
+The last done condition of #79 is that the first one is performed against this
+list and that whatever turns out to be missing is added to it in the same
+change.
+
+This is where that fact is read from. A document that has a reason to say it
+links here rather than carrying its own copy, because the day it stops being
+true is a day every copy has to move and only the copies somebody remembers
+will.
 
 How a release is actually published, what the publish run refuses on its own and
 what it produces, is [`RELEASING.md`](RELEASING.md). This list is what a person
