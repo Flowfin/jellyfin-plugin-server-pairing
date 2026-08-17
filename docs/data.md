@@ -59,7 +59,7 @@ and a field added there without a row here is a defect in this file.
 
 | Field | What it is | Personal data | Where it comes to rest |
 | --- | --- | --- | --- |
-| replacement public key | As the offered public key above | No | As the offered public key above. The superseded key is dropped when the overlap closes, which is issue #23 |
+| replacement public key | As the offered public key above | No | As the offered public key above. The superseded key is dropped when the overlap closes, which `KeyOverlap.CloseIfElapsed` does and issue #23 built |
 | the instant the old key stops verifying | A timestamp | No | In the pairing record until the overlap closes |
 
 ### In `revoke`
@@ -121,20 +121,42 @@ Three mechanisms hold the edges of that.
 
 An enrolment window is opened by an administrator against an address that
 administrator typed, and a `hello` is matched to a window by that address and by
-nothing else. Holding the peer to the approved address is issue #22.
+nothing else. Holding the peer to the approved address was issue #22, and the two
+types that decide it are in the tree:
+
+    git ls-tree -r --name-only origin/master -- Jellyfin.Plugin.ServerPairing/Protocol/PeerAddress.cs Jellyfin.Plugin.ServerPairing/Protocol/EnrolmentWindow.cs
+    Jellyfin.Plugin.ServerPairing/Protocol/EnrolmentWindow.cs
+    Jellyfin.Plugin.ServerPairing/Protocol/PeerAddress.cs
 
 The credential on the pairing plane is this plugin's own and is accepted by
 nothing else, so nothing that holds a Jellyfin credential can create a pairing.
-That is issue #11, and what a Jellyfin API key would otherwise reach is measured
-in [`threat-model.md`](threat-model.md).
+That was issue #11, what a Jellyfin API key would otherwise reach is measured in
+[`threat-model.md`](threat-model.md), and a host credential offered as the
+signing key is refused by a test rather than by intention:
+
+    git grep -n "public void AHostCredentialUsedAsTheSigningKeyIsRefused" origin/master -- Jellyfin.Plugin.ServerPairing.Tests
+    origin/master:Jellyfin.Plugin.ServerPairing.Tests/Protocol/PairingCredentialTests.cs:121:    public void AHostCredentialUsedAsTheSigningKeyIsRefused(string encoding)
 
 A pairing that both administrators built can be ended by either of them alone.
-Revocation is unilateral, immediate and terminal, which is issue #24.
+Revocation is unilateral, immediate and terminal, which is issue #24 and is the
+one of the three still open. The transition into `Revoked` is in the state
+machine and nothing destroys a key, because there is no key store to destroy one
+from, which is issue #30.
 
-None of those three is enforced by anything in this tree today, and neither is
-the reading of the transition table above them. The mechanism is a specification
-and the issues that owe the code, and this paragraph is the whole of that
-disclosure.
+None of the three reaches a request, and that is what this disclosure is about
+rather than which types exist. This paragraph used to say that all three were a
+specification and the issues that owed the code. Two of those issues have closed
+with types the suite exercises, so the attribution moved and the position did
+not. Nothing in this plugin answers a peer, so no
+window is consulted, no credential is checked and no revocation is applied on any
+path a request takes:
+
+    git grep -l "ControllerBase" origin/master -- Jellyfin.Plugin.ServerPairing ; echo "exit=$?"
+    exit=1
+
+Empty output, exit one. The reading of the transition table above them is a
+reading of a specification for the same reason, and the types named here are
+exercised by the suite rather than by a server.
 
 ## Removing what moved
 
@@ -159,9 +181,55 @@ bytes are on the peer's disk and nothing this plugin can send gets them back.
 That is stated in [`threat-model.md`](threat-model.md) in the same words and it is
 not softened here.
 
-What disable, uninstall and reinstall leave behind is issue #58, and reporting
-and removing what is held about one user is issue #60. Both are M8, and neither
-is answered by this document.
+What disable, uninstall and reinstall leave behind is issue #58, which is M8 and
+is not answered by this document.
+
+## Reporting and removing what is held about one user
+
+The section above removes what moved through a pairing. An operator asked by one
+person in a household what is held about them, and to remove it, is asking a
+narrower question that crosses every pairing at once. Issue #60 owes the two
+administrative operations that answer it. Neither exists, and this section states
+what they cover so that the code obeys it rather than the scope being read back
+off the code afterwards.
+
+Nothing in this plugin holds a person's name. What the report covers, for one
+local user, on every pairing that user is mapped on, is what the sections above
+say is at rest here:
+
+- the mapping, which is one local user identifier and one opaque peer user
+  identifier
+- the cached peer display name beside it, said in the output to be a cache rather
+  than the peer user's name, because it is a copy that may be discarded at any
+  moment, nothing is decided from it, and it is never the identity a request is
+  authorised against
+- the pairing each mapping belongs to, by its identifier
+
+Counting the cache as data held about that user is the part that is easy to
+leave out. A report that lists the opaque identifier and omits the readable name
+beside it has left out the only field in the table that names a person.
+
+What the removal covers, once per pairing the user is mapped on:
+
+- the mapping and its display cache, both removed rather than marked
+- the consumer event that tells a sync plugin to delete what it stored under that
+  pairing for that user, which is the same direction revocation takes above and
+  is settled in issue #1
+- an audit entry, for the report as well as for the removal, because a report of
+  what is held about a person is itself an act worth being able to find later
+
+There is no operator choice at removal time and no confirmation offering to stop
+the transfer and leave the rows in place, for the reason the section above gives.
+
+What only the peer operator can do is the half this plugin cannot reach, and it
+is the same asymmetry as revocation, one level down from a pairing to a person. A
+mapping names a user on each side. Removing it here removes this server's half
+and asks the consumers on this server to delete what they wrote; what the peer
+server holds about that user, including whatever this server already sent under
+the mapping, stays on the peer's disk. Nothing in the specification asks a peer
+to delete on behalf of a person, and no operation this issue adds gets those
+bytes back. An operator answering the person in front of them is told that half
+plainly rather than being left to read a completed removal as a total one.
 
 ## Changing a mapping does not move what already moved
 
