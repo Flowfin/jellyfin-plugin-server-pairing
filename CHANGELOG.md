@@ -48,3 +48,9 @@ release replaces this section with what it carries, and the `changelog` field in
   failed attempts. A peer that arrives late, twice, or after guessing is refused
   in the one shape a stranger is always refused in. Nothing opens a window yet,
   so a server installed today answers exactly as it did before.
+- [protocol] The versions this build speaks are now written down in one place,
+  and a pairing between two servers that speak different sets settles on the
+  highest version both of them have rather than on the oldest either of them
+  remembers. Two servers with no version in common are not paired at a version
+  one of them cannot speak. The set has one member today, so nothing an operator
+  can see changes, and nothing calls the selection yet.
