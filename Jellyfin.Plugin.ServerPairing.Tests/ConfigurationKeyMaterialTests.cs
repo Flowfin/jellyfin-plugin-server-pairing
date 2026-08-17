@@ -153,12 +153,9 @@ public class ConfigurationKeyMaterialTests
                 var memberPath = string.Concat(path, ".", name);
                 found.Add((memberPath, memberType));
 
-                foreach (var next in Inside(memberType))
+                foreach (var next in Inside(memberType).Where(WorthWalking))
                 {
-                    if (WorthWalking(next))
-                    {
-                        Visit(next, memberPath);
-                    }
+                    Visit(next, memberPath);
                 }
             }
         }

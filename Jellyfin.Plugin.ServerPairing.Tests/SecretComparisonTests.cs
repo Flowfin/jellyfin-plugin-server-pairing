@@ -290,12 +290,9 @@ public class SecretComparisonTests
         {
             var line = WithoutTextAndComments(lines[i]);
 
-            foreach (var operand in ComparedOperands(line))
+            foreach (var operand in ComparedOperands(line).Where(CarriesSecretMaterial))
             {
-                if (CarriesSecretMaterial(operand))
-                {
-                    found.Add(fileName + ":" + (i + 1).ToString(CultureInfo.InvariantCulture) + ": " + operand);
-                }
+                found.Add(fileName + ":" + (i + 1).ToString(CultureInfo.InvariantCulture) + ": " + operand);
             }
         }
 

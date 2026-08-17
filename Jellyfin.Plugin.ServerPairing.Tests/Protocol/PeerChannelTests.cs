@@ -228,9 +228,10 @@ public class PeerChannelTests
 
         // Not the framework defaults, which are what this assertion exists to tell it from.
         using var untouched = new HttpClient();
+        using var defaults = new SocketsHttpHandler();
         Assert.NotEqual(untouched.Timeout, channel.Timeout);
-        Assert.NotEqual(new SocketsHttpHandler().ConnectTimeout, channel.ConnectTimeoutInUse);
-        Assert.True(new SocketsHttpHandler().AllowAutoRedirect);
+        Assert.NotEqual(defaults.ConnectTimeout, channel.ConnectTimeoutInUse);
+        Assert.True(defaults.AllowAutoRedirect);
     }
 
     /// <summary>
@@ -349,8 +350,6 @@ public class PeerChannelTests
         private readonly HttpClient _mine = new HttpClient();
 
         public void Dispose() => _mine.Dispose();
-
-        public override string ToString() => _mine.ToString() ?? nameof(ASecondClient);
     }
 
     /// <summary>
