@@ -34,9 +34,12 @@ Anything else is an ordinary line with no marker.
 ## Unreleased
 
 No release has been published from this repository, and nothing in the tree yet
-changes what an operator sees on a server that installs the plugin. The first
-release replaces this section with what it carries, and the `changelog` field in
-`build.yaml` and `build.net10.0.yaml` carries the same words.
+changes what an operator sees on a server that installs the plugin. The command
+that reads the first half of that is in [`docs/release.md`](docs/release.md),
+which is where it is kept so that one place moves on the day it stops being
+true. The first release replaces this section with what it carries, and the
+`changelog` field in `build.yaml` and `build.net10.0.yaml` carries the same
+words.
 
 - [protocol] A refused request can now say that its nonce was already seen, or
   that the pairing has no room to remember another one, instead of both arriving
