@@ -433,9 +433,20 @@ origin/master:Jellyfin.Plugin.ServerPairing/Protocol/EnrolmentWindow.cs:69:    p
 
 The paragraph above this section still holds over it. Nothing routes a stranger's
 bytes to that type, so what it bounds today is a caller the test project stands
-in for. What issue #18 is still open on is the lifetime living in the
-configuration, where a value above the maximum is refused as the configuration is
-read rather than as the type is constructed.
+in for. Issue #18 is still open on two things rather than the one this paragraph
+used to name. The first is the lifetime living in the configuration, where a
+value above the maximum is refused as the configuration is read rather than as
+the type is constructed. The second is the operator being told while a window is
+open, which the type answers and nothing reads:
+
+```
+git grep -n "public IReadOnlyList<string> OpenAddresses" origin/master -- Jellyfin.Plugin.ServerPairing/Protocol/EnrolmentWindow.cs
+origin/master:Jellyfin.Plugin.ServerPairing/Protocol/EnrolmentWindow.cs:261:    public IReadOnlyList<string> OpenAddresses(DateTimeOffset at)
+```
+
+There is no page to render that and no endpoint to ask it, which matters to this
+adversary rather than only to the issue: a window an operator has forgotten is
+open is the window this one is waiting for.
 
 ### A8, a consumer plugin on this server, once compromised
 
@@ -593,10 +604,50 @@ It does not reach the past. A captured request cannot be replayed outside a
 small timestamp window and cannot be replayed twice inside one, which is issue
 #21.
 
-Every one of those six is owed by a milestone and none of them is enforced
-today. That is the state of the tree rather than a weakness of the model, and
-the model is written this way so that each sentence has somewhere to be proved
-when the code arrives.
+Four of those six have a type or a test in this tree and two do not, so a
+milestone owes the list in different amounts rather than owing all of it. The
+first names an issue that is closed, and the assertions that hold it sit beside
+the ones holding the second and the fifth:
+
+```
+git grep -n "public void AHostCredentialUsedAsTheSigningKeyIsRefused\|public void AKeyIsAcceptedOnlyForThePairingItBelongsTo\|public void AKeyThatStopsBeingLiveStopsVerifyingOnTheNextRequest" origin/master -- Jellyfin.Plugin.ServerPairing.Tests/Protocol/PairingCredentialTests.cs
+origin/master:Jellyfin.Plugin.ServerPairing.Tests/Protocol/PairingCredentialTests.cs:121:    public void AHostCredentialUsedAsTheSigningKeyIsRefused(string encoding)
+origin/master:Jellyfin.Plugin.ServerPairing.Tests/Protocol/PairingCredentialTests.cs:145:    public void AKeyIsAcceptedOnlyForThePairingItBelongsTo()
+origin/master:Jellyfin.Plugin.ServerPairing.Tests/Protocol/PairingCredentialTests.cs:173:    public void AKeyThatStopsBeingLiveStopsVerifyingOnTheNextRequest()
+```
+
+The sixth is a landed type as well, which separates a timestamp outside the
+window from a nonce already seen:
+
+```
+git grep -n "AlreadySeen = \|OutsideTheWindow = " origin/master -- Jellyfin.Plugin.ServerPairing/Protocol/FreshnessOutcome.cs
+origin/master:Jellyfin.Plugin.ServerPairing/Protocol/FreshnessOutcome.cs:33:    OutsideTheWindow = 2,
+origin/master:Jellyfin.Plugin.ServerPairing/Protocol/FreshnessOutcome.cs:38:    AlreadySeen = 3,
+```
+
+The third and the fourth are the two that are owed in full. One needs a mapping
+table and the other needs a key store, and the tree holds neither:
+
+```
+git ls-tree -r --name-only origin/master -- Jellyfin.Plugin.ServerPairing/KeyStore Jellyfin.Plugin.ServerPairing/Mapping ; echo "exit=$?"
+exit=0
+```
+
+Empty output, exit zero.
+
+None of that makes any of the six enforced, and this is the sentence that has to
+survive the correction rather than be softened by it. Nothing routes a request
+from outside this process to any of the landed types, because there is nothing
+to route it through:
+
+```
+git grep -l "ControllerBase" origin/master -- Jellyfin.Plugin.ServerPairing ; echo "exit=$?"
+exit=1
+```
+
+So what stands behind every one of the six today is a caller the test project
+stands in for, and the model is written this way so that each sentence has
+somewhere to be proved when the code arrives.
 
 ## The refusal path and the oracle question
 
