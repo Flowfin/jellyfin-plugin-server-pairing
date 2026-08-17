@@ -59,7 +59,7 @@ and a field added there without a row here is a defect in this file.
 
 | Field | What it is | Personal data | Where it comes to rest |
 | --- | --- | --- | --- |
-| replacement public key | As the offered public key above | No | As the offered public key above. The superseded key is dropped when the overlap closes, which is issue #23 |
+| replacement public key | As the offered public key above | No | As the offered public key above. The superseded key is dropped when the overlap closes, which `KeyOverlap.CloseIfElapsed` does and issue #23 built |
 | the instant the old key stops verifying | A timestamp | No | In the pairing record until the overlap closes |
 
 ### In `revoke`
@@ -121,20 +121,42 @@ Three mechanisms hold the edges of that.
 
 An enrolment window is opened by an administrator against an address that
 administrator typed, and a `hello` is matched to a window by that address and by
-nothing else. Holding the peer to the approved address is issue #22.
+nothing else. Holding the peer to the approved address was issue #22, and the two
+types that decide it are in the tree:
+
+    git ls-tree -r --name-only origin/master -- Jellyfin.Plugin.ServerPairing/Protocol/PeerAddress.cs Jellyfin.Plugin.ServerPairing/Protocol/EnrolmentWindow.cs
+    Jellyfin.Plugin.ServerPairing/Protocol/EnrolmentWindow.cs
+    Jellyfin.Plugin.ServerPairing/Protocol/PeerAddress.cs
 
 The credential on the pairing plane is this plugin's own and is accepted by
 nothing else, so nothing that holds a Jellyfin credential can create a pairing.
-That is issue #11, and what a Jellyfin API key would otherwise reach is measured
-in [`threat-model.md`](threat-model.md).
+That was issue #11, what a Jellyfin API key would otherwise reach is measured in
+[`threat-model.md`](threat-model.md), and a host credential offered as the
+signing key is refused by a test rather than by intention:
+
+    git grep -n "public void AHostCredentialUsedAsTheSigningKeyIsRefused" origin/master -- Jellyfin.Plugin.ServerPairing.Tests
+    origin/master:Jellyfin.Plugin.ServerPairing.Tests/Protocol/PairingCredentialTests.cs:121:    public void AHostCredentialUsedAsTheSigningKeyIsRefused(string encoding)
 
 A pairing that both administrators built can be ended by either of them alone.
-Revocation is unilateral, immediate and terminal, which is issue #24.
+Revocation is unilateral, immediate and terminal, which is issue #24 and is the
+one of the three still open. The transition into `Revoked` is in the state
+machine and nothing destroys a key, because there is no key store to destroy one
+from, which is issue #30.
 
-None of those three is enforced by anything in this tree today, and neither is
-the reading of the transition table above them. The mechanism is a specification
-and the issues that owe the code, and this paragraph is the whole of that
-disclosure.
+None of the three reaches a request, and that is what this disclosure is about
+rather than which types exist. This paragraph used to say that all three were a
+specification and the issues that owed the code. Two of those issues have closed
+with types the suite exercises, so the attribution moved and the position did
+not. Nothing in this plugin answers a peer, so no
+window is consulted, no credential is checked and no revocation is applied on any
+path a request takes:
+
+    git grep -l "ControllerBase" origin/master -- Jellyfin.Plugin.ServerPairing ; echo "exit=$?"
+    exit=1
+
+Empty output, exit one. The reading of the transition table above them is a
+reading of a specification for the same reason, and the types named here are
+exercised by the suite rather than by a server.
 
 ## Removing what moved
 
