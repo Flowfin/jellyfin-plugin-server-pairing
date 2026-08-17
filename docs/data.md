@@ -188,8 +188,15 @@ The rules that decide when a mapping may change at all, including that a second
 mapping for either side is refused rather than replacing the first, are issue
 #37. Saying this consequence at the moment of remapping, on the page rather than
 in this document, is issue #40 for the surface and issue #54 for the wording.
-Neither exists, and until they do an operator meets this sentence only if they
-read this file.
+The wording is written and is in the tree, saying what this section says:
+
+```
+git grep -n "public const string ChangeMapping" origin/master -- Jellyfin.Plugin.ServerPairing/Wording/DestructiveWording.cs
+origin/master:Jellyfin.Plugin.ServerPairing/Wording/DestructiveWording.cs:51:    public const string ChangeMapping =
+```
+
+The surface is not, and nothing renders that constant, so an operator still
+meets this sentence only if they read this file.
 
 ## What this document does not do
 
