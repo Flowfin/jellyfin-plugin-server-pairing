@@ -59,13 +59,19 @@ the sentence says so in those words.
 
 The tree holds a plugin skeleton, a test project and the protocol core: the
 state machine, the canonical form and its field limits, the freshness window
-with its nonce store, the key overlap, the peer address, the request
-authenticator and the enrolment window.
+with its nonce store, the key overlap, the peer address and the channel that
+holds a request to it, the request authenticator, the enrolment window and the
+version negotiation.
 
 ```
 git ls-tree -r --name-only origin/master -- Jellyfin.Plugin.ServerPairing/Protocol | wc -l
-29
+34
 ```
+
+That count rises whenever a file lands under that directory, so a reader who
+gets a larger number has a later tree rather than a wrong document. What goes
+stale here is the sentence above rather than the number: a part of the protocol
+core the list does not name is what a reader of this section would miss.
 
 The sentences an operator would read during the comparison are in the tree as
 well, as text with nothing rendering it:
@@ -197,10 +203,34 @@ plugins at either tag:
     git grep -il "plugin" v10.11.9 v12.0-rc3 -- Jellyfin.Server.Implementations/FullSystemBackup/BackupService.cs ; echo "exit=$?"
     exit=1
 
-What it does copy is the configuration directory, the root folder and named
-subdirectories of the data path:
+What it does copy is read out of the application paths that service names, at
+both tags, and the whole set is short enough to paste:
 
-    git grep -n "CopyDirectory(Path.Combine\|EnumerateFiles(_applicationPaths" v10.11.9 -- Jellyfin.Server.Implementations/FullSystemBackup/BackupService.cs
+    for t in v10.11.9 v12.0-rc3; do echo "-- $t --"; gh api \
+      "repos/jellyfin/jellyfin/contents/Jellyfin.Server.Implementations/FullSystemBackup/BackupService.cs?ref=$t" \
+      --jq '.content' | tr -d '\n' | base64 -d \
+      | grep -oE '_applicationPaths\.[A-Za-z]+' | sort -u; done
+    -- v10.11.9 --
+    _applicationPaths.BackupPath
+    _applicationPaths.ConfigurationDirectoryPath
+    _applicationPaths.DataPath
+    _applicationPaths.DefaultInternalMetadataPath
+    _applicationPaths.InternalMetadataPath
+    _applicationPaths.RootFolderPath
+    -- v12.0-rc3 --
+    _applicationPaths.BackupPath
+    _applicationPaths.ConfigurationDirectoryPath
+    _applicationPaths.DataPath
+    _applicationPaths.DefaultInternalMetadataPath
+    _applicationPaths.InternalMetadataPath
+    _applicationPaths.RootFolderPath
+
+So the backup reaches the configuration directory, the root folder and named
+subdirectories of the data path, and `PluginsPath` appears at neither tag. The
+sentence that stood here said as much and pasted nothing under the command it
+rested on, which made it the one block in this document a reader could not check
+against an output, and the command it named was run at one tag where the claim
+is made about two.
 
 The plugin configuration directory sits under the plugins path rather than the
 configuration directory, shown by the two commands in the previous section, so
