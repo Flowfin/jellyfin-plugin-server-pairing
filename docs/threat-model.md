@@ -318,7 +318,15 @@ administrators reading the fingerprints their own dashboards show and finding
 them different. That is the one place in this design where the mechanism is a
 person, and no test can prove a person read a screen. What the page can do is
 make the comparison hard to skip and hard to get wrong, which is the ceremony in
-issue #19 and the wording in issue #54.
+issue #19. The wording it would show is written and is in the tree rather than
+owed by issue #54:
+
+    git grep -n "public const string TheComparisonIsTheTrust" origin/master -- Jellyfin.Plugin.ServerPairing/Wording/CeremonyWording.cs
+    origin/master:Jellyfin.Plugin.ServerPairing/Wording/CeremonyWording.cs:60:    public const string TheComparisonIsTheTrust =
+
+What that issue is still open on is the markup half, the fingerprint read as
+eight groups by a screen reader and no state signalled by colour alone. Both of
+those are properties of a page, and there is none.
 
 #### What an operator who confirms without comparing loses
 
