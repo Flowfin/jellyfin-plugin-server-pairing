@@ -39,12 +39,21 @@ Those two tags are still only where the commands below were run, which is a
 narrower thing than what the plugin supports. A reading taken at v10.11.9 says
 nothing about a later release on the same line.
 
-They were also not the newest tag on either line when this was written:
+They are also not the newest tag on either line. This is the one command here
+whose answer moves on its own, because it reads a tag listing rather than a
+commit, so a paste of it is a reading at a moment. Read on 2026-08-17:
 
     gh api "repos/jellyfin/jellyfin/tags?per_page=100" --jq 'first(.[] | select(.name | startswith("v10.11"))) | .name'
     v10.11.11
     gh api "repos/jellyfin/jellyfin/tags?per_page=100" --jq 'first(.[] | select(.name | startswith("v12."))) | .name'
-    v12.0-rc4
+    v12.0-rc5
+
+The second of the two stood at `v12.0-rc4` here until that reading. Nothing in
+this repository re-runs a command that reads a service, so a paste of this kind
+goes stale without anybody being told. A reader who runs it and gets a third name
+has a later listing rather than a document that is wrong: what the block is
+evidence for is that neither tag below is the newest on its line, and a newer
+name is that claim holding rather than failing.
 
 That takes nothing away from a measurement below, because each one names the tag
 it was run at and those bytes stay fetchable. It does fix what each one is about:
