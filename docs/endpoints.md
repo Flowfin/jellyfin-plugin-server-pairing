@@ -140,9 +140,16 @@ On a 10.11 server with the shipped default, a token is accepted from any of:
 | `X-MediaBrowser-Token` header | yes | no |
 | `?api_key=` in the query string | yes | no |
 
-The row worth noticing is the second. `?ApiKey=` is read at line 105, which is
-the one token route that is not behind the flag, so a credential in a query
-string is accepted on both lines and under both settings. A query string is
+Seven rows out of six places. The `Authorization` header is one place and is
+listed twice, because the scheme name is checked separately from the header:
+`MediaBrowser` is accepted whatever the flag says and `Emby` only when it is on,
+which is line 259 above.
+
+The row worth noticing is the second, and it is one of two rather than one.
+`?ApiKey=` at line 105 and the `Authorization` header at line 231 are the two
+places the flag does not guard, which is the same thing the two `yes | yes` rows
+say. So a credential in a query string is accepted on both lines and under both
+settings, and that is the one of the two worth a rule here. A query string is
 written to access logs, to proxy logs, to browser history and, on an outbound
 link, to a referrer header, so this is a route this plugin does not use for a
 credential of its own and does not offer as a convenience.

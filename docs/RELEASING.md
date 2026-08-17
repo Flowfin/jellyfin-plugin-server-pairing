@@ -62,9 +62,18 @@ release and the list attached to a pull-request run come out of the same bytes.
 
 The `.md5` is the value a Jellyfin catalog serves as the plugin checksum. There is
 exactly one per release so that no generator can pair a checksum with the wrong
-file. Both the archive and the metadata are checked for existence by name before the
-release job runs, so a release with three of the four files is not a state this route
-can reach.
+file.
+
+Three of those five are checked for existence by name before the release job
+runs, so a release missing the archive, the packaging metadata or the component
+list is not a state this route can reach:
+
+    git grep -n 'for file in ' origin/master -- .github/workflows/publish.yaml
+    origin/master:.github/workflows/publish.yaml:372:          for file in "${ARTIFACT}" "${ARTIFACT}.meta.json" "${ARTIFACT}.cdx.json"; do
+
+The other two are outside that check because neither can go missing on its own.
+Both are written from the archive in the release job itself, which refuses unless
+it finds exactly one archive and exactly one metadata file to write them from.
 
 The run also signs a build provenance statement for the archive, in a separate job
 that downloads the archive and runs no build tooling. A downloaded archive can be
