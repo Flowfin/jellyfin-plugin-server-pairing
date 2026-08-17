@@ -150,7 +150,7 @@ The comparison is no longer only those two greps. A script that reads every
 manifest against the build it describes is in the tree, and a workflow runs it:
 
     git grep -l manifest-check origin/master -- .github/workflows
-    .github/workflows/gate.yml
+    origin/master:.github/workflows/gate.yml
 
 It runs in the `Build and test` job on every pull request, ahead of the restore,
 because every value it reads comes out of a tracked file and needs no SDK. Its

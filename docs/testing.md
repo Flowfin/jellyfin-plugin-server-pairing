@@ -83,22 +83,28 @@ a clean test project prints, so the input is counted before the result is read:
 git ls-files -- '*Tests*'
 ```
 
-Run at `d070084`, that names five files:
+First run at `d070084`, over a test project of five files. Counted again on a
+clean checkout of `a1ebd36`, which reads the index rather than a commit:
 
 ```
-Jellyfin.Plugin.ServerPairing.Tests/Jellyfin.Plugin.ServerPairing.Tests.csproj
-Jellyfin.Plugin.ServerPairing.Tests/PluginIdentityTests.cs
-Jellyfin.Plugin.ServerPairing.Tests/ServiceRegistrationTests.cs
-Jellyfin.Plugin.ServerPairing.Tests/StaticStateTests.cs
-Jellyfin.Plugin.ServerPairing.Tests/packages.lock.json
+git ls-files -- '*Tests*' | wc -l
+27
 ```
 
-and each of the three greps returns nothing and exits 1 over them. That is the
-first run of these commands against a test project rather than against an empty
-set. It says the project carries none of the three refused things today. It is a
-grep and not a gate: it reads the names in the source and never what the code
-does, and nothing refuses a change that reintroduces one of them. #67 is where a
-check over this would live.
+and each of the three greps returns nothing and exits 1 over those twenty-seven.
+That is what makes the empty results above worth reading: the pathspec matched a
+project rather than nothing.
+
+The count is re-run rather than carried over on purpose. What stood here was the
+five-file listing from `d070084` and the sentence that the project carries none
+of the three refused things today, and those two do not go together: the reading
+was of a tree twenty-two files smaller than the one a reader has, and a
+present-tense sentence resting on it is the exact defect the paragraph above it
+argues against.
+
+It is a grep and not a gate: it reads the names in the source and never what the
+code does, and nothing refuses a change that reintroduces one of them. #67 is
+where a check over this would live.
 
 The pathspec is the fragile part. It matches on the segment `Tests`, so a test
 project named without it would take these three greps back to reading an empty
