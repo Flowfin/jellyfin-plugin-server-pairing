@@ -27,14 +27,24 @@ accepts.
 Three files carrying five fields between them, and they say the same thing at
 every commit:
 
-    grep -n '^version:' build.yaml build.net10.0.yaml
-    build.yaml:9:version: "0.0.0.0"
-    build.net10.0.yaml:9:version: "0.0.0.0"
+    grep '^version:' build.yaml build.net10.0.yaml
+    build.yaml:version: "0.0.0.0"
+    build.net10.0.yaml:version: "0.0.0.0"
 
-    grep -n '<Version>\|<AssemblyVersion>\|<FileVersion>' Directory.Build.props
-    3:        <Version>0.0.0.0</Version>
-    4:        <AssemblyVersion>0.0.0.0</AssemblyVersion>
-    5:        <FileVersion>0.0.0.0</FileVersion>
+    grep '<Version>\|<AssemblyVersion>\|<FileVersion>' Directory.Build.props
+            <Version>0.0.0.0</Version>
+            <AssemblyVersion>0.0.0.0</AssemblyVersion>
+            <FileVersion>0.0.0.0</FileVersion>
+
+Neither block asks for a line number, and that is a repair rather than a style.
+The second one carried `-n` and pasted lines 3, 4 and 5 until a property group
+landed above the fields and moved them to 34, 35 and 36, at which point the
+paste stopped reproducing. What the sentence above claims is which files hold
+the value and that the value agrees across them, and a position in a file is no
+part of that: it is a number this document carries, nothing derives, and any
+insertion above the field breaks. The first block still reproduced when this was
+written and lost its `-n` for the same fragility rather than for a defect of its
+own.
 
 `0.0.0.0` is the unreleased value. Nothing has been published from this
 repository, so the number agrees with itself by never having moved, which is
