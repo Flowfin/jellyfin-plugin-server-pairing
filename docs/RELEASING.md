@@ -118,9 +118,25 @@ All of these fail before anything is published.
 
 ## What the run notes without failing
 
-The packaging tool warns when `build.yaml` declares neither `image` nor `imageUrl`.
-The plugin then shows without a logo in a catalog. That is a warning on every run
-until a logo exists, and it is not a reason to hold a release.
+The packaging tool warns when a manifest declares neither `image` nor `imageUrl`, and
+the plugin then shows without a logo in a catalog. That is not a reason to hold a
+release. Neither manifest is in that state, so it is not a warning this repository
+currently produces:
+
+    git grep -nE '^(image|imageUrl):' -- build.yaml build.net10.0.yaml
+    build.net10.0.yaml:8:imageUrl: "https://raw.githubusercontent.com/Flowfin/jellyfin-plugin-server-pairing/master/img/logo.png"
+    build.yaml:8:imageUrl: "https://raw.githubusercontent.com/Flowfin/jellyfin-plugin-server-pairing/master/img/logo.png"
+
+Both point at a tracked file through the repository's own raw URL, so the logo is
+served by GitHub rather than carried in the package. No route here reads that field.
+The link check walks the tracked markdown for inline links and autolinks, and a
+manifest is neither:
+
+    git grep -n "files=\$(git ls-files" -- .github/link-check.sh
+    .github/link-check.sh:42:files=$(git ls-files '*.md')
+
+So a release whose logo URL has stopped resolving fails nothing and warns nobody, and
+what a catalog shows in that case was not measured here.
 
 ## Re-running
 
