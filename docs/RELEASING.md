@@ -57,8 +57,10 @@ the list does not have.
 
 The same reading refuses the release, below, when the archive holds an assembly
 `build.yaml` does not name. It is the script `.github/package-audit.sh`, which
-the package check also runs on every pull request, so the list attached to a
-release and the list attached to a pull-request run come out of the same bytes.
+the package check also runs on a pull request into `master`, so the list attached
+to a release and the list attached to a pull-request run come out of the same
+bytes. Which pull requests that check sees is the workflow's own filter, read in
+item 5 of [`release.md`](release.md) rather than carried a second time here.
 
 The `.md5` is the value a Jellyfin catalog serves as the plugin checksum. There is
 exactly one per release so that no generator can pair a checksum with the wrong
