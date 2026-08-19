@@ -64,10 +64,21 @@ becomes a command here when #59 lands.
 
 ## 3. The mutation run and the fuzz run have been dispatched since the last release
 
-Both are runs somebody starts rather than gates that stop a merge, which is
-exactly why they are on this list. A finding from either is triaged before the
-release, not left pending, since a pending finding at release is a finding
-nobody has decided about.
+Neither is a gate that stops a merge, which is exactly why they are on this list.
+Each carries a weekly schedule and a manual dispatch and nothing else, so a run
+can arrive without anybody having asked for one:
+
+    git grep -E '^  (schedule|workflow_dispatch|pull_request|push):' origin/master -- .github/workflows/fuzz.yml .github/workflows/stryker-mutation.yml
+    origin/master:.github/workflows/fuzz.yml:  schedule:
+    origin/master:.github/workflows/fuzz.yml:  workflow_dispatch:
+    origin/master:.github/workflows/stryker-mutation.yml:  schedule:
+    origin/master:.github/workflows/stryker-mutation.yml:  workflow_dispatch:
+
+That is why the item is worded as dispatched rather than as started by somebody,
+and why it is read out of the run history below rather than out of a memory of
+having launched one. A finding from either is triaged before the release, not
+left pending, since a pending finding at release is a finding nobody has decided
+about.
 
 Both landed after this list was written, so this item is now read rather than
 recorded as unmet:
@@ -82,10 +93,11 @@ the previous release tag, rather than from anyone's recollection:
     gh run list --workflow=stryker-mutation.yml --limit 5
     gh run list --workflow=fuzz.yml --limit 5
 
-Neither has a `pull_request` trigger, so neither reports on a change on its way
-in and a release is the moment somebody has to look. There is no previous
-release tag to bound the range with, so for the first release the range is the
-whole history of each workflow.
+The trigger listing above is what makes this item necessary: with no
+`pull_request` among them, neither reports on a change on its way in, and a
+release is the moment somebody has to look. There is no previous release tag to
+bound the range with, so for the first release the range is the whole history of
+each workflow.
 
 ## 4. The changelog entry exists and marks any protocol or contract change
 
@@ -152,10 +164,29 @@ manifest against the build it describes is in the tree, and a workflow runs it:
     git grep -l manifest-check origin/master -- .github/workflows
     origin/master:.github/workflows/gate.yml
 
-It runs in the `Build and test` job on every pull request, ahead of the restore,
-because every value it reads comes out of a tracked file and needs no SDK. Its
-own cases run beside it in the same job, so a change that quietly stops it
-refusing anything reds that job rather than passing it.
+It runs in the `Build and test` job, ahead of the restore, because every value it
+reads comes out of a tracked file and needs no SDK. Its own cases run beside it
+in the same job, so a change that quietly stops it refusing anything reds that
+job rather than passing it.
+
+Which pull requests that job sees is the workflow's own filter rather than a
+reading of it, and it is narrower than all of them. The packaging job carries the
+same filter, so both are read here and neither document holds a second copy:
+
+    git grep -A2 '^  pull_request:' origin/master -- .github/workflows/gate.yml .github/workflows/package.yml
+    origin/master:.github/workflows/gate.yml:  pull_request:
+    origin/master:.github/workflows/gate.yml-    branches:
+    origin/master:.github/workflows/gate.yml-      - master
+    --
+    origin/master:.github/workflows/package.yml:  pull_request:
+    origin/master:.github/workflows/package.yml-    branches:
+    origin/master:.github/workflows/package.yml-      - master
+
+A pull request that targets any other branch runs neither, so a change arriving
+at `master` through an intermediate branch is read by these two on its last step
+and not before. Other guards in the same directory take every branch instead and
+each says so in its own file, which is what makes this a filter somebody chose
+rather than one nobody noticed.
 
 That is a change of kind for this item and not only of wording. A manifest
 naming a framework the project does not build, a version the assembly does not
