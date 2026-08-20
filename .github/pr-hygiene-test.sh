@@ -145,11 +145,17 @@ docs_tree_of() {
 # The same root shape as root_tree, with the plugin subtree carrying one file
 # under Protocol/. Written out rather than folded into root_tree, which builds a
 # flat plugin subtree that every other fixture here depends on.
+#
+# Takes an optional CHANGELOG.md blob. Since #217 the marker is owed by a
+# SOURCE change and not by a document one, so the three cases that prove
+# the marker discipline reach the guard through this root, not a docs tree.
 protocol_source_root() {
+    changelog=$1
     inner=$(printf '100644 blob %s\tCanonicalForm.cs\n' "$canonical_blob" | git mktree)
     plugin=$(printf '100644 blob %s\tPlugin.cs\n040000 tree %s\tProtocol\n' "$source_blob" "$inner" | git mktree)
     tests=$(printf '100644 blob %s\tPluginTests.cs\n' "$test_blob" | git mktree)
     {
+        [ -n "$changelog" ] && printf '100644 blob %s\tCHANGELOG.md\n' "$changelog"
         printf '100644 blob %s\tbuild.yaml\n' "$base_manifest"
         printf '040000 tree %s\tJellyfin.Plugin.ServerPairing\n' "$plugin"
         printf '040000 tree %s\tJellyfin.Plugin.ServerPairing.Tests\n' "$tests"
@@ -158,19 +164,10 @@ protocol_source_root() {
 
 protocol_doc_tree=$(printf '040000 tree %s\tdocs\n' "$(docs_tree_of "$protocol_blob" protocol.md)" |
     root_tree "$base_manifest" "$source_blob" "$test_blob")
-protocol_marked_tree=$({
-    printf '100644 blob %s\tCHANGELOG.md\n' "$changelog_protocol_blob"
-    printf '040000 tree %s\tdocs\n' "$(docs_tree_of "$protocol_blob" protocol.md)"
-} | root_tree "$base_manifest" "$source_blob" "$test_blob")
-protocol_unmarked_tree=$({
-    printf '100644 blob %s\tCHANGELOG.md\n' "$changelog_blob"
-    printf '040000 tree %s\tdocs\n' "$(docs_tree_of "$protocol_blob" protocol.md)"
-} | root_tree "$base_manifest" "$source_blob" "$test_blob")
-protocol_wrong_marker_tree=$({
-    printf '100644 blob %s\tCHANGELOG.md\n' "$changelog_contract_blob"
-    printf '040000 tree %s\tdocs\n' "$(docs_tree_of "$protocol_blob" protocol.md)"
-} | root_tree "$base_manifest" "$source_blob" "$test_blob")
-protocol_source_tree=$(protocol_source_root)
+protocol_marked_tree=$(protocol_source_root "$changelog_protocol_blob")
+protocol_unmarked_tree=$(protocol_source_root "$changelog_blob")
+protocol_wrong_marker_tree=$(protocol_source_root "$changelog_contract_blob")
+protocol_source_tree=$(protocol_source_root "")
 contract_doc_tree=$(printf '040000 tree %s\tdocs\n' "$(docs_tree_of "$contract_blob" consumer-interface.md)" |
     root_tree "$base_manifest" "$source_blob" "$test_blob")
 contract_marked_tree=$({
@@ -248,8 +245,8 @@ expect "a manifest version change with a manifest changelog entry passes" \
 expect "a manifest version change with a CHANGELOG.md change passes" \
     0 "CHANGELOG.md changed with it" "Closes #65." User OWNER "$bumped_changelog"
 
-expect "a protocol document change with no changelog line is refused" \
-    1 "the protocol changed and CHANGELOG.md gained no [protocol] line" "Closes #76." User OWNER "$protocol_doc"
+expect "a protocol document change alone is not a protocol change" \
+    0 "nothing in this pull request changes the protocol" "Closes #217." User OWNER "$protocol_doc"
 
 expect "a protocol source change with no changelog line is refused" \
     1 "the protocol changed and CHANGELOG.md gained no [protocol] line" "Closes #76." User OWNER "$protocol_source"
