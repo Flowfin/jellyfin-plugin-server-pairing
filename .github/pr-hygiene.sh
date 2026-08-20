@@ -184,7 +184,7 @@ fi
 # exist in the tree yet: the consumer contract is M6 and this is the guard
 # waiting for it. A contract that lands somewhere else walks past this, so the
 # issue that creates it moves this list in the same change.
-protocol_paths='^docs/protocol\.md$|^Jellyfin\.Plugin\.ServerPairing/Protocol/'
+protocol_paths='^Jellyfin\.Plugin\.ServerPairing/Protocol/'
 contract_paths='^docs/consumer-interface\.md$|^Jellyfin\.Plugin\.ServerPairing/Contract/'
 
 marked_change() {
