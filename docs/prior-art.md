@@ -198,8 +198,8 @@ direction. That was the open half of decision 1 in #1 when this section was
 written, and the answer is stated where the protocol is specified rather than
 restated here:
 
-    git grep -n "Enrolment is static key pairs" origin/master -- docs/protocol.md
-    origin/master:docs/protocol.md:34:worth stating before the tables. Enrolment is static key pairs with a fingerprint
+    git grep "Enrolment is static key pairs" origin/master -- docs/protocol.md
+    origin/master:docs/protocol.md:worth stating before the tables. Enrolment is static key pairs with a fingerprint
 
 #54 holds the wording and the readability of that comparison. The known failure
 mode is the one to design against rather than the cryptography: a human who

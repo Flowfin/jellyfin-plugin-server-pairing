@@ -66,7 +66,7 @@ There is no separate reporting address for this repository yet. Until there is,
 a report reaches the maintainer through GitHub, either as a private message to
 the repository owner or through GitHub's own abuse reporting. Anything that is
 also a vulnerability in the pairing path goes through the route in
-[`CONTRIBUTING.md`](CONTRIBUTING.md) instead, because a public report is the
+[`SECURITY.md`](SECURITY.md) instead, because a public report is the
 disclosure.
 
 All community leaders are obligated to respect the privacy and security of the
