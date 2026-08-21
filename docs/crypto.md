@@ -192,7 +192,9 @@ A signature, a MAC tag, a derived key and a fingerprint compared with `==`, with
 many leading bytes were right. That is a working attack against a MAC and it is
 the reason this is a rule rather than a preference.
 
-This is the one line in this document a test asserts today.
+This is the one rule in this document a guard over the plugin source refuses.
+What else here a test asserts, and what none of those tests reads, is at the end
+of this document.
 `SecretComparisonTests` in the test project reads the plugin source and refuses a
 comparison whose operand is named as secret material, and it proves it bites with
 fixtures rather than by assertion: the same line written through
@@ -270,19 +272,37 @@ looking for them.
 It does not describe how the key store holds any of this. That is M4, and issue
 #31 is where what protects it at rest, and what does not, is answered.
 
-Three things here are asserted by a test. The comparison rule is refused by
-`SecretComparisonTests`, the tag length this document fixes is read out of this
-document by `PairingCredentialTests` and asserted against what the pairing plane
-accepts as a credential, and the grouping this document pins as part of the
-construction is read by `CeremonyWordingTests`, which also refuses the names in
-this document appearing in a sentence an operator reads:
+Three things here are asserted by a test, and one of the three assertions reads
+this file. The comparison rule is refused by `SecretComparisonTests`, which opens
+this document and requires it to go on naming the call it pins. The tag length is
+asserted by `PairingCredentialTests` against what the pairing plane accepts as a
+credential. The grouping is asserted by `CeremonyWordingTests` against the
+sentence an operator reads, and that test also refuses the names in this document
+appearing in that sentence.
+
+The second and third hold their own copy of the value, with this document named
+in a comment beside it. That is a citation rather than a reading, and the
+difference is the whole of what changing a number here would do. One test opens
+this file:
 
 ```
-git grep -ln "crypto.md" origin/master -- Jellyfin.Plugin.ServerPairing.Tests
+git grep -E 'File\.ReadAllText\(.*"crypto' origin/master -- Jellyfin.Plugin.ServerPairing.Tests
+origin/master:Jellyfin.Plugin.ServerPairing.Tests/SecretComparisonTests.cs:        var document = File.ReadAllText(Path.Combine(RepositoryRoot(), "docs", "crypto.md"));
+```
+
+Three name it, and a grep for the name cannot tell a citation from a reading,
+which is why both commands are here rather than the second alone:
+
+```
+git grep -l "crypto.md" origin/master -- Jellyfin.Plugin.ServerPairing.Tests
 origin/master:Jellyfin.Plugin.ServerPairing.Tests/Protocol/PairingCredentialTests.cs
 origin/master:Jellyfin.Plugin.ServerPairing.Tests/SecretComparisonTests.cs
 origin/master:Jellyfin.Plugin.ServerPairing.Tests/Wording/CeremonyWordingTests.cs
 ```
+
+So changing the tag length or the grouping here reddens nothing. The value would
+have to be changed in the test as well, and nothing says so at the moment
+somebody changes one.
 
 The rest is not asserted anywhere, because there is nothing yet to assert it
 against.
