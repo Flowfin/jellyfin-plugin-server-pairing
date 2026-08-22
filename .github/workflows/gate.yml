@@ -24,11 +24,13 @@
 #     for whichever the SDK picks.
 #
 # What it does NOT do, and what has to happen elsewhere. This job is not in the
-# required set on the default branch, so it reports and blocks nothing:
+# required set on the default branch, so it reports and blocks nothing. Read
+# that set rather than a copy of it. It is a repository setting, it moves
+# without any commit here, and the copy this comment used to carry named three
+# contexts while the setting had grown a fourth:
 #
 #     gh api repos/Flowfin/jellyfin-plugin-server-pairing/rulesets/20464076 \
 #       --jq '[.rules[] | select(.type=="required_status_checks") | .parameters.required_status_checks[].context]'
-#     ["call / build","call / test","Reject Trojan Source Unicode"]
 #
 # The required set is a repository setting and no file in this tree reaches it,
 # which is issue #62's own last done condition. This job is the first step of the
