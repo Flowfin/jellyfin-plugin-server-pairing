@@ -164,10 +164,13 @@ public class PairingCredentialTests
     /// source no longer answers with is refused without the receiver being rebuilt or told.
     /// </summary>
     /// <remarks>
-    /// What makes a key stop being live is revocation and the end of a rotation overlap, which
-    /// are issues #24 and #23 and are not in the tree. What is asserted here is the half that
-    /// is: whatever ends a key's life, ending it in the source is enough, because nothing
-    /// downstream of the source caches it.
+    /// What makes a key stop being live is revocation and the end of a rotation overlap, and
+    /// neither is absent from the tree in the way this remark used to say. The overlap closes
+    /// in <c>KeyOverlap.CloseIfElapsed</c>, which landed with issue #23. Revocation is a
+    /// transition the state machine already takes, and what is missing there is the half that
+    /// destroys the key rather than the transition, which is issue #24 over the store issue
+    /// #30 owes. What is asserted here needs neither: whatever ends a key's life, ending it in
+    /// the source is enough, because nothing downstream of the source caches it.
     /// </remarks>
     [Fact]
     public void AKeyThatStopsBeingLiveStopsVerifyingOnTheNextRequest()
