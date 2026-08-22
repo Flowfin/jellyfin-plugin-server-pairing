@@ -119,9 +119,14 @@ hash are the bytes the framework already agrees on rather than an encoding
 invented here.
 
 P-256 rather than a curve this document would have to argue for: it is in the
-base class library on both supported server lines, it is the curve the platform
-implements with hardware support, and nothing in this design needs more than the
-128-bit security level it gives.
+base class library on both supported server lines, and nothing in this design
+needs more than the 128-bit security level it gives.
+
+Both of those are checkable from a checkout, which is why they are the whole of
+the argument. Whether the processor underneath accelerates the curve is not.
+Which curves are offloaded is decided by the operating system's cryptographic
+provider and by the machine a server runs on, nothing in this tree can read
+either, and no measurement of it was taken here.
 
 ## The key derivation
 
