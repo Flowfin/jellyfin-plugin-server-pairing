@@ -110,11 +110,12 @@ working pairing that does not pass through an administrator acting on each of th
 two dashboards. That is readable from the transition table in
 [`protocol.md`](protocol.md) rather than asserted here:
 
-`Active` is the only state in which an `exchange` is answered. Its two entries
-are from `ConfirmedHere` on a peer's `confirm`, and from `ConfirmedByPeer` on the
-local administrator confirming. So reaching `Active` requires the local
-administrator's confirmation in both cases, and by symmetry it requires the far
-administrator's on the other side. There is no unattended mode, which is settled
+An `exchange` is answered in `Active` and in `Rotating` and nowhere else, and
+`Rotating` is entered only from `Active`, so both rest on reaching `Active`. Its
+two entries are from `ConfirmedHere` on a peer's `confirm`, and from
+`ConfirmedByPeer` on the local administrator confirming. So reaching `Active`
+requires the local administrator's confirmation in both cases, and by symmetry it
+requires the far administrator's on the other side. There is no unattended mode, which is settled
 in issue #1, so there is no second path with a weaker root.
 
 Three mechanisms hold the edges of that.
