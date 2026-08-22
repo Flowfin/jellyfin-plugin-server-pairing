@@ -43,8 +43,19 @@ fine, and it is deliberately a category rather than a detail, because the log
 and the refusal path have the same oracle problem.
 
 A truncated key fingerprint is fine only where this document says how many bits
-it exposes and why that is acceptable for the thing it identifies. No such
-truncation is defined yet, so none may be logged yet.
+it exposes and why that is acceptable for the thing it identifies.
+
+One truncation is defined in the tree. [`crypto.md`](crypto.md) fixes the
+leading 128 bits of a SHA-256 digest as the value two operators compare, and
+argues that length in both directions. The number is cited rather than restated
+here, because a second copy of a cryptographic parameter is the copy that goes
+stale, and that document is the authority for every one of them.
+
+What is missing is the second half of the rule rather than the first. This
+document has not said whether that value may be logged, or what logging it would
+expose for the pairing it identifies, so none may be logged. The prohibition
+rests on the sentence above being unwritten rather than on there being no
+truncation to prohibit, which is what it used to rest on.
 
 ## The audit trail these lists have to support
 
