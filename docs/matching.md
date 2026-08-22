@@ -3,8 +3,11 @@
 Two servers hold the same film, and nothing about the two copies is the same
 except what a metadata provider said about it. The item identifiers differ, the
 file paths differ, the libraries they sit in differ, and the runtime differs by
-however much the two rips differ. Provider identifiers are the only vocabulary
-both sides share, so they are the only thing this plugin matches on.
+however much the two rips differ. Provider identifiers are the vocabulary both
+sides share, so they are what this plugin matches on. The one thing beside them
+is an episode carrying none of its own, which is allowed its series identifiers
+plus its season and episode number under the conditions the Episodes section
+below fixes.
 
 This document fixes the rules. The test corpus takes its expected outcome from
 here rather than from the code, so a disagreement between the two is a failing

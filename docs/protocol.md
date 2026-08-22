@@ -122,7 +122,7 @@ holds its own and the two are not assumed to agree.
 | `Pending` | A peer key arrived inside the window and the fingerprint is on the dashboard. Neither operator has confirmed |
 | `ConfirmedHere` | The administrator on this server compared and confirmed. The peer has not confirmed, or its confirmation has not arrived |
 | `ConfirmedByPeer` | The peer's confirmation arrived and verified. The administrator on this server has not confirmed |
-| `Active` | Both confirmations are in. This is the only state in which an `exchange` is answered |
+| `Active` | Both confirmations are in. An `exchange` is answered here and in `Rotating`, and nowhere else |
 | `Rotating` | Active, and a key rotation is inside its overlap window, so two of this side's keys verify. The overlap is fixed below |
 | `Revoked` | Terminal. Nothing moves out of it, and the record is kept rather than deleted so that a later request naming this identifier is refused rather than treated as new. Issue #24 owns revocation |
 

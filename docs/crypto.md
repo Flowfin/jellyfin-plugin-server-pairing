@@ -258,9 +258,12 @@ class library, so it means a cryptographic dependency or hand-rolling one. Neith
 is on the table, and the enrolment answer removes the transcribed code that would
 have made it worth arguing about.
 
-No truncated key material anywhere. The fingerprint is a truncated digest of
-public keys and is the only truncation in this document; a MAC tag is never
-truncated and a derived key is never shortened.
+No truncated key material anywhere. A MAC tag is never truncated and a derived
+key is never shortened. Two truncated digests do appear here and neither is key
+material: the fingerprint above, and the pairing identifier the HKDF salt is
+taken from, which [`protocol.md`](protocol.md) fixes as the first 16 bytes of a
+digest over the same public keys. Both are public values, so shortening either
+removes nothing an attacker holding those keys could not compute in full.
 
 ## What this document does not do
 
