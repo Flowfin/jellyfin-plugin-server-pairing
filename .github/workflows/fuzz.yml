@@ -27,9 +27,12 @@ name: Fuzz the wire parser
 
 on:
   schedule:
-    # Fridays. Offset from the scorecard (27 4 * * 1), the link check
-    # (41 3 * * 2), the mutation run (17 5 * * 3) and the code scan
-    # (24 2 * * 4), so no two scheduled runs contend for a runner.
+    # Fridays. Every scheduled run in this directory is on a day of its own so
+    # no two contend for a runner. What the others are set to is read rather
+    # than copied here, because a copy of somebody else's cron goes stale when
+    # they move theirs and nothing reports it:
+    #
+    #     git grep -n 'cron:' -- .github/workflows
     - cron: "53 4 * * 5"
   workflow_dispatch:
     inputs:
