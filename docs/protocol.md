@@ -165,6 +165,7 @@ violation is a refusal rather than a truncation.
 | public key | base64 of the DER `SubjectPublicKeyInfo` | at most 512 characters |
 | fingerprint digest | lowercase hex | exactly 64 |
 | peer address | absolute `https` URI, no query, no fragment, no userinfo | at most 255 characters |
+| rotation instant | a timestamp, in a `rotate` body, saying when the superseded key stops verifying | after the instant the rotation starts, and no further ahead than the overlap the rotation section below fixes |
 | body, `exchange` | bytes | 1 MiB |
 | body, every other type | bytes | 8 KiB |
 
@@ -527,6 +528,37 @@ purpose and which closes on a timer.
 The timing of a refusal is one class. Every cause above is answered after the
 same work, so a caller cannot separate them by measurement where the codes are
 identical. Nothing in the tree enforces that today and issue #28 owes the test.
+
+Two refusals a landed type already produces have no code in the table above, and
+saying so is what stops the table being read as the whole set. `KeyOverlap.Rotate`
+returns five values, two of which are refusals this document has never named:
+
+```
+git grep -nE "^    [A-Za-z]+ = [0-9]+" origin/master -- Jellyfin.Plugin.ServerPairing/Protocol/RotationOutcome.cs
+origin/master:Jellyfin.Plugin.ServerPairing/Protocol/RotationOutcome.cs:17:    Rotated = 0,
+origin/master:Jellyfin.Plugin.ServerPairing/Protocol/RotationOutcome.cs:24:    AlreadyRotating = 1,
+origin/master:Jellyfin.Plugin.ServerPairing/Protocol/RotationOutcome.cs:30:    OutsideTheMaximum = 2,
+origin/master:Jellyfin.Plugin.ServerPairing/Protocol/RotationOutcome.cs:35:    Malformed = 3,
+origin/master:Jellyfin.Plugin.ServerPairing/Protocol/RotationOutcome.cs:41:    NotAReplacement = 4,
+```
+
+Three of the five are placed. `Rotated` is the answer, `AlreadyRotating` is the
+`state` the rotation section above gives a second `rotate` inside an open overlap,
+and `Malformed` is a replacement whose length is not the key length, which is a
+field outside its limit and therefore `malformed`. The
+other two are not. `OutsideTheMaximum` is an overlap of zero, a negative one, or
+one longer than the bound; `NotAReplacement` is a `rotate` offering the key the
+pairing is already on. Both are reached only after the signature verified, which
+is the position every code other than `refused` exists for, and the rotation
+section calls both of them refused in the ordinary sense of the word rather than
+by giving either a code.
+
+Which code each takes is not settled here, and folding them into `refused` is not
+the default answer just because nothing else is written. Issue #28 owns the
+taxonomy and is where `replay` and `busy` were separated from `refused` for the
+same reason: a peer that is told what a stranger is told, about a cause the
+operator cannot see either, is a pairing that stops working with nobody able to
+say why.
 
 ## Versions
 
