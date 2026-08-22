@@ -20,6 +20,18 @@ the same bytes rather than against whatever the file says later:
     gh api repos/<owner>/<repo>/readme --jq '.sha'
     gh api repos/<owner>/<repo>/readme --jq '.content' | base64 -d
 
+A quotation reproduces the source's words and not its markup, so where a README
+emphasises part of a sentence the asterisks around it are not carried across. A
+reader checking one against the blob strips them from both sides rather than
+matching the line as it stands:
+
+    gh api repos/<owner>/<repo>/git/blobs/<sha> --jq '.content' \
+      | tr -d '\n' | base64 -d | tr -d '*' \
+      | grep -F '<the quotation, asterisks removed>'
+
+The exception is a quotation where the emphasis is the evidence rather than
+decoration, which is the by-file-path count under Server Sync below.
+
 ## Server Sync, a plugin
 
 <https://github.com/JPKribs/jellyfin-plugin-serversync>, README blob
@@ -78,11 +90,11 @@ servers stop being connected. Deleting content is a separate always-on-the-sourc
 question rather than an unpairing one: "Files no longer on Source Server are set
 to Delete only when `Delete Missing Content` is enabled (off by default)".
 
-Observation about blast radius, read out of the whitelist section rather than
-stated by it: "A whitelisted Collection or Playlist syncs whatever it currently
-contains, checked on every Refresh, so anyone who can edit it on the Source
-Server controls what syncs." That sentence is the README's own, and it is a rare
-and honest statement of a delegation that most such documents leave implicit.
+Blast radius, and the README states it rather than leaving it to be read out of
+the whitelist section: "A whitelisted Collection or Playlist syncs whatever it
+currently contains, checked on every Refresh, so anyone who can edit it on the
+Source Server controls what syncs." That is a rare and honest statement of a
+delegation that most such documents leave implicit.
 
 ## Jellyfin Server Sync, a plugin
 
@@ -150,7 +162,8 @@ the child is not carried back by that rule.
 
 Topology. "Recommended topology: one master server and one child server with
 matching usernames. Multi-server setups and complex user mapping topologies are
-supported but have not been extensively tested."
+supported but have not been extensively tested — take care when combining
+both."
 
 Revocation. Observation: revocation is not a step this tool has. Withdrawing
 access means deleting an API key on a Jellyfin server, which is Jellyfin's
