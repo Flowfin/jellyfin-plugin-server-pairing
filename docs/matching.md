@@ -30,9 +30,16 @@ handed them, and that translation is not part of this document.
 
 Nothing else. The names are the ones the host uses as keys in an item's provider
 dictionary, and they are not string literals invented here: the matched list is
-built from `MediaBrowser.Model.Entities.MetadataProvider`, and a test asserts
-each entry is a member of that enumeration, so a name that stops being one fails
-the build rather than silently matching nothing.
+built from `MediaBrowser.Model.Entities.MetadataProvider`, so a name that stops
+being a member of that enumeration is a compile error rather than a matcher that
+silently stops matching on that provider.
+
+That guarantee is the construction's rather than a test's, and the difference is
+worth stating because a reader who takes it for a test's expects the suite to
+redden where the compiler is what stops the change. While the list is built this
+way the membership assertion cannot fail: a name the enumeration produced is a
+name the enumeration has. What that assertion holds is the construction itself,
+and it reddens the moment an entry is written as a literal instead.
 
     dotnet test --filter MatchedProviders
 
