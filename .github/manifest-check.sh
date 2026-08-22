@@ -2,7 +2,7 @@
 # Compares every manifest against the build it describes, before anything is
 # packaged.
 #
-#     sh .github/manifest-check.sh                  the four comparisons that read tracked files
+#     sh .github/manifest-check.sh                  every comparison that reads tracked files
 #     sh .github/manifest-check.sh --output DIR     and the artefact list against a build output
 #
 # One script rather than a block inside a workflow, so the command a person runs
