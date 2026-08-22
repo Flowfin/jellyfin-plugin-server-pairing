@@ -250,12 +250,31 @@ somebody to distrust the document while they are holding a credential.
 
 The operator guide is #75 and does not exist yet.
 
+## 8. The interoperability matrix is green on both server lines
+
+This plugin has to work alone and to work with every other supported sibling
+plugin installed at the same time. A clash over a route, a scheduled task name
+or a configuration key is invisible to a suite that loads one plugin on its own,
+and a release is where somebody else's installation meets it first.
+
+Decided by the matrix in #81. That harness does not exist, so for the first
+release this item is recorded as not run rather than passed, and it becomes a
+command here when #81 lands.
+
+What the item asks once it can be read: both runs come up without startup
+errors on both server lines, answer their routes, and pass a collision scan
+over routes, task names and configuration keys. A red matrix stops the release
+until the collision is fixed or the incompatibility is written down as a known
+limitation with its reason, because shipping over a known clash moves the
+failure onto an operator who cannot see it coming.
+
 ## What this list cannot decide
 
-Items 2 and 7 name work that has not landed: the cross-version test in #59 and
-the operator guide in #75 are both open. A release cut against this list today
-would read items 1, 3, 4, 5 and 6, and would record those two as not run, which
-is the honest state and not a reason to tick them.
+Items 2, 7 and 8 name work that has not landed: the cross-version test in #59,
+the operator guide in #75 and the interoperability matrix in #81 are all open. A
+release cut against this list today would read items 1, 3, 4, 5 and 6, and would
+record those three as not run, which is the honest state and not a reason to
+tick them.
 
 Items 3, 4 and 6 were in that unmet list when this document was written and are
 not any more. Each moved because the thing it names landed, so the sentence that
