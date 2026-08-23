@@ -1,9 +1,16 @@
-# Developer Certificate of Origin (DCO) sign-off gate (#746). A contributor
+# Developer Certificate of Origin (DCO) sign-off gate. A contributor
 # legal-authorization mechanism - OpenSSF Silver / OSPS-LE-01.01 - implemented as a
 # self-contained first-party check, no external DCO App or third-party action (the
 # same internal-only posture as the PR-hygiene gate). It verifies every non-merge
 # commit in the PR carries a `Signed-off-by:` trailer matching its author, i.e. the
 # author asserted the DCO in ./DCO. Fail-closed: any unsigned commit reds the check.
+#
+# Reds the check rather than blocks the merge. This job's context is not in the
+# required set, which is a repository setting rather than anything in this tree,
+# so it is read rather than restated here:
+#
+#     gh api repos/Flowfin/jellyfin-plugin-server-pairing/rulesets/20464076 \
+#       --jq '[.rules[] | select(.type=="required_status_checks") | .parameters.required_status_checks[].context]'
 name: DCO
 
 on:
