@@ -1,23 +1,33 @@
 # Static analysis of the GitHub Actions workflows themselves (zizmor). The
-# workflow YAML is release-critical attack surface - publish-beta.yml runs on
-# every push to main with contents:write - so it is audited like any other code.
+# workflow YAML is release-critical attack surface: the one job in this tree that
+# holds contents:write is the release job in publish.yaml, reached by pushing a
+# release tag, so a workflow file is audited like any other code.
 #
 # The gate runs zizmor's regular persona at --min-severity=low: it fails the
 # build on any actionable (low/medium/high/critical) security finding -
 # template-injection, cache-poisoning, dangerous-triggers, excessive-permissions,
-# unpinned-uses, etc. - and uploads that same set to the code-scanning tab. The
+# unpinned-uses, etc. The same set is uploaded to the code-scanning tab where the
+# token may write it, which is the condition on the upload step below. The
 # regular persona is the one zizmor documents for CI ("high-signal, low-noise,
 # actionable"). The pedantic persona is deliberately NOT used to gate: it adds
 # low-severity hygiene findings (undocumented permissions, missing concurrency,
 # pin-comment mismatches, unnamed jobs) that are stylistic, not security-blocking,
 # and some are context-blind (it would demand run-cancelling concurrency on the
 # release workflows, which must never be cancelled mid-publish). That backlog is
-# tracked as a code-quality task (#263), not gated here.
+# not gated here and no issue on this repository holds it.
 #
-# Rule for future workflow changes: every new or edited workflow must pass this
-# gate before merge. Keep actions SHA-pinned, keep checkout on
-# persist-credentials:false, grant write permissions per job (never
-# workflow-level), and never restore a cache in a job that publishes a release.
+# What this gate does to a merge is read rather than written down here. This
+# job's context is not in the required set today, so a red run reports and blocks
+# nothing, and what is required is a repository setting rather than anything in
+# this tree:
+#
+#     gh api repos/Flowfin/jellyfin-plugin-server-pairing/rulesets/20464076 \
+#       --jq '[.rules[] | select(.type=="required_status_checks") | .parameters.required_status_checks[].context]'
+#
+# What a workflow change is expected to carry, whether or not anything refuses
+# it: actions SHA-pinned, checkout on persist-credentials:false, write
+# permissions granted per job and never workflow-level, and no cache restored in
+# a job that publishes a release.
 name: Workflow Security Analysis
 
 on:
@@ -65,13 +75,16 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Upload SARIF
-        # Only upload where the GITHUB_TOKEN can write security events: pushes to main
-        # and same-repo human PRs. Fork and Dependabot pull requests run with a
-        # read-only token, so the upload is skipped there - the gate step below still
-        # runs and blocks on findings. continue-on-error keeps the security gate
-        # independent of the upload: a transient code-scanning upload failure must not
-        # skip the "Fail on actionable findings" step below.
-        if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || (github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.user.login != 'dependabot[bot]')
+        # Only upload where the GITHUB_TOKEN can write security events: pushes to the
+        # default branch and same-repo human pull requests. The default branch here is
+        # master, which is what the push trigger above already names; a condition naming
+        # a branch this repository does not have matches nothing, and the upload is dead
+        # on every push for as long as it names one. Fork and Dependabot pull requests
+        # run with a read-only token, so the upload is skipped there and the step below
+        # still reds the job on findings. continue-on-error keeps that step independent
+        # of the upload: a transient code-scanning upload failure must not skip
+        # "Fail on actionable findings".
+        if: (github.event_name == 'push' && github.ref == 'refs/heads/master') || (github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.user.login != 'dependabot[bot]')
         continue-on-error: true
         uses: github/codeql-action/upload-sarif@e4fba868fa4b1b91e1fdab776edc8cfbe6e9fb81 # v4.37.3
         with:

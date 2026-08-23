@@ -20,9 +20,16 @@
 # without the half of it that runs first.
 #
 # What is deliberately outside the list is as much a decision as what is in it.
-# KeyOverlap.cs, PeerAddress.cs, PeerChannel.cs and PairingRequest.cs are
-# protocol types this issue does not scope itself to, so they are not mutated and
-# their absence from a report is not evidence about them either way.
+# The protocol types this issue does not scope itself to are not mutated, and
+# their absence from a report is not evidence about them either way. Which types
+# those are is derived rather than named here. A list written into this comment
+# does not grow when the tree does, and this one did not: it named four, and
+# further protocol types carrying a body of their own have landed beside them
+# since, each outside the list and named by nothing.
+#
+#     comm -23 \
+#       <(git ls-tree --name-only origin/master Jellyfin.Plugin.ServerPairing/Protocol/ | sed 's#.*/##' | sort) \
+#       <(sed -n 's#.*"Protocol/\(.*\)".*#\1#p' Jellyfin.Plugin.ServerPairing.Tests/stryker-config.json | sort)
 #
 # The score is reported and never gated:
 #   - There is no pull_request trigger, so this workflow cannot run as a check on
