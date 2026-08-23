@@ -54,12 +54,14 @@ seeds are read and the path is driven. It proves nothing about coverage.
 ## The seeds
 
 `corpus/envelope` and `corpus/canonical` carry the field values the protocol
-suite already uses, as the seven fields separated by a zero byte with the body
-last. The separator is a zero byte rather than a line feed on purpose: every
-field this protocol accepts is printable ASCII, so a zero byte cannot be part of
-one, and a line feed separator would make it impossible for a mutation to put a
-line feed inside a field. A field carrying a line feed past the shape check is
-exactly the defect the canonical leg exists to find.
+suite already uses, as the seven fields and the body separated by a zero byte,
+the body last, which is eight parts and seven separators. The two directories
+hold the same bytes on purpose: the seeds are field values and the two legs
+drive different code from them. The separator is a zero byte rather than a line
+feed on purpose: every field this protocol accepts is printable ASCII, so a zero
+byte cannot be part of one, and a line feed separator would make it impossible
+for a mutation to put a line feed inside a field. A field carrying a line feed
+past the shape check is exactly the defect the canonical leg exists to find.
 
 `corpus/address` carries the accepted and refused forms from the address suite,
 one address per file, as raw bytes.
