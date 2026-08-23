@@ -31,9 +31,19 @@ anchors_of() {
         sed -E 's/[[:space:]]+/-/g'
 }
 
-# Inline links [text](target) and autolinks <https://...>. Reference-style
-# links are not used in this tree; a run over a file that started using them
-# would count fewer links rather than more, which the totals below catch.
+# Inline links [text](target) and autolinks <https://...>, and nothing else.
+#
+# REFERENCE-STYLE LINKS ARE USED IN THIS TREE AND THIS SCANNER DOES NOT SEE
+# THEM. Neither the use nor the definition carries `](` or a bracketed URL, so
+# both walk past the two patterns above:
+#
+#     git grep -nE '^\[[^]]+\]:[[:space:]]' -- '*.md'
+#
+# A file that starts using them lowers the count on the line this prints at the
+# end and nothing compares that count against anything, so the only total that
+# refuses is a zero one. Reading them is work this script does not do rather
+# than work it does badly, and it is stated here so an empty result is not read
+# as every link in the tree resolving.
 targets_of() {
     grep -o '](<*[^)> ]*' "$1" 2>/dev/null | sed 's/^](<*//'
     grep -oE '<https?://[^>]+>' "$1" 2>/dev/null | sed 's/^<//; s/>$//'
