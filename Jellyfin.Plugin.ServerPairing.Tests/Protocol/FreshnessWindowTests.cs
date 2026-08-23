@@ -11,8 +11,9 @@ namespace Jellyfin.Plugin.ServerPairing.Tests.Protocol;
 /// <remarks>
 /// Every number asserted here is read out of the freshness section of
 /// <c>docs/protocol.md</c>: 300 seconds either side, and a nonce remembered for 600, which is
-/// the window in both directions plus the window again. The clock is an argument in every
-/// case, so nothing here waits for real time.
+/// the window taken in both directions and is the widest gap between the first arrival of a
+/// request and the last instant a copy of it would still be inside the window. The clock is an
+/// argument in every case, so nothing here waits for real time.
 /// </remarks>
 public class FreshnessWindowTests
 {
