@@ -84,8 +84,12 @@ public sealed class KeyOverlap
     /// Gets a value indicating whether a superseded key is still holding its slot.
     /// </summary>
     /// <remarks>
-    /// True from the moment a rotation is accepted until the overlap closes, whether it closes
-    /// by running out, by the peer proving it has the replacement, or by being abandoned.
+    /// True from the moment a rotation is accepted until the slot is given up, which happens
+    /// when the peer proves it has the replacement, when the rotation is abandoned, or when
+    /// <see cref="CloseIfElapsed"/> is called after the overlap has run out. Time passing is
+    /// not one of them. This reads the slot rather than a clock, so an overlap nobody has
+    /// closed still reads as rotating while <see cref="LiveKeys"/> at the same instant already
+    /// counts one key.
     /// </remarks>
     public bool IsRotating
     {
