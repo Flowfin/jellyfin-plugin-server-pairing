@@ -333,8 +333,10 @@ be is issue #21's along with the restart question, and it is not settled here.
 
 Both numbers are constants of the specification rather than secrets, so a caller
 learns nothing by discovering them that reading this document would not have
-told them. Issue #26 owns the clock injection that makes them testable and the
-skew policy the refusal below rests on.
+told them. What makes them testable is already here: every judgement takes the
+instant as an argument, so a case chooses the moment rather than waiting for it,
+and nothing is injected. Issue #26 owns the skew policy the refusal below rests
+on.
 
 ## The rotation overlap
 
