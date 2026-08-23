@@ -5,25 +5,28 @@
              known-vulnerable package fails the restore. Left as warnings they would be
              true and green, printed into a log nobody reads.
     
-             This board committed a lockfile and ran no audit, which is the worse half of
-             the pair: the graph was held still and nothing looked at it. Eleven boards of
-             this fleet were in that state on 2026-08-18, and the twelfth is why it
-             matters. jellyfin-plugin-watchlist was told by Scorecard about one high
-             advisory; switching this on found a second one rated critical that Scorecard
-             had never reported.
+             A committed lock file without an audit is the worse half of the pair: the
+             graph is held still and nothing looks at it. This tree commits one for every
+             project and restores locked everywhere, which is what makes the audit the
+             missing half rather than a second opinion.
     
-             Mode all rather than direct: both of those arrived under the Jellyfin
-             packages and neither was referenced by a project file, so a direct-only audit
-             would have found neither.
+             Mode all rather than direct. What a project file names is the smaller half
+             of the graph and a direct-only audit reads none of the rest. The rest is
+             committed rather than argued about, so its size is one command:
     
-             Nothing is pinned here. Measured with the audit forced on from the command
-             line, this board reports no advisory today; the entry is the detector, not a
-             repair.
+                 git grep -c '"type": "Transitive"' Jellyfin.Plugin.ServerPairing/packages.lock.json
+    
+             Nothing is pinned here. What is pinned is the detector, not a repair, and
+             whether the graph carries anything today is a reading rather than a sentence:
+             run dotnet list package over the solution with its vulnerable and
+             include-transitive switches. A clean reading says the graph carried nothing
+             when it was run and says nothing about the next restore. The switches are
+             named in words here for the reason the note below gives.
     
              Note for whoever edits this comment: an XML comment may not contain two
-             hyphens in a row. A draft elsewhere in this fleet spelled out a command line
-             flag, left the file malformed, and the build failed on a property defined
-             twenty lines below. -->
+             hyphens in a row, so a command line flag spelled out here leaves the file
+             malformed and the build fails on a property defined further down rather than
+             on the comment. Name the flag in words instead. -->
         <NuGetAudit>true</NuGetAudit>
         <NuGetAuditMode>all</NuGetAuditMode>
         <NuGetAuditLevel>low</NuGetAuditLevel>
