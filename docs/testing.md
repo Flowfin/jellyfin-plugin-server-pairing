@@ -53,13 +53,17 @@ is a reading rather than a test.
 
 ## Two rules that apply to every test
 
-Nothing writes outside a per-test temporary directory. The key store is
-therefore tested against an injected path and never against a real application
-data directory.
+Nothing writes outside a per-test temporary directory. The key store is what
+that rule is written for and there is none in the tree yet, so it is what a
+store test will be held to rather than something the suite does today: the path
+is one the test chose, never a real application data directory.
 
 Nothing reads the wall clock directly. Every expiry, every skew window and every
-rotation overlap is tested against an injected clock, so a test that depends on
-time is deterministic rather than slow and occasionally red.
+rotation overlap is judged at an instant its caller hands in, so a test that
+depends on time is deterministic rather than slow and occasionally red. There is
+no clock to inject: the source guard leaves a type that wants the time with
+nowhere to get it except its own argument, which is the stronger of the two
+shapes because a parameter cannot be bypassed by one careless call.
 
 ## The greps that check this
 

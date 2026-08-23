@@ -52,8 +52,10 @@ public class ClockSourceTests
     /// <summary>
     /// Nothing in the plugin reads the wall clock. Every expiry this protocol has, the
     /// enrolment window, the timestamp window, the rotation overlap and the nonce store,
-    /// takes its now from an injected source instead, so a test can move time rather than
-    /// wait for it.
+    /// is judged at an instant its caller hands in, so a test can move time rather than
+    /// wait for it. There is no clock to inject and nothing injects one: a type that wanted
+    /// the time would have nowhere to get it except its argument, which is what this
+    /// assertion leaves it with.
     /// </summary>
     [Fact]
     public void NoPluginSourceFileReadsTheWallClock()

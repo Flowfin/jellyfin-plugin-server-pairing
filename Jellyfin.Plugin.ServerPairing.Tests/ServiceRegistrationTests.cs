@@ -49,12 +49,12 @@ public class ServiceRegistrationTests
     }
 
     /// <summary>
-    /// The check above runs over whatever the registrator added, and today that is nothing,
-    /// so on its own it would pass against a registrator that registers something broken.
-    /// This is the same check against a registrator that adds a service whose dependency
-    /// nobody registered, and it has to fail. Delete the loop in
+    /// The check above runs over whatever the registrator added, so it is empty either
+    /// because everything resolved or because there was nothing to resolve, and the result
+    /// does not say which. This is the same check against a registrator that adds a service
+    /// whose dependency nobody registered, and it has to fail. Delete the loop in
     /// <see cref="AssertEveryRegisteredServiceResolves"/> and this test goes red, which is
-    /// the only reason to trust the one above once it has something to run over.
+    /// the only reason to trust the one above.
     /// </summary>
     [Fact]
     public void TheResolutionCheckRefusesAServiceWhoseDependencyIsMissing()
