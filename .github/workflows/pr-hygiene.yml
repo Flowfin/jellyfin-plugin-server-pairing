@@ -1,7 +1,9 @@
-# Checks the pull request itself rather than the code in it: that the body says
-# which issue it belongs to, that every commit subject does, and that a manifest
-# version change arrives with a changelog entry. Two more things are printed and
-# never refused, a large diff and a source change with no test change.
+# Checks the pull request itself rather than the code in it.
+#
+# Which rules refuse and which only print is not listed here. A list in a
+# comment drifts against the script that decides it, and this one did: it named
+# three of the four rules that refuse. The run prints one line per rule and
+# CONTRIBUTING.md states them under "What a pull request carries".
 #
 # First-party and deterministic. Nothing in the failing path is a third-party
 # action, nothing is fetched, and there is no review service and no bot: the

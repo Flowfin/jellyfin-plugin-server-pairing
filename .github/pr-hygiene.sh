@@ -14,10 +14,15 @@
 #
 # Two tiers, and the difference between them is deliberate.
 #
-# The refusing tier is for things that are near-certainly wrong: a body with no
-# issue reference, a commit subject with no issue reference, and a manifest
-# version change with no changelog entry. Each is cheap to check, cheap to fix,
-# and loses information that cannot be recovered later.
+# The refusing tier is for things that are near-certainly wrong: cheap to check,
+# cheap to fix, and losing information that cannot be recovered later.
+#
+# Which rules are in it is not listed here. A list in a comment drifts against
+# the code under it, and this one did: it named three while the script refused
+# four, for as long as the protocol and contract markers have been in it. The
+# run prints one line per rule, CONTRIBUTING.md states them under "What a pull
+# request carries", and .github/pr-hygiene-test.sh watches each one refuse
+# something.
 #
 # The annotating tier prints and never fails. A size cap that fails is a size
 # cap that gets worked around, and a source change with no test change has
