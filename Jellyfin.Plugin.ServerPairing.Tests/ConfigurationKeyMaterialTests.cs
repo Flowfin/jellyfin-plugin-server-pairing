@@ -112,6 +112,7 @@ public class ConfigurationKeyMaterialTests
     {
         Assert.True(CarriesKeyMaterial(typeof(byte[])));
         Assert.True(CarriesKeyMaterial(typeof(ReadOnlyMemory<byte>)));
+        Assert.True(CarriesKeyMaterial(typeof(ReadOnlySpan<byte>)));
         Assert.True(CarriesKeyMaterial(typeof(Memory<byte>)));
         Assert.True(CarriesKeyMaterial(typeof(IReadOnlyList<byte>)));
         Assert.True(CarriesKeyMaterial(typeof(List<byte>)));

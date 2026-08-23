@@ -315,12 +315,13 @@ public class EnrolmentWindowTests
     }
 
     /// <summary>
-    /// A lifetime above the maximum is refused rather than clamped silently to something the
-    /// operator did not ask for. The configuration surface that will carry this value is
+    /// A lifetime outside the bounds is refused rather than clamped silently to something the
+    /// operator did not ask for. Both ends are refused: above the maximum, and a window that
+    /// would never be open at all. The configuration surface that will carry this value is
     /// issue #50; the bound holds for every caller either way.
     /// </summary>
     [Fact]
-    public void ALifetimeAboveTheMaximumIsRefusedRatherThanClamped()
+    public void ALifetimeOutsideTheBoundsIsRefusedRatherThanClamped()
     {
         Assert.Throws<ArgumentOutOfRangeException>(
             () => new EnrolmentWindow(new NoPairings(), EnrolmentWindow.MaximumLifetimeSeconds + 1));
@@ -330,11 +331,12 @@ public class EnrolmentWindowTests
     }
 
     /// <summary>
-    /// The default lifetime is inside the maximum, and the maximum is short enough to be the
-    /// bound the rule describes rather than a number that refuses nothing.
+    /// The default lifetime is inside the maximum, the maximum is short enough to be the
+    /// bound the rule describes rather than a number that refuses nothing, and the failure
+    /// allowance leaves an operator at least one attempt.
     /// </summary>
     [Fact]
-    public void TheDefaultLifetimeIsShortAndInsideTheMaximum()
+    public void TheDefaultLifetimeIsShortInsideTheMaximumAndOneAttemptIsAllowed()
     {
         Assert.True(EnrolmentWindow.LifetimeSeconds <= EnrolmentWindow.MaximumLifetimeSeconds);
         Assert.True(EnrolmentWindow.MaximumLifetimeSeconds <= 3600);
