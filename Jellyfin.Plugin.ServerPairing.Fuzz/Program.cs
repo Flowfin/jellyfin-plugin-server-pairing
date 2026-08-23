@@ -49,16 +49,16 @@ internal static class Program
     private const string SmokeVariable = "SERVERPAIRING_FUZZ_SMOKE";
 
     /// <summary>
-    /// A fixed key. The question here is what the parse and validate path does with bytes,
-    /// and a key that moved between iterations would make a reproducer stop reproducing.
-    /// Nothing is protected by it, and no secret of any kind belongs in this file.
-    /// </summary>
-    /// <summary>
     /// The three characters the address parse refuses by name, so an accepted value carrying
     /// one of them is a hole rather than a preference.
     /// </summary>
     private static readonly char[] RefusedByName = { '@', '?', '#' };
 
+    /// <summary>
+    /// A fixed key. The question here is what the parse and validate path does with bytes,
+    /// and a key that moved between iterations would make a reproducer stop reproducing.
+    /// Nothing is protected by it, and no secret of any kind belongs in this file.
+    /// </summary>
     private static readonly byte[] FixedKey = new byte[]
     {
         0x6a, 0x65, 0x6c, 0x6c, 0x79, 0x66, 0x69, 0x6e, 0x2d, 0x66, 0x75, 0x7a, 0x7a, 0x2d, 0x6b, 0x65,
@@ -226,11 +226,12 @@ internal static class Program
     /// </summary>
     /// <remarks>
     /// The properties. Parsing never throws and never hands back an address it did not
-    /// accept. An accepted address is inside its length limit, carries the one allowed scheme
-    /// and none of the three characters the parse refuses by name, and is a fixed point: it
-    /// parses to itself. That last one is what an approval means. The operator approved a
-    /// spelling; if the spelling this type produces parsed to something else, the address
-    /// held would not be the address approved.
+    /// accept. An accepted address is inside its length limit, carries the one allowed scheme,
+    /// carries none of the three characters the parse refuses by name, carries no path, is a
+    /// fixed point in that it parses to itself, and approves the candidate it was parsed from.
+    /// The last two are what an approval means. The operator approved a spelling; if the
+    /// spelling this type produces parsed to something else, or if the address it produced
+    /// then refused the text it came from, the address held would not be the address approved.
     /// </remarks>
     private static void FuzzPeerAddress(ReadOnlySpan<byte> data)
     {
@@ -287,9 +288,15 @@ internal static class Program
 
     /// <summary>
     /// The bytes a signature covers have to name their own field boundaries. Eight lines, each
-    /// ended by one line feed, no carriage return, nothing outside ASCII, and each line equal
-    /// to the field it was built from.
+    /// ended by one line feed, no carriage return and nothing outside ASCII.
     /// </summary>
+    /// <remarks>
+    /// Seven of the eight lines are compared against the field they were built from. The
+    /// eighth is the body digest and is compared against nothing here, so a wrong digest is
+    /// outside what this asserts: checking it means computing it, and a harness computing it
+    /// the same way the code under test does proves the two agree with each other rather than
+    /// with the specification.
+    /// </remarks>
     private static void AssertCanonicalFormIsRecoverable(PairingRequest request)
     {
         var bytes = CanonicalForm.ForRequest(request);
@@ -354,8 +361,11 @@ internal static class Program
     private readonly struct WireFields
     {
         /// <summary>
-        /// Six covered fields and the signature header, in the order the canonical form names
-        /// them, with the body last so a mutation that lengthens it does not shift the rest.
+        /// Six covered fields and the signature header, in the order a request takes them in
+        /// its constructor rather than the order the canonical form names them, with the body
+        /// last so a mutation that lengthens it does not shift the rest. The two orders differ
+        /// in one place: the version is first on the canonical form and fourth here, so a seed
+        /// laid out by reading that form is not the seed this splitter reads.
         /// </summary>
         private const int FieldCount = 7;
 
