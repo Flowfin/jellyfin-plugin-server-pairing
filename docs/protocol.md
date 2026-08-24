@@ -213,6 +213,79 @@ request to an address no administrator approved. Every response is read against
 the limit for its message type and the read stops one byte past it, so a peer
 that answers endlessly costs this server that limit and no more.
 
+### The body members
+
+The message table fixes what each body carries and the limits table fixes what
+each value is checked against. Neither names the member a value travels under,
+so two implementations built from those two tables agree about every value and
+disagree about every name. The names are fixed here, and the type that
+serialises them follows this document rather than the other way round: choosing
+them in a C# type would choose the wire in the one place the other server cannot
+read.
+
+Every body that is not empty is a single JSON object with no nesting. Members
+are the exact byte sequences below, matched case-sensitively, so `Address` is
+not `address`. Member order is not significant and nothing covers it, because
+line 8 of the canonical form below covers the body bytes as they were sent
+rather than as they would re-serialise.
+
+| Type | Body | Member | Value, and the limit it is already checked against |
+| --- | --- | --- | --- |
+| `hello` | request | `key` | public key, the one this sender offers |
+| `hello` | request | `versionLow` | protocol version, the lowest the sender speaks |
+| `hello` | request | `versionHigh` | protocol version, the highest the sender speaks, not below `versionLow` |
+| `hello` | request | `address` | peer address, the one this sender believes it is talking to |
+| `hello` | response | `key` | public key, this server's |
+| `hello` | response | `version` | protocol version, the one this server selected |
+| `hello` | response | `pairingId` | pairing identifier, the one the two keys derive |
+| `confirm` | request | `digest` | fingerprint digest |
+| `confirm` | response | none | empty |
+| `rotate` | request | `key` | public key, the replacement |
+| `rotate` | request | `notAfter` | rotation instant, after which the superseded key no longer verifies |
+| `rotate` | response | `key` | public key, this side's replacement |
+| `revoke` | request | none | empty |
+| `revoke` | response | none | empty |
+| `exchange` | both | none named here | opaque to this layer; M6 fixes what is inside it and this document names none of it |
+| every type | refusal | `code` | one of the codes in the error taxonomy below |
+
+The version range is two members rather than one nested object, so each half is
+checked against the protocol version limit by itself and a range whose halves
+are the wrong way round is one comparison rather than a parse. `hello` is the
+only body carrying a range; every later message carries the selected version in
+`X-Pairing-Version` and nowhere else.
+
+`key` is one name across the three bodies that carry a public key, because no
+body carries two of them, and a name that changes per message buys a reader
+nothing and costs an implementer a table.
+
+**Empty means zero bytes.** Where the table says empty the body is nothing at
+all, not `{}` and not whitespace, and line 8 of the canonical form takes the
+digest of the empty string for it. A request or a response carrying a body where
+this table says empty is refused, so a member cannot be smuggled into a body
+this document says has none and then relied on.
+
+**Every member in the table is required in the body it belongs to.** There is no
+optional member and no default. A body missing a member that its declared
+version requires is refused rather than completed, because a default is a value
+neither side agreed on standing in for one they would have had to send. To a
+caller whose signature verified that refusal is `malformed`; to one whose
+signature did not, it is `refused` like everything else, which is the taxonomy
+below rather than a rule of its own.
+
+**A member this document does not name is refused rather than ignored**, in
+those words. Ignoring an unknown member is what turns it into an undocumented
+extension: two implementations begin relying on it and the version that was
+supposed to announce it never moved. A member carrying `null`, and a body
+carrying the same member twice, are refused the same way and for the same
+reason, rather than being resolved by a rule about which copy wins.
+
+**The members are part of the protocol version.** Adding a member, renaming one,
+removing one, or changing what one holds is a change to the bytes under a
+version, which [`versioning.md`](versioning.md) already calls a removal wearing
+a smaller number: give it a new protocol version and keep the old one accepted,
+or accept that it moves the first part of the plugin version. Each of those
+carries a `[protocol]` line in [`../CHANGELOG.md`](../CHANGELOG.md).
+
 ## What is authenticated, and over exactly which bytes
 
 Every pairing plane request carries five headers. They are custom headers rather
