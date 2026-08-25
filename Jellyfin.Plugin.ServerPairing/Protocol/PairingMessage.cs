@@ -27,8 +27,10 @@ public enum PairingMessage
     Rotate = 2,
 
     /// <summary>
-    /// The peer ends the pairing. Unilateral, and accepted in every state where a pairing
-    /// exists.
+    /// The peer ends the pairing. Unilateral, and accepted in every state where this side
+    /// holds the peer's key. <see cref="PairingState.Offered"/> is the exception: a record
+    /// exists there and no peer key has arrived, so an arriving revoke carries no signature
+    /// this side could verify and is refused.
     /// </summary>
     Revoke = 3,
 

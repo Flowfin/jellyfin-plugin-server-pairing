@@ -36,9 +36,10 @@ public sealed class FreshnessWindow
     public const int WindowSeconds = 300;
 
     /// <summary>
-    /// How long a nonce is remembered, in seconds. It is the window in both directions plus
-    /// the window again, so a nonce cannot age out while a request carrying it is still inside
-    /// the window.
+    /// How long a nonce is remembered, in seconds. It is the window taken in both directions,
+    /// which is the widest gap there can be between the first arrival of a request and the
+    /// last instant a copy of it would still be inside the window, so a nonce cannot age out
+    /// while a request carrying it would still be accepted.
     /// </summary>
     public const int RememberedSeconds = 600;
 

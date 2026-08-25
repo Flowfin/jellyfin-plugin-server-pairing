@@ -19,10 +19,10 @@ public enum FreshnessOutcome
     Fresh = 0,
 
     /// <summary>
-    /// The timestamp is not an unsigned decimal integer inside its digit limit. The shape
-    /// check refuses this before a signature is computed, so reaching it here means a caller
-    /// bypassed that; it is a value rather than an exception so that the ordering can be
-    /// tested rather than assumed.
+    /// The timestamp is not an unsigned decimal integer inside its digit limit, or the nonce
+    /// is not the hex field it has to be. The shape check refuses both before a signature is
+    /// computed, so reaching this here means a caller bypassed that; it is a value rather than
+    /// an exception so that the ordering can be tested rather than assumed.
     /// </summary>
     Malformed = 1,
 

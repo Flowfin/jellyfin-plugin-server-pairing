@@ -13,8 +13,10 @@ namespace Jellyfin.Plugin.ServerPairing.Protocol;
 /// </summary>
 /// <remarks>
 /// One type owns the outbound side so that the rules below hold for every request rather than
-/// for the ones whoever wrote them remembered. Nothing else in the plugin builds an
-/// <see cref="HttpClient"/> or a handler, and a test asserts that rather than trusting it.
+/// for the ones whoever wrote them remembered. No other type in the plugin holds an
+/// <see cref="HttpClient"/> or a handler in a field or a property, and a test reads the
+/// compiled assembly for that rather than trusting it. What that reading cannot see is a
+/// client built inside a method and used there, so the rule is wider than the assertion.
 /// <para>
 /// The handler is a constructor argument, so a suite drives this over an
 /// <see cref="HttpMessageHandler"/> it wrote and no test opens a socket. That is the seam

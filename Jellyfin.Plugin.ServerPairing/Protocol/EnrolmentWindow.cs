@@ -58,10 +58,11 @@ public sealed class EnrolmentWindow
     public const int MaximumLifetimeSeconds = 1800;
 
     /// <summary>
-    /// How many failed attempts a window survives.
+    /// How many failed attempts a window takes before it closes.
     /// </summary>
     /// <remarks>
-    /// Three, and the fourth closes the window rather than being refused on its own. An
+    /// Three, and the third is the one that closes it: it is refused like the two before it
+    /// and the window is gone in the same call, so there is no fourth attempt left to make. An
     /// operator who is enrolling watches it happen, so a retry costs them a fresh window and
     /// nothing else; a stranger guessing gets three attempts against a window an administrator
     /// happens to have open, and then the door is shut rather than left ajar.

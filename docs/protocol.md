@@ -381,8 +381,10 @@ The nonce is 16 random bytes from `RandomNumberGenerator`, written as 32
 lowercase hex characters. It is not a counter and carries no meaning; two
 requests that differ in nothing else must differ here.
 
-A nonce is remembered for 600 seconds, which is the window in both directions
-plus the window again. A nonce older than that is dropped, so the store is
+A nonce is remembered for 600 seconds, which is the window taken in both
+directions, and is the widest gap there can be between the first arrival of a
+request and the last instant a copy of it would still be inside the window. A
+nonce older than that is dropped, so the store is
 bounded by the request rate rather than by uptime. The store is per pairing and
 is not persisted: a restart forgets it, and a request replayed across a restart
 inside 300 seconds is accepted. That is a real gap, it is named rather than left

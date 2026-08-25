@@ -11,8 +11,9 @@ namespace Jellyfin.Plugin.ServerPairing.Tests.Protocol;
 /// <remarks>
 /// Every number asserted here is read out of the freshness section of
 /// <c>docs/protocol.md</c>: 300 seconds either side, and a nonce remembered for 600, which is
-/// the window in both directions plus the window again. The clock is an argument in every
-/// case, so nothing here waits for real time.
+/// the window taken in both directions and is the widest gap between the first arrival of a
+/// request and the last instant a copy of it would still be inside the window. The clock is an
+/// argument in every case, so nothing here waits for real time.
 /// </remarks>
 public class FreshnessWindowTests
 {
@@ -146,8 +147,10 @@ public class FreshnessWindowTests
 
     /// <summary>
     /// A nonce is forgotten once it is older than the remembered span, and not before. The
-    /// span is longer than the window in both directions, so a nonce cannot age out while a
-    /// request carrying it would still be inside the window.
+    /// span is exactly the window taken in both directions, which is the widest gap between
+    /// the first arrival of a request and the last instant a copy of it would still be inside
+    /// the window, so a nonce cannot age out while one carrying it would still be accepted.
+    /// The two cases below sit either side of that boundary, and the margin is nothing.
     /// </summary>
     [Fact]
     public void ANonceIsForgottenByAgeAndNotBefore()
