@@ -164,7 +164,15 @@ public class ConfigurationKeyMaterialTests
             foreach (var (name, memberType) in members)
             {
                 var memberPath = string.Concat(path, ".", name);
-                found.Add((memberPath, memberType));
+
+                // Every type the member's own type contains counts as reached, not only the
+                // declared one, for the same reason Inside is transitive: a member declared
+                // as a list of keys is a key on the configuration, and recording only the
+                // list walked past it.
+                foreach (var reached in Inside(memberType))
+                {
+                    found.Add((memberPath, reached));
+                }
 
                 foreach (var next in Inside(memberType).Where(WorthWalking))
                 {
@@ -175,8 +183,13 @@ public class ConfigurationKeyMaterialTests
     }
 
     /// <summary>
-    /// The member's own type, plus what it contains, so a list of records is walked for
-    /// the record rather than stopped at the list.
+    /// The member's own type and everything it contains, to the bottom.
+    ///
+    /// TRANSITIVE, AND IT WAS NOT. This unwrapped one level, so a member declared as a
+    /// list of lists of something reached the inner list and stopped there. Found while
+    /// building the same walk over the endpoints for issue #32, by planting an endpoint
+    /// answering with a task of a list of a type holding a key and watching that guard
+    /// stay green.
     /// </summary>
     private static IEnumerable<Type> Inside(Type type)
     {
@@ -184,14 +197,20 @@ public class ConfigurationKeyMaterialTests
 
         if (type.IsArray && type.GetElementType() is { } element)
         {
-            yield return element;
+            foreach (var inside in Inside(element))
+            {
+                yield return inside;
+            }
         }
 
         if (type.IsGenericType)
         {
             foreach (var argument in type.GetGenericArguments())
             {
-                yield return argument;
+                foreach (var inside in Inside(argument))
+                {
+                    yield return inside;
+                }
             }
         }
     }
