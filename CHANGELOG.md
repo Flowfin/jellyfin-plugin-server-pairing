@@ -41,6 +41,14 @@ true. The first release replaces this section with what it carries, and the
 `changelog` field in `build.yaml` and `build.net10.0.yaml` carries the same
 words.
 
+- [protocol] The specification's explanation of how long a nonce is remembered
+  was wrong and is corrected. It said 600 seconds is the window in both
+  directions plus the window again; 600 seconds is the window taken in both
+  directions and nothing more, and that span is the widest gap there can be
+  between the first arrival of a request and the last instant a copy of it would
+  still be inside the window. The number on the wire is unchanged, so a server
+  behaves exactly as it did before and only the reasoning a far-side
+  implementer would derive from the document moves.
 - [protocol] A refused request can now say that its nonce was already seen, or
   that the pairing has no room to remember another one, instead of both arriving
   as the one undistinguished refusal. Nothing implements either code yet, so a
