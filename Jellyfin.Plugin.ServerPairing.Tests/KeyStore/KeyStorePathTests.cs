@@ -76,7 +76,7 @@ public class KeyStorePathTests
             var store = new FilePairingKeyStore(Path.Combine(directory, KeyStorePath.FileName));
             store.Add("9f8c1d2b3a4e5f60718293a4b5c6d7e8", key);
 
-            var written = new StringWriter(System.Globalization.CultureInfo.InvariantCulture);
+            using var written = new StringWriter(System.Globalization.CultureInfo.InvariantCulture);
             new XmlSerializer(typeof(PluginConfiguration)).Serialize(written, new PluginConfiguration());
             var configuration = written.ToString();
 
@@ -120,7 +120,7 @@ public class KeyStorePathTests
 
         Assert.ThrowsAny<Exception>(() =>
         {
-            var written = new StringWriter(System.Globalization.CultureInfo.InvariantCulture);
+            using var written = new StringWriter(System.Globalization.CultureInfo.InvariantCulture);
             new XmlSerializer(typeof(KeyMaterial)).Serialize(written, key);
         });
     }

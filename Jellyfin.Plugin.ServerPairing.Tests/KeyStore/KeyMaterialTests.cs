@@ -170,9 +170,12 @@ public class KeyMaterialTests
         Assert.DoesNotContain(declared, method => string.Equals(method.Name, "Equals", StringComparison.Ordinal));
         Assert.DoesNotContain(declared, method => string.Equals(method.Name, "GetHashCode", StringComparison.Ordinal));
 
+        // What two keys with the same bytes answer to inherited equality is not asserted, and
+        // this case deliberately does not call it: calling Equals on a type that declares none
+        // is the trap, and a case doing it to demonstrate the trap is still a call somebody
+        // can copy. The reflection above is the whole of the property.
         var bytes = new byte[KeyMaterial.Length];
 
-        Assert.False(KeyMaterial.From(bytes).Equals(KeyMaterial.From(bytes)));
         Assert.True(KeyMaterial.From(bytes).SameAs(KeyMaterial.From(bytes)));
     }
 }
