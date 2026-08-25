@@ -31,24 +31,30 @@ marker for what it touched.
 
 Anything else is an ordinary line with no marker.
 
-## Unreleased
+## 0.1.0.0
 
-No release has been published from this repository, and nothing in the tree yet
-changes what an operator sees on a server that installs the plugin. The command
-that reads the first half of that is in [`docs/release.md`](docs/release.md),
-which is where it is kept so that one place moves on the day it stops being
-true. The first release replaces this section with what it carries, and the
-`changelog` field in `build.yaml` and `build.net10.0.yaml` carries the same
-words.
+The first release, so nothing under this heading is a difference from a
+published version: there is none. The lines below were written one at a time as
+the wire specification moved, which is why each of them says what a server
+installed today does rather than what an operator has to act on.
+
+What an operator gets by installing this version is a plugin that answers on the
+five pairing paths and refuses every request that reaches them. Nothing
+verifies: the check that reads an arriving request is given the key source of a
+server that holds no keys, and there is no page and no endpoint an administrator
+can open an enrolment from. Two servers cannot be paired with this version. The
+`changelog` field in `build.yaml` and `build.net10.0.yaml` carries that
+paragraph in the same words.
 
 - [protocol] A server running this plugin now answers on the five pairing paths the
   specification fixes, and every answer is the refusal a stranger gets. A request
   whose path carries a trailing slash, a query string, a percent-encoded byte or a
   different case is refused rather than read as one of the five; a body over the
   limit for its message is refused without being read past that limit; and nothing
-  a request carries is looked at past its signature. There is no key store yet, so
-  no signature verifies and no pairing exists, which is why the answer is the same
-  refusal in every case rather than a working handshake.
+  a request carries is looked at past its signature. Nothing verifies, because the
+  check that reads an arriving request is given the key source of a server that
+  holds no keys, so no pairing exists and the answer is the same refusal in every
+  case rather than a working handshake.
 - [protocol] The specification's explanation of how long a nonce is remembered
   was wrong and is corrected. It said 600 seconds is the window in both
   directions plus the window again; 600 seconds is the window taken in both

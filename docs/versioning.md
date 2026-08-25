@@ -28,13 +28,13 @@ Three files carrying five fields between them, and they say the same thing at
 every commit:
 
     grep '^version:' build.yaml build.net10.0.yaml
-    build.yaml:version: "0.0.0.0"
-    build.net10.0.yaml:version: "0.0.0.0"
+    build.yaml:version: "0.1.0.0"
+    build.net10.0.yaml:version: "0.1.0.0"
 
     grep '<Version>\|<AssemblyVersion>\|<FileVersion>' Directory.Build.props
-            <Version>0.0.0.0</Version>
-            <AssemblyVersion>0.0.0.0</AssemblyVersion>
-            <FileVersion>0.0.0.0</FileVersion>
+            <Version>0.1.0.0</Version>
+            <AssemblyVersion>0.1.0.0</AssemblyVersion>
+            <FileVersion>0.1.0.0</FileVersion>
 
 Neither block asks for a line number, and that is a repair rather than a style.
 The second one carried `-n` and pasted lines 3, 4 and 5 until a property group
@@ -46,9 +46,11 @@ insertion above the field breaks. The first block still reproduced when this was
 written and lost its `-n` for the same fragility rather than for a defect of its
 own.
 
-`0.0.0.0` is the unreleased value. Nothing has been published from this
-repository, so the number agrees with itself by never having moved, which is
-worth less than it looks.
+`0.1.0.0` is the number the first release carries. It is written into those five
+fields ahead of the tag rather than by it, which is the order
+[`RELEASING.md`](RELEASING.md) fixes. Nothing has been published from this
+repository yet, so the agreement above has never been tested by a release, which
+is worth less than it looks.
 
 The publish run refuses a tag whose numeric part is not the `version` in
 `build.yaml`, and refuses a build whose stamped assembly version is not that

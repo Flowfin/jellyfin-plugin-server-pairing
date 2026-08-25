@@ -134,13 +134,13 @@ than it looks: `Pull request hygiene` is not in the required set read by item 1
 above, so the leg reports and does not stop a merge. The entry in front of a
 release is still read by a person.
 
-`build.yaml` carries a `changelog` field and it still holds the placeholder the
-first release replaces:
+`build.yaml` carries a `changelog` field and it holds the first release entry
+rather than the placeholder it used to:
 
     git show origin/master:build.yaml | grep -n -A2 'changelog'
     28:changelog: >
-    29-  No release has been published from this repository yet. The first release
-    30-  replaces this entry with what it changed.
+    29-  The first release. A server that installs it answers on the five pairing paths
+    30-  the specification fixes and refuses every request that reaches them. Nothing
 
 `build.net10.0.yaml` carries the same field with the same words, and both take
 the entry from the changelog rather than a second wording.
@@ -155,8 +155,10 @@ does not load.
     grep -n '^version:' build.yaml
     grep -n '<Version>\|<AssemblyVersion>\|<FileVersion>' Directory.Build.props
 
-Both currently read `0.0.0.0`, which is the unreleased value rather than an
-agreement worth anything.
+Both read `0.1.0.0`, which is the number the first release carries, written into
+them ahead of the tag because that is the order [`RELEASING.md`](RELEASING.md)
+fixes. No release has been published, so the agreement has never been tested by
+one.
 
 The comparison is no longer only those two greps. A script that reads every
 manifest against the build it describes is in the tree, and a workflow runs it:
@@ -199,8 +201,8 @@ Running it before a tag is still worth the second it costs, because the one
 comparison the job cannot make is the one a release most needs:
 
     sh .github/manifest-check.sh
-    ./build.net10.0.yaml: version 0.0.0.0, floor 12.0.0.0 on net10.0, 1 artefact(s)
-    ./build.yaml: version 0.0.0.0, floor 10.11.0.0 on net9.0, 1 artefact(s)
+    ./build.net10.0.yaml: version 0.1.0.0, floor 12.0.0.0 on net10.0, 1 artefact(s)
+    ./build.yaml: version 0.1.0.0, floor 10.11.0.0 on net9.0, 1 artefact(s)
     manifest-check: 10 comparison(s), 0 disagreement(s). The artefact list was not compared: no --output was given.
 
 The last line is the bound and the script prints it on every run. The artefact

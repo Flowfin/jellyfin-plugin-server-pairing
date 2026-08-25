@@ -6,7 +6,7 @@
 name: "Server Pairing"
 guid: "130cc961-461b-49fd-8a3e-f9eb46db0716"
 imageUrl: "https://raw.githubusercontent.com/Flowfin/jellyfin-plugin-server-pairing/master/img/logo.png"
-version: "0.0.0.0"
+version: "0.1.0.0"
 targetAbi: "12.0.0.0"
 framework: "net10.0"
 overview: "Pairs this Jellyfin server with a second one, so plugins on both sides can work across the pair."
@@ -26,5 +26,9 @@ owner: "Flowfin"
 artifacts:
 - "Jellyfin.Plugin.ServerPairing.dll"
 changelog: >
-  No release has been published from this repository yet. The first release
-  replaces this entry with what it changed.
+  The first release. A server that installs it answers on the five pairing paths
+  the specification fixes and refuses every request that reaches them. Nothing
+  verifies yet, because the check that reads an arriving request is given the key
+  source of a server that holds no keys, and there is no page and no endpoint an
+  administrator can open an enrolment from. Two servers cannot be paired with this
+  version.
