@@ -72,6 +72,42 @@ What the type does today:
 - destroying it overwrites the bytes and makes it unusable, and asking a
   destroyed key for its bytes is an error rather than an empty answer
 
+## How writes are made safe, and against what
+
+**The mechanism is one lock per store instance and one atomic replace per
+write.** Not a concurrent collection, not a type whose name sounds safe.
+
+Every operation on a store instance is taken under that lock, so a rotation and
+a read never interleave. Every write goes through `AtomicWrite.Replace`, which
+writes a temporary file beside the destination and then moves it over, so a
+reader sees the file as it was before the write or as it is after it, and never
+as it is during one:
+
+    git grep -n 'class AtomicWrite' -- Jellyfin.Plugin.ServerPairing/KeyStore/
+
+The temporary file lives in the same directory as its destination. A move across
+a filesystem boundary is a copy and a delete, which is the window this exists to
+close, and a temporary directory is a different filesystem on more machines than
+not. Nothing reads a file with the temporary suffix, so one left behind by a
+process that died is inert and the next write overwrites it.
+
+A write that fails anywhere leaves the destination as it was, and the failure
+reaches the caller rather than being swallowed. A store that reported success on
+a write that did not happen would leave a rotation the peer believes in and this
+server has not made.
+
+**What the lock does not cover.** It is per instance, so what makes it cover the
+server is the singleton registration: two instances over one file would each
+serialise their own callers and neither would see the other. A second process is
+out of reach entirely - an operator editing the file by hand while the server
+runs is serialised by nothing, and the last write wins.
+
+**What the atomic replace does not cover.** The bytes are not forced to the
+platter before the move. The move is ordered after the write by this code and
+not by any promise the filesystem makes, so a machine that loses power between
+them may come back with the move done and the contents not. Closing that needs a
+flush the runtime does not expose portably.
+
 ## What zeroing does not achieve
 
 `KeyMaterial.Destroy` calls `CryptographicOperations.ZeroMemory` on the array it
@@ -97,9 +133,6 @@ mistaken for reading a finished design.
 - **What protects the file at rest.** Nothing in this plugin encrypts it. The
   keys are on disk in a form anybody who can read the file can use. Issue #31 is
   where what protects it, and what does not, is answered.
-- **Atomic writes and concurrent access.** A write is a read of the file, a
-  change, and a write back. It is not atomic, and it is not safe against a
-  second writer in another process. Issue #34 is where that is fixed.
 - **The file's permissions, and creating it.** The directory is created when
   something is first written and the file gets whatever permissions the platform
   gives it. Issue #35 owns creating the store lazily and with the right
