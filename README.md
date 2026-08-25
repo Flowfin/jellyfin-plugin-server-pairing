@@ -56,8 +56,9 @@ it is the one that deletes those rows when the pairing ends. That is a
 requirement this plugin's contract puts on every sync plugin built against it
 rather than a hope, and it is why every synced row has to record the pairing it
 arrived under. The longer version is in [`docs/data.md`](docs/data.md), which
-also says what it does not answer: what disabling or uninstalling the plugin
-leaves behind is not settled anywhere yet.
+also says what it does not answer. What disabling, uninstalling and reinstalling
+leave behind, and the file an operator deletes by hand, is
+[`docs/lifecycle.md`](docs/lifecycle.md).
 
 Neither of those happens yet, for the same reason nothing in the next section
 does.
@@ -70,12 +71,15 @@ arrangement rests on, and it is the one step no software performs on their
 behalf. [`docs/threat-model.md`](docs/threat-model.md) states what is lost by an
 operator who confirms without comparing.
 
-Nobody can carry that out today. This plugin adds no endpoint:
+Nobody can carry that out today. The one endpoint this plugin adds is the peer
+plane, which a stranger reaches and an operator does not:
 
     git grep -lE 'ControllerBase|\[ApiController\]' -- Jellyfin.Plugin.ServerPairing ; echo "exit=$?"
-    exit=1
+    Jellyfin.Plugin.ServerPairing/Api/PeerPlaneController.cs
+    exit=0
 
-its configuration page is still the plugin template's example fields:
+There is nothing an administrator can call to open an enrolment; its
+configuration page is still the plugin template's example fields:
 
     grep -c 'AnInteger\|Several Options\|A String' Jellyfin.Plugin.ServerPairing/Configuration/configPage.html
     6
@@ -112,6 +116,10 @@ been no release.
   an item on the other, and what that costs
 - [`docs/endpoints.md`](docs/endpoints.md), how the host authenticates a
   dashboard request and what forgery is possible against it
+- [`docs/keystore.md`](docs/keystore.md), where the key material is kept, what
+  protects it and what does not
+- [`docs/lifecycle.md`](docs/lifecycle.md), what disabling, uninstalling and
+  reinstalling leave behind, and what an operator has to delete by hand
 - [`docs/logging.md`](docs/logging.md), what is logged and what may never be
 - [`docs/testing.md`](docs/testing.md), the three kinds of test this repository
   refuses and what replaces each one
@@ -130,7 +138,7 @@ That list is every document under `docs/`, and it is checkable rather than
 trusted:
 
     git ls-files 'docs/*.md' | wc -l
-    12
+    14
 
 ## Contributing
 

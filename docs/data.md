@@ -182,8 +182,9 @@ bytes are on the peer's disk and nothing this plugin can send gets them back.
 That is stated in [`threat-model.md`](threat-model.md) in the same words and it is
 not softened here.
 
-What disable, uninstall and reinstall leave behind is issue #58, which is M8 and
-is not answered by this document.
+What disable, uninstall and reinstall leave behind is
+[`lifecycle.md`](lifecycle.md), which names the file that survives an uninstall
+and what deleting it costs. It is not answered by this document.
 
 ## Reporting and removing what is held about one user
 
