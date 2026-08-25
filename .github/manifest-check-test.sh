@@ -84,7 +84,7 @@ expect "a manifest claiming a framework the project does not build" refuses "$d"
 # This is the case the issue asks for by name, and the near-miss is a manifest
 # bumped for a release with the assembly version left behind.
 d=$(tree version)
-sed -i 's/^version: "0.0.0.0"$/version: "0.1.0.0"/' "${d}/build.yaml"
+sed -i 's/^version: "0.1.0.0"$/version: "0.2.0.0"/' "${d}/build.yaml"
 expect "a manifest version the assembly does not carry" refuses "$d"
 
 # The floor a manifest claims against the package the shipping build compiles
