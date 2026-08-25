@@ -1,5 +1,7 @@
 using Jellyfin.Plugin.ServerPairing.Api;
+using Jellyfin.Plugin.ServerPairing.KeyStore;
 using Jellyfin.Plugin.ServerPairing.Protocol;
+using MediaBrowser.Common.Configuration;
 using MediaBrowser.Controller;
 using MediaBrowser.Controller.Plugins;
 using Microsoft.Extensions.DependencyInjection;
@@ -36,5 +38,17 @@ public class PluginServiceRegistrator : IPluginServiceRegistrator
         serviceCollection.AddSingleton<IPairingKeySource, NoPairingKeys>();
         serviceCollection.AddSingleton(services => new RequestAuthenticator(services.GetRequiredService<IPairingKeySource>()));
         serviceCollection.AddSingleton(services => new PeerPlane(services.GetRequiredService<RequestAuthenticator>()));
+
+        // The key store, over the file the host's own paths put it at. The path is derived
+        // from IApplicationPaths rather than written down, so a server whose data directory is
+        // somewhere unusual is served without a setting, and the file is nowhere near the
+        // directory the host writes plugin configurations into.
+        //
+        // Nothing resolves this yet. What would is the request authenticator, and reaching a
+        // store whose every read takes an instant needs the injected clock, which is issue
+        // #26. It is registered here rather than when that arrives so that a server carries
+        // one store rather than one per caller.
+        serviceCollection.AddSingleton<IPairingKeyStore>(services =>
+            new FilePairingKeyStore(KeyStorePath.FileFor(services.GetRequiredService<IApplicationPaths>())));
     }
 }

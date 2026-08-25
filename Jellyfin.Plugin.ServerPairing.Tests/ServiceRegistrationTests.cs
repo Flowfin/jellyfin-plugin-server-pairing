@@ -1,5 +1,6 @@
 using System;
 using System.Linq;
+using MediaBrowser.Common.Configuration;
 using MediaBrowser.Controller;
 using MediaBrowser.Controller.Plugins;
 using Microsoft.Extensions.DependencyInjection;
@@ -36,12 +37,18 @@ public class ServiceRegistrationTests
 
     /// <summary>
     /// Every service the plugin registers is resolvable without a running server. What is
-    /// substituted is the host interface the server passes in, and nothing else.
+    /// substituted is what the server supplies: the host interface it passes into the
+    /// registrator, and the paths it registers in its own container, which the key store
+    /// derives its file from.
     /// </summary>
     [Fact]
     public void EveryServiceTheRegistratorAddsResolvesWithoutAServer()
     {
         var services = new ServiceCollection();
+
+        var paths = Substitute.For<IApplicationPaths>();
+        paths.DataPath.Returns(System.IO.Path.GetTempPath());
+        services.AddSingleton(paths);
 
         new PluginServiceRegistrator().RegisterServices(services, Substitute.For<IServerApplicationHost>());
 

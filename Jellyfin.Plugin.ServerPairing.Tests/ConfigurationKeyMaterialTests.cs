@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using Jellyfin.Plugin.ServerPairing.Configuration;
+using Jellyfin.Plugin.ServerPairing.KeyStore;
 using Xunit;
 
 namespace Jellyfin.Plugin.ServerPairing.Tests;
@@ -27,10 +28,10 @@ public class ConfigurationKeyMaterialTests
 
     /// <summary>
     /// A member whose type is a run of bytes, in any of the shapes this plugin passes a
-    /// pairing key around in today. There is no key type to name instead: key material
-    /// crosses this plugin as <c>byte[]</c>, <c>ReadOnlyMemory&lt;byte&gt;</c> and
-    /// <c>ReadOnlySpan&lt;byte&gt;</c>, which is issue #32's subject rather than this
-    /// file's. When a key type arrives it is added here beside these.
+    /// pairing key around in. The key type arrived with issue #30 and is named beside
+    /// these in <see cref="CarriesKeyMaterial"/>; the runs of bytes stay, because a key
+    /// still crosses this plugin as <c>byte[]</c>, <c>ReadOnlyMemory&lt;byte&gt;</c> and
+    /// <c>ReadOnlySpan&lt;byte&gt;</c> wherever the cryptography consumes one.
     /// </summary>
     private static bool IsARunOfBytes(Type type)
     {
@@ -57,8 +58,17 @@ public class ConfigurationKeyMaterialTests
         type.Namespace is not null
         && type.Namespace.StartsWith("System.Security.Cryptography", StringComparison.Ordinal);
 
+    /// <summary>
+    /// The type key material travels in. It is refused by name, which is the whole reason
+    /// issue #30 gave key material a type of its own: a run of bytes is refused by shape
+    /// and a shape has to be guessed at, while a named type cannot be reached from the
+    /// configuration by any spelling.
+    /// </summary>
+    private static bool IsTheKeyType(Type type) =>
+        type == typeof(KeyMaterial) || type == typeof(PairingKeys);
+
     private static bool CarriesKeyMaterial(Type type) =>
-        IsARunOfBytes(type) || IsACryptographicType(type);
+        IsARunOfBytes(type) || IsACryptographicType(type) || IsTheKeyType(type);
 
     /// <summary>
     /// The first done condition of issue #30. Every member the serialiser can reach from
@@ -117,6 +127,8 @@ public class ConfigurationKeyMaterialTests
         Assert.True(CarriesKeyMaterial(typeof(IReadOnlyList<byte>)));
         Assert.True(CarriesKeyMaterial(typeof(List<byte>)));
         Assert.True(CarriesKeyMaterial(typeof(System.Security.Cryptography.HMACSHA256)));
+        Assert.True(CarriesKeyMaterial(typeof(KeyMaterial)));
+        Assert.True(CarriesKeyMaterial(typeof(PairingKeys)));
 
         Assert.False(CarriesKeyMaterial(typeof(int)));
         Assert.False(CarriesKeyMaterial(typeof(string)));
