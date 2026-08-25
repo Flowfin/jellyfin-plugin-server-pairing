@@ -22,12 +22,24 @@ namespace Jellyfin.Plugin.ServerPairing.KeyStore;
 /// somewhere else discovers a key on an object it was walking.
 /// </para>
 /// <para>
-/// THREE NEIGHBOURING RULES ARE NOT HERE AND EACH HAS AN ISSUE. Writes are not atomic and are
-/// not safe against a concurrent writer in another process, which is issue #34. The file is
-/// created with whatever permissions the platform gives it, which is issue #35. What a
-/// restored, copied or corrupt store does is issue #33, and a file that does not parse
-/// currently throws rather than being answered for. Reading this class as covering any of the
-/// three is the mistake this paragraph exists to stop.
+/// Every operation on one store instance is serialised by one lock, and every write goes
+/// through <see cref="AtomicWrite"/>, so a reader sees the file as it was before a write or as
+/// it is after one and never as it is during one. That is the whole of the mechanism, stated
+/// rather than left to be inferred from a type name.
+/// </para>
+/// <para>
+/// The lock is per instance, so what makes it cover the server is the singleton registration
+/// in <see cref="PluginServiceRegistrator"/>: two instances over one file would each serialise
+/// their own callers and neither would see the other. A SECOND PROCESS IS OUT OF REACH
+/// ENTIRELY - an operator editing the file by hand while the server runs is not serialised by
+/// anything, and the last write wins.
+/// </para>
+/// <para>
+/// TWO NEIGHBOURING RULES ARE NOT HERE AND EACH HAS AN ISSUE. The file is created with
+/// whatever permissions the platform gives it, which is issue #35. What a restored, copied or
+/// corrupt store does is issue #33, and a file that does not parse currently throws rather
+/// than being answered for. Reading this class as covering either is the mistake this
+/// paragraph exists to stop.
 /// </para>
 /// </remarks>
 public sealed class FilePairingKeyStore : IPairingKeyStore
@@ -42,6 +54,7 @@ public sealed class FilePairingKeyStore : IPairingKeyStore
 
     private readonly Lock _gate = new Lock();
     private readonly string _file;
+    private readonly Action<string, string>? _moveIntoPlace;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="FilePairingKeyStore"/> class.
@@ -49,8 +62,29 @@ public sealed class FilePairingKeyStore : IPairingKeyStore
     /// <param name="file">The file the keys are held in.</param>
     /// <exception cref="ArgumentNullException">The file is null.</exception>
     public FilePairingKeyStore(string file)
+        : this(file, null)
+    {
+    }
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="FilePairingKeyStore"/> class, with the step
+    /// that puts a written file in place replaced.
+    /// </summary>
+    /// <param name="file">The file the keys are held in.</param>
+    /// <param name="moveIntoPlace">
+    /// How a temporary file becomes the store's file, or null for the platform's own move.
+    /// </param>
+    /// <exception cref="ArgumentNullException">The file is null.</exception>
+    /// <remarks>
+    /// The seam exists for one reason: the interesting failure of an atomic write is a failure
+    /// BETWEEN writing the temporary file and putting it in place, and nothing outside this
+    /// class can arrange one. A caller that passes its own is driving that failure; a server
+    /// uses the constructor above.
+    /// </remarks>
+    public FilePairingKeyStore(string file, Action<string, string>? moveIntoPlace)
     {
         _file = file ?? throw new ArgumentNullException(nameof(file));
+        _moveIntoPlace = moveIntoPlace;
     }
 
     /// <summary>
@@ -164,14 +198,7 @@ public sealed class FilePairingKeyStore : IPairingKeyStore
 
     private void Write(Dictionary<string, StoredPairing> held)
     {
-        var directory = Path.GetDirectoryName(_file);
-
-        if (!string.IsNullOrEmpty(directory))
-        {
-            Directory.CreateDirectory(directory);
-        }
-
-        System.IO.File.WriteAllText(_file, JsonSerializer.Serialize(held, _format));
+        AtomicWrite.Replace(_file, JsonSerializer.Serialize(held, _format), _moveIntoPlace);
     }
 
     /// <summary>
