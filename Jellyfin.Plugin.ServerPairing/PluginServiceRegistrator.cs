@@ -1,3 +1,4 @@
+using Jellyfin.Plugin.ServerPairing.Api;
 using Jellyfin.Plugin.ServerPairing.Protocol;
 using MediaBrowser.Controller;
 using MediaBrowser.Controller.Plugins;
@@ -24,5 +25,16 @@ public class PluginServiceRegistrator : IPluginServiceRegistrator
         // is registered here so that the client carrying the timeouts and the redirect
         // refusal is the client every caller gets, rather than one each caller builds.
         serviceCollection.AddSingleton(_ => new PeerChannel(PeerChannel.CreateHandler()));
+
+        // The inbound side. The controller is found by the host's own scan of this assembly
+        // and is constructed from the container, so what it needs is registered here or the
+        // five paths answer with a server error instead of a refusal.
+        //
+        // The key source is the one this tree can honestly supply: there is no key store, so
+        // nothing arriving verifies. Issue #30 is where that changes, and this line is what
+        // it replaces.
+        serviceCollection.AddSingleton<IPairingKeySource, NoPairingKeys>();
+        serviceCollection.AddSingleton(services => new RequestAuthenticator(services.GetRequiredService<IPairingKeySource>()));
+        serviceCollection.AddSingleton(services => new PeerPlane(services.GetRequiredService<RequestAuthenticator>()));
     }
 }

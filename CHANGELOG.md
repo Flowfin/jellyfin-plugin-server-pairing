@@ -41,6 +41,14 @@ true. The first release replaces this section with what it carries, and the
 `changelog` field in `build.yaml` and `build.net10.0.yaml` carries the same
 words.
 
+- [protocol] A server running this plugin now answers on the five pairing paths the
+  specification fixes, and every answer is the refusal a stranger gets. A request
+  whose path carries a trailing slash, a query string, a percent-encoded byte or a
+  different case is refused rather than read as one of the five; a body over the
+  limit for its message is refused without being read past that limit; and nothing
+  a request carries is looked at past its signature. There is no key store yet, so
+  no signature verifies and no pairing exists, which is why the answer is the same
+  refusal in every case rather than a working handshake.
 - [protocol] The specification's explanation of how long a nonce is remembered
   was wrong and is corrected. It said 600 seconds is the window in both
   directions plus the window again; 600 seconds is the window taken in both
