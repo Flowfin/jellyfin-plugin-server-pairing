@@ -51,6 +51,22 @@ public sealed class UserMappings
     /// The administrator is a required argument rather than something defaulted or read from
     /// an ambient context, so there is no way to reach this without naming who decided. That
     /// is what makes the audit trail on the mapping worth reading.
+    /// <para>
+    /// ONE LOCAL USER MAPS TO AT MOST ONE PEER USER PER PAIRING, AND ONE PEER USER TO AT MOST
+    /// ONE LOCAL USER. Both directions are refused here rather than replaced, and the pair of
+    /// them is one rule rather than a rule and its mirror: a table that guards only the local
+    /// side accepts two local users pointing at one peer user, which puts two people's data
+    /// on one account. Which of the two stood in the way is read back with <see cref="Of"/>
+    /// and <see cref="From"/>, so a refusal can name the mapping that is already there instead
+    /// of telling an administrator only that something failed.
+    /// </para>
+    /// <para>
+    /// CHANGING A MAPPING IS TWO ACTS, <see cref="Unmap"/> and then this. That is not
+    /// ceremony: a replacement reads as a repair and is not one, because everything that
+    /// already arrived under the old mapping stays on the user it arrived on and nothing here
+    /// reaches it. An administrator who has to remove the old mapping first has been shown
+    /// that the old one existed.
+    /// </para>
     /// </remarks>
     public MappingOutcome Map(
         string pairingId,
@@ -70,6 +86,16 @@ public sealed class UserMappings
         if (state == PairingState.Revoked)
         {
             return MappingOutcome.PairingIsOver;
+        }
+
+        if (Of(pairingId, localUserId) is not null)
+        {
+            return MappingOutcome.LocalUserAlreadyMapped;
+        }
+
+        if (From(pairingId, peerUserId) is not null)
+        {
+            return MappingOutcome.PeerUserAlreadyMapped;
         }
 
         _mappings.Put(new UserMapping(pairingId, localUserId, peerUserId, peerDisplayName, administrator, at));
@@ -105,4 +131,20 @@ public sealed class UserMappings
     public UserMapping? Of(string pairingId, string localUserId)
         => _mappings.For(pairingId)
             .FirstOrDefault(mapping => string.Equals(mapping.LocalUserId, localUserId, StringComparison.Ordinal));
+
+    /// <summary>
+    /// The mapping held for one peer user under one pairing, if any.
+    /// </summary>
+    /// <param name="pairingId">The pairing identifier.</param>
+    /// <param name="peerUserId">The user on the peer.</param>
+    /// <returns>The mapping that claims that peer user, or null where none does.</returns>
+    /// <remarks>
+    /// The reverse of <see cref="Of"/>, and it exists for the refusal rather than for a sync
+    /// path. When a second local user is offered a peer user that is already spoken for, this
+    /// is what names the local user who has it, so an administrator is told which mapping is
+    /// in the way instead of being told that something failed.
+    /// </remarks>
+    public UserMapping? From(string pairingId, string peerUserId)
+        => _mappings.For(pairingId)
+            .FirstOrDefault(mapping => string.Equals(mapping.PeerUserId, peerUserId, StringComparison.Ordinal));
 }

@@ -92,6 +92,68 @@ Only the state machine sweeps a table, and that is asserted too. A caller that
 empties the table when it believes a pairing has ended makes the removal depend
 on that caller being right, and the state machine is the one type that knows.
 
+## One on each side, per pairing
+
+Two rules and they are one rule, which is why they are written together.
+
+**One local user maps to at most one peer user, and one peer user to at most one
+local user.** Both directions are refused, and the second is the one that gets
+left out. A table that guards only the local side accepts two local users both
+pointing at one peer user, which is two people's history arriving on one account
+- the failure this whole model exists against, reached from the side nobody
+watched.
+
+**Refused, never replaced.** A second mapping for either side is turned down and
+the mapping already there is left exactly as it was, field for field. The two
+answers are separate values rather than one, for the reason the section above
+gives: `LocalUserAlreadyMapped` and `PeerUserAlreadyMapped` send an administrator
+to different places.
+
+    git grep -n 'AlreadyMapped' -- Jellyfin.Plugin.ServerPairing/Mapping/MappingOutcome.cs
+
+**A refusal can say which mapping is in the way.** Both directions are readable:
+the mapping held for a local user, and the mapping that claims a peer user. So
+what an administrator is told is which correspondence stopped them, rather than
+that something failed.
+
+    git grep -n 'public UserMapping? From' -- Jellyfin.Plugin.ServerPairing/Mapping/UserMappings.cs
+
+**Changing a mapping is removing it and making the new one**, and that is two
+acts because it is two acts. A replacement reads as a repair and is not one:
+everything that arrived under the old mapping stays on the user it arrived on,
+and nothing here reaches it. That consequence is
+[the data statement's](data.md), said in the words an operator will read in
+`DestructiveWording.ChangeMapping`. An administrator who has to remove the old
+mapping first has been shown that there was one.
+
+**The rules are per pairing, and deliberately.** The same local user may map to
+different peer users under two pairings, and the same peer user may be mapped
+under two pairings, because those are different relationships between different
+pairs of servers. A rule written over the whole table rather than over a pairing
+would refuse both, and each of them has a case of its own so the scope cannot
+quietly widen.
+
+## What is not refused yet, and why
+
+**A mapping to a local user who no longer exists.** Nothing here knows which
+local users exist: this plugin holds no reference to the host's user manager and
+takes no list of users on any call. Detecting it is a read of that set, and the
+surface that would perform the read is the administration one. Issue #37 keeps
+that rule.
+
+**A mapping whose peer user no longer exists on the peer.** That is detected on
+the next `exchange`, and `exchange` has no payload yet - the field table in
+[the protocol specification](protocol.md) leaves it to M6.
+
+**A local user being deleted.** The rule is that deleting one does not silently
+delete the mapping, because a silent deletion loses the audit trail of what used
+to be synced where. Nothing in this plugin is told when a user is deleted, so
+there is no moment at which it could do either thing.
+
+Each of the three is a rule with no code path to sit on rather than a rule that
+was decided against, and none of them is asserted by a test, because a test over
+a path that does not exist passes and goes on passing after the path is written.
+
 ## An unmapped user is not synced
 
 Silently, and by default. Asking for the mapping of a user who has none returns
