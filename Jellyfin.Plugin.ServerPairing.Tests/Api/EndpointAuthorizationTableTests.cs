@@ -150,10 +150,8 @@ public class EndpointAuthorizationTableTests
         Assert.NotEmpty(declared);
         Assert.Equal(served.Length, declared.Length);
 
-        foreach (var message in Enum.GetValues<PairingMessage>())
+        foreach (var path in Enum.GetValues<PairingMessage>().Select(PeerPlane.PathFor))
         {
-            var path = PeerPlane.PathFor(message);
-
             Assert.Contains(served, endpoint => string.Equals(endpoint.Path, path, StringComparison.Ordinal));
             Assert.Contains(declared, endpoint => string.Equals(endpoint.Path, path, StringComparison.Ordinal));
         }
@@ -384,14 +382,11 @@ public class EndpointAuthorizationTableTests
             .Skip(1)
             .ToArray();
 
-        foreach (var cells in rows)
+        foreach (var cells in rows.Where(row => row.Length != 6))
         {
-            if (cells.Length != 6)
-            {
-                throw new InvalidOperationException(
-                    "A row of the endpoint table carries " + cells.Length.ToString(CultureInfo.InvariantCulture)
-                    + " cells rather than six: " + string.Join(" | ", cells));
-            }
+            throw new InvalidOperationException(
+                "A row of the endpoint table carries " + cells.Length.ToString(CultureInfo.InvariantCulture)
+                + " cells rather than six: " + string.Join(" | ", cells));
         }
 
         return rows;

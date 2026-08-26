@@ -148,14 +148,22 @@ None of the three reaches a request, and that is what this disclosure is about
 rather than which types exist. This paragraph used to say that all three were a
 specification and the issues that owed the code. Two of those issues have closed
 with types the suite exercises, so the attribution moved and the position did
-not. Nothing in this plugin answers a peer, so no
-window is consulted, no credential is checked and no revocation is applied on any
-path a request takes:
+not. This paragraph said nothing in this plugin answered a peer, and that has stopped
+being true:
 
     git grep -l "ControllerBase" origin/master -- Jellyfin.Plugin.ServerPairing ; echo "exit=$?"
-    exit=1
+    origin/master:Jellyfin.Plugin.ServerPairing/Api/PeerPlaneController.cs
+    exit=0
 
-Empty output, exit one. The reading of the transition table above them is a
+What has not changed is what the sentence was for. The five paths are answered
+and every answer is the same refusal, because the key source the plane is given
+holds no keys:
+
+    git grep -n 'IPairingKeySource, ' origin/master -- Jellyfin.Plugin.ServerPairing/PluginServiceRegistrator.cs
+    origin/master:Jellyfin.Plugin.ServerPairing/PluginServiceRegistrator.cs:38:        serviceCollection.AddSingleton<IPairingKeySource, NoPairingKeys>();
+
+So no window is consulted, no credential is checked and no revocation is applied
+on any path a request takes. The reading of the transition table above them is a
 reading of a specification for the same reason, and the types named here are
 exercised by the suite rather than by a server.
 

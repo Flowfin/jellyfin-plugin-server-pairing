@@ -128,11 +128,14 @@ One leg of the hygiene check reads those two markers on the way in:
     origin/master:.github/pr-hygiene.sh:214:marked_change contract "$contract_paths"
 
 It refuses a pull request that touches the protocol or the contract and adds no
-line carrying the marker for what it touched. That is a bound on what reaches
-the file, not a reading of the entry being released, and it is a weaker bound
-than it looks: `Pull request hygiene` is not in the required set read by item 1
-above, so the leg reports and does not stop a merge. The entry in front of a
-release is still read by a person.
+line carrying the marker for what it touched. That bound now stands in front of a
+merge: `Pull request hygiene` is in the required set read by item 1 above, so the
+leg stops one. This paragraph said it did not until that setting moved, which is
+why item 1 reads the set rather than keeping a copy of it.
+
+What the leg still cannot do is read the entry being released. It asks whether a
+marked line was added, never whether that line says what the change did, so the
+entry in front of a release is still read by a person.
 
 `build.yaml` carries a `changelog` field and it holds the first release entry
 rather than the placeholder it used to:

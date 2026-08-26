@@ -1,4 +1,5 @@
 using System;
+using Jellyfin.Plugin.ServerPairing.Mapping;
 
 namespace Jellyfin.Plugin.ServerPairing.Protocol;
 
@@ -25,14 +26,24 @@ namespace Jellyfin.Plugin.ServerPairing.Protocol;
 public sealed class PairingStateMachine
 {
     private readonly IPairingRecordStore _records;
+    private readonly IUserMappingStore _mappings;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="PairingStateMachine"/> class.
     /// </summary>
     /// <param name="records">Where a pairing's state is kept.</param>
-    public PairingStateMachine(IPairingRecordStore records)
+    /// <param name="mappings">
+    /// Where the user mappings are kept, so that a pairing ending takes its mappings with it.
+    /// </param>
+    /// <remarks>
+    /// The mapping store is required rather than optional. An overload without it would build
+    /// a state machine that ends pairings and leaves their mappings behind, which is the
+    /// failure this argument exists to prevent, and it would do so silently.
+    /// </remarks>
+    public PairingStateMachine(IPairingRecordStore records, IUserMappingStore mappings)
     {
         _records = records ?? throw new ArgumentNullException(nameof(records));
+        _mappings = mappings ?? throw new ArgumentNullException(nameof(mappings));
     }
 
     /// <summary>
@@ -262,12 +273,21 @@ public sealed class PairingStateMachine
     /// Writes the result of a transition, and only where the pairing moved.
     /// </summary>
     /// <remarks>
+    /// The mappings for a pairing go when it reaches <see cref="PairingState.Revoked"/> or
+    /// <see cref="PairingState.Absent"/>, which is driven from here rather than from the
+    /// record being deleted. Those are two different moments: reaching <c>Absent</c> deletes
+    /// the record and reaching <c>Revoked</c> keeps it on purpose, and a mapping table wired
+    /// to record deletion would survive every revocation.
+    /// <para>
     /// A transition that leaves the state where it was writes nothing, and that is a decision
     /// rather than an omission. A repeated confirm and a repeated hello with the identical key
     /// are answered as before, and every refusal from an unauthenticated caller stays where it
     /// was, so persisting on every call would let anyone who can reach the endpoint make this
     /// server write to disk as fast as it can answer. What such a call produces is a log line,
-    /// which is <c>docs/logging.md</c>, and the record here carries the last move.
+    /// which is <c>docs/logging.md</c>, and the record here carries the last move. The same
+    /// early return is why a repeated revocation does not remove mappings twice; the first one
+    /// moved the pairing and took them.
+    /// </para>
     /// </remarks>
     private void Persist(
         string pairingId,
@@ -280,6 +300,11 @@ public sealed class PairingStateMachine
         if (!transition.Moves(from))
         {
             return;
+        }
+
+        if (transition.To is PairingState.Absent or PairingState.Revoked)
+        {
+            _mappings.RemoveEvery(pairingId);
         }
 
         if (transition.To == PairingState.Absent)

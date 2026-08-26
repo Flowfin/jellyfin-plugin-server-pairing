@@ -50,6 +50,22 @@ public class ServiceRegistrationTests
         paths.DataPath.Returns(System.IO.Path.GetTempPath());
         services.AddSingleton(paths);
 
+        // The other thing the server supplies. Its container is a generic host's with Serilog
+        // on it, and the plugin registrators run inside a ConfigureServices callback on that
+        // same builder, read at the two lines this plugin builds against rather than assumed:
+        //
+        //     gh api -H "Accept: application/vnd.github.raw" \
+        //       "repos/jellyfin/jellyfin/contents/Jellyfin.Server/Program.cs?ref=v10.11.9" \
+        //       | grep -nE 'CreateDefaultBuilder|Init\(services\)|UseSerilog\(\)'
+        //     168:                _jellyfinHost = Host.CreateDefaultBuilder()
+        //     170:                    .ConfigureServices(services => appHost.Init(services))
+        //     181:                    .UseSerilog()
+        //
+        // The same three at v12.0-rc3 are 169, 171 and 182. That the builder registers the
+        // logging services is the generic host's own behaviour rather than something read out
+        // of the server's tree.
+        services.AddLogging();
+
         new PluginServiceRegistrator().RegisterServices(services, Substitute.For<IServerApplicationHost>());
 
         AssertEveryRegisteredServiceResolves(services);

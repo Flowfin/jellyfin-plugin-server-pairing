@@ -12,19 +12,39 @@ the version negotiation are here:
 
 ```
 git ls-tree -r --name-only origin/master -- Jellyfin.Plugin.ServerPairing/Protocol | wc -l
-34
+35
 ```
 
-Nothing reaches any of them from outside this server. There is no endpoint:
+**This paragraph said nothing reached any of them from outside this server, that
+there was no endpoint, and that there was no key store. All three have stopped
+being true and the sentence they supported has not.** Something reaches them:
 
 ```
 git grep -l "ControllerBase" origin/master -- Jellyfin.Plugin.ServerPairing ; echo "exit=$?"
-exit=1
+origin/master:Jellyfin.Plugin.ServerPairing/Api/PeerPlaneController.cs
+exit=0
 ```
 
-and there is no key store, so no request has ever been signed by this plugin
-against a key it holds. Every sentence below about the wire is therefore still a
-design position rather than a measured property of something that runs, and the
+and there is a key store:
+
+```
+git ls-tree -r --name-only origin/master -- Jellyfin.Plugin.ServerPairing/KeyStore | wc -l
+9
+```
+
+What has not changed is the thing that made the old sentence right. No request
+has ever been verified by this plugin against a key it holds, because the key
+source the plane is given is the one that holds none:
+
+```
+git grep -n 'IPairingKeySource, ' origin/master -- Jellyfin.Plugin.ServerPairing/PluginServiceRegistrator.cs
+origin/master:Jellyfin.Plugin.ServerPairing/PluginServiceRegistrator.cs:38:        serviceCollection.AddSingleton<IPairingKeySource, NoPairingKeys>();
+```
+
+So the five paths are served and every one of them refuses, and nothing has ever
+been signed by this plugin against a key it holds or accepted from a peer.
+Everything below about what happens after a signature verifies is therefore still
+a design position rather than a measured property of something that runs, and the
 sentences about the state machine and the canonical form are the specification
 the landed types are checked against rather than a reading of them. Where a
 milestone owes a mechanism, the issue is named at the place the mechanism is
@@ -398,9 +418,9 @@ to refuse. All three numbers are constants of the landed type, and the two this
 paragraph adds are read out of it rather than asserted beside it:
 
 ```
-git grep -n "const int RememberedSeconds\|const int NoncesPerPairing" -- Jellyfin.Plugin.ServerPairing/Protocol/FreshnessWindow.cs
-Jellyfin.Plugin.ServerPairing/Protocol/FreshnessWindow.cs:43:    public const int RememberedSeconds = 600;
-Jellyfin.Plugin.ServerPairing/Protocol/FreshnessWindow.cs:55:    public const int NoncesPerPairing = 4096;
+git grep -n "const int RememberedSeconds\|const int NoncesPerPairing" origin/master -- Jellyfin.Plugin.ServerPairing/Protocol/FreshnessWindow.cs
+origin/master:Jellyfin.Plugin.ServerPairing/Protocol/FreshnessWindow.cs:44:    public const int RememberedSeconds = 600;
+origin/master:Jellyfin.Plugin.ServerPairing/Protocol/FreshnessWindow.cs:56:    public const int NoncesPerPairing = 4096;
 ```
 
 What that refusal says on the wire is the taxonomy below. What the count should
@@ -531,6 +551,46 @@ An administrator revoking sends a `revoke` to the peer and moves to `Revoked`
 whether or not that delivery succeeds. Revocation that waits for the peer is
 revocation an unreachable peer can refuse.
 
+### What holds a pairing that is not yet identified
+
+The first row of that table has a problem the other five do not, and it is
+written here rather than being met inside whichever change reaches it first.
+
+A pairing is held by its identifier, and the identifier is derived from both
+public keys. A window opens before any peer key has arrived, so at the moment
+this table says a pairing moves from `Absent` to `Offered` there is no identifier
+to hold it under. The wire already says as much about the request that arrives in
+that state:
+
+    git grep -n "Its .X-Pairing-Id. is 32" origin/master -- docs/protocol.md
+    origin/master:docs/protocol.md:364:them. Its `X-Pairing-Id` is 32 `0` characters, which is what line 5 of its
+
+and nothing carries that over to the record.
+
+Two answers are available and this document takes neither.
+
+`Offered` is a state no record is written for. Then the reader that asks what
+state a pairing is in answers `Absent` for one this table says is `Offered`, and
+the fifth row - an administrator revoking from `Offered` - names a pairing
+nothing could find.
+
+`Offered` is written under a provisional identifier that changes when the peer
+key arrives. Then a record's identifier moves, and `Revoked` records are kept
+precisely so that a later request naming an identifier is refused rather than
+treated as new, which is a guarantee about identifiers not moving.
+
+What is in the tree today sidesteps it rather than settling it: the enrolment
+window is held against the peer address, which is how a `hello` is matched to a
+window, and it writes no record and calls no state machine.
+
+    git grep -n 'OpenAddresses' origin/master -- Jellyfin.Plugin.ServerPairing/Protocol/EnrolmentWindow.cs
+    origin/master:Jellyfin.Plugin.ServerPairing/Protocol/EnrolmentWindow.cs:262:    public IReadOnlyList<string> OpenAddresses(DateTimeOffset at)
+
+That is enough for the bounds issue #18 owns and it is not enough for this
+transition. Whoever wires the window to the state machine meets this question
+first, and answering it inside that pull request is how the document and the code
+come to disagree.
+
 ## The error taxonomy
 
 Every refusal on the pairing plane is HTTP 403 with a body of exactly one JSON
@@ -546,7 +606,7 @@ administrator opened deliberately.
 
 | Code | What caused it | Who can ever see it | Distinguishable from its neighbours |
 | --- | --- | --- | --- |
-| `refused` | An unknown pairing identifier, a signature that does not verify, a body over its limit, a malformed header value, a request in a state that does not accept it from an unverified caller, a revoked pairing, a request when no pairing exists, a second `hello` with a different key | anyone | No, and deliberately so. Every one of those causes produces the same bytes |
+| `refused` | An unknown pairing identifier, a signature that does not verify, a body over its limit, a malformed header value, a request in a state that does not accept it from an unverified caller, a revoked pairing, a request when no pairing exists, a second `hello` with a different key, a fault on this side while serving the request | anyone | No, and deliberately so. Every one of those causes produces the same bytes |
 | `clock` | The signature verified and the timestamp is outside the freshness window | only a caller holding a verifying key | Yes |
 | `version` | No version in common | a caller inside an open enrolment window, or a caller holding a verifying key | Yes, to those callers only |
 | `state` | The signature verified and the message is not accepted in this state | only a caller holding a verifying key | Yes |
@@ -602,9 +662,32 @@ is built.
 because an enrolment window is open, which is a door an administrator opened on
 purpose and which closes on a timer.
 
+The last cause in the `refused` row is the one that is not about the request at
+all, and it is in that row for the reason the row exists. A fault on this side is
+a bug, a full disk or a body stream that went away, and none of that is the
+caller's business; more to the point, a caller that can make one path fault while
+another path refuses has separated two paths, whatever the fault was. So a fault
+is caught before it leaves the plugin and is answered with the same status, the
+same media type and the same bytes as everything else in that row. What a
+framework produces for an escaping exception is none of those: a different
+status, usually a different media type, and on a server with the developer page
+turned on, a stack trace naming this plugin's types.
+
+The detail goes to the log instead, at Error, where an operator can read it and a
+stranger cannot. [`logging.md`](logging.md) carries that entry and says why it is
+the one entry in its table with no pairing identifier on it.
+
+A caller that hung up is not a fault and is not answered at all. There is nobody
+left to receive an answer, and an error line for every disconnect fills a log
+with the network rather than with this plugin.
+
 The timing of a refusal is one class. Every cause above is answered after the
 same work, so a caller cannot separate them by measurement where the codes are
 identical. Nothing in the tree enforces that today and issue #28 owes the test.
+A fault is the one cause that plainly does not take the same time as the others,
+and no reading of a tree fixes that: it is answered after however far the request
+got before it failed. The one-shape refusal bounds what a caller reads, not how
+long it waited for it.
 
 Two refusals a landed type already produces have no code in the table above, and
 saying so is what stops the table being read as the whole set. `KeyOverlap.Rotate`
@@ -672,7 +755,7 @@ the longest lifetime a caller may ask for are constants on `EnrolmentWindow`:
 git grep -nE "public const int (LifetimeSeconds|MaximumLifetimeSeconds|FailuresAllowed)" origin/master -- Jellyfin.Plugin.ServerPairing/Protocol/EnrolmentWindow.cs
 origin/master:Jellyfin.Plugin.ServerPairing/Protocol/EnrolmentWindow.cs:47:    public const int LifetimeSeconds = 600;
 origin/master:Jellyfin.Plugin.ServerPairing/Protocol/EnrolmentWindow.cs:58:    public const int MaximumLifetimeSeconds = 1800;
-origin/master:Jellyfin.Plugin.ServerPairing/Protocol/EnrolmentWindow.cs:69:    public const int FailuresAllowed = 3;
+origin/master:Jellyfin.Plugin.ServerPairing/Protocol/EnrolmentWindow.cs:70:    public const int FailuresAllowed = 3;
 ```
 
 Making the first of those a setting rather than a constant is issue #18.
@@ -684,3 +767,28 @@ The `exchange` payloads, M6.
 
 Whether the nonce store survives a restart, issue #21, which is named above as an
 accepted gap rather than left silent.
+
+What identifier holds a pairing in `Offered`, which is set out under the local
+events table above with both answers and what each costs. It is written there
+rather than here because the row it is about is there.
+
+**Where this side remembers the version a pairing settled on.** Every message
+after `hello` carries the selected version in `X-Pairing-Version` and nowhere
+else, which this document states above, so a side that sends one has to have kept
+it. Nothing in the tree keeps it:
+
+    git grep -nE 'Version|Address' origin/master -- Jellyfin.Plugin.ServerPairing/Protocol/PairingRecord.cs Jellyfin.Plugin.ServerPairing/Protocol/IPairingRecordStore.cs Jellyfin.Plugin.ServerPairing/KeyStore/PairingKeys.cs Jellyfin.Plugin.ServerPairing/KeyStore/IPairingKeyStore.cs ; echo "exit=$?"
+    exit=1
+
+Empty output, exit one, over the record, the record store, the key store and the
+keys a pairing holds. The same command is why the peer address is not there
+either; that field is claimed by issue #18 and unbuilt, and the version is
+claimed by no issue at all. Neither has bitten yet because nothing in this plugin
+sends a message: the only mentions of the channel's send are its own declaration
+and its own call into the HTTP client.
+
+    git grep -n 'SendAsync' origin/master -- Jellyfin.Plugin.ServerPairing
+    origin/master:Jellyfin.Plugin.ServerPairing/Protocol/PeerChannel.cs:131:    public async Task<PeerReply> SendAsync(
+    origin/master:Jellyfin.Plugin.ServerPairing/Protocol/PeerChannel.cs:167:                .SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken)
+
+The first outbound message pays for both.

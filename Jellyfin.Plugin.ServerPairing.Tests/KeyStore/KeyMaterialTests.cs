@@ -38,10 +38,10 @@ public class KeyMaterialTests
     [Fact]
     public void SomethingThatIsNotTheLengthOfAKeyIsRefused()
     {
-        foreach (var length in new[] { 0, 1, KeyMaterial.Length - 1, KeyMaterial.Length + 1, 64 })
-        {
-            var bytes = new byte[length];
+        var lengths = new[] { 0, 1, KeyMaterial.Length - 1, KeyMaterial.Length + 1, 64 };
 
+        foreach (var bytes in lengths.Select(length => new byte[length]))
+        {
             Assert.Throws<ArgumentException>(() => KeyMaterial.From(bytes));
         }
 

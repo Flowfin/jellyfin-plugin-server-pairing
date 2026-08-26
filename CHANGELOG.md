@@ -46,6 +46,20 @@ can open an enrolment from. Two servers cannot be paired with this version. The
 `changelog` field in `build.yaml` and `build.net10.0.yaml` carries that
 paragraph in the same words.
 
+- When the server starts, this plugin now writes one line to the log for each
+  pairing the key store already holds, naming it. The store is not in the
+  plugin's directory, so it survives an uninstall and a reinstall comes up paired
+  with whatever it was paired with before; that line is what says so instead of
+  the pairings simply being there. Nothing is written when the store holds
+  nothing, and looking at a store that does not exist does not create one. A
+  store that cannot be read produces one line at Error and leaves the server
+  running.
+- [protocol] A pairing request that runs into a fault on this server is now
+  answered with the same refusal every other caller gets, rather than with
+  whatever the server produces for an error. The detail is written to the log at
+  Error instead, where the operator of this server can read it and the peer
+  cannot. What such a request was answered with before was never measured on a
+  running server and nothing here claims it.
 - The key store's directory and its file are created with permissions of their own
   where the server runs on a platform that has them: the directory readable,
   writable and traversable by its owner alone, the file readable and writable by
@@ -97,3 +111,12 @@ paragraph in the same words.
   remembers. Two servers with no version in common are not paired at a version
   one of them cannot speak. The set has one member today, so nothing an operator
   can see changes, and nothing calls the selection yet.
+- [protocol] A pairing ending now takes the user mappings held for it. That is
+  true whether it ended by being revoked, which keeps its record, or by an
+  enrolment window expiring, which does not, and the cached peer display name
+  beside each mapping goes with it. A mapping can only be made by an
+  administrator naming themselves, only under a pairing that exists and has not
+  been revoked, and a user with no mapping is skipped rather than guessed at.
+  Nothing on the wire moved and no server answers differently: there is still no
+  page and no endpoint through which a mapping can be made, so a server installed
+  today holds an empty table.

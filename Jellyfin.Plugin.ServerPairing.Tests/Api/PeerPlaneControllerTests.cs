@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
@@ -11,6 +12,8 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using MediaBrowser.Controller;
 using NSubstitute;
 using Xunit;
@@ -28,6 +31,13 @@ namespace Jellyfin.Plugin.ServerPairing.Tests.Api;
 /// </remarks>
 public class PeerPlaneControllerTests
 {
+    /// <summary>
+    /// The text the induced fault carries. It is written to be unmistakable in an answer:
+    /// finding it there is finding this exception rather than any word a refusal might
+    /// legitimately hold.
+    /// </summary>
+    private const string Marker = "the body stream went away, 9f8c1d2b3a4e5f60";
+
     /// <summary>
     /// Every message, so a case walks the five rather than naming one.
     /// </summary>
@@ -162,7 +172,9 @@ public class PeerPlaneControllerTests
         var limit = PeerPlane.BodyLimitFor(message);
         var body = Filled(limit);
 
-        var read = await PeerPlaneController.ReadBounded(new MemoryStream(body), limit, CancellationToken.None)
+        using var stream = new MemoryStream(body);
+
+        var read = await PeerPlaneController.ReadBounded(stream, limit, CancellationToken.None)
             .ConfigureAwait(true);
 
         Assert.False(read.Exceeded);
@@ -181,7 +193,9 @@ public class PeerPlaneControllerTests
     {
         var limit = PeerPlane.BodyLimitFor(message);
 
-        var read = await PeerPlaneController.ReadBounded(new MemoryStream(Filled(limit + 1)), limit, CancellationToken.None)
+        using var stream = new MemoryStream(Filled(limit + 1));
+
+        var read = await PeerPlaneController.ReadBounded(stream, limit, CancellationToken.None)
             .ConfigureAwait(true);
 
         Assert.True(read.Exceeded);
@@ -231,8 +245,10 @@ public class PeerPlaneControllerTests
     [Fact]
     public async Task NoBodyAtAllIsABodyOfZeroBytes()
     {
+        using var stream = new MemoryStream(Array.Empty<byte>());
+
         var read = await PeerPlaneController.ReadBounded(
-            new MemoryStream(Array.Empty<byte>()),
+            stream,
             PeerPlane.BodyLimit,
             CancellationToken.None).ConfigureAwait(true);
 
@@ -273,6 +289,26 @@ public class PeerPlaneControllerTests
     {
         var services = new ServiceCollection();
 
+        // What the container already holds before any plugin is asked for anything. The
+        // host is a generic host with Serilog on it, and the plugin registrators run
+        // against that same collection. Read at the two lines this plugin builds against
+        // rather than assumed:
+        //
+        //     gh api -H "Accept: application/vnd.github.raw" \
+        //       "repos/jellyfin/jellyfin/contents/Jellyfin.Server/Program.cs?ref=v10.11.9" \
+        //       | grep -nE 'CreateDefaultBuilder|Init\(services\)|UseSerilog\(\)'
+        //     168:                _jellyfinHost = Host.CreateDefaultBuilder()
+        //     170:                    .ConfigureServices(services => appHost.Init(services))
+        //     181:                    .UseSerilog()
+        //
+        // The same three at v12.0-rc3 are 169, 171 and 182. That the builder registers the
+        // logging services is the generic host's own behaviour rather than something read
+        // out of the server's tree, which is why this line stands here in the host's place.
+        //
+        // It stands in for the host and not for the registrator: everything else below
+        // comes from the registrator, and a dependency it forgets still fails here.
+        services.AddLogging();
+
         new PluginServiceRegistrator().RegisterServices(services, Substitute.For<IServerApplicationHost>());
 
         using var provider = services.BuildServiceProvider(new ServiceProviderOptions { ValidateScopes = true });
@@ -304,12 +340,21 @@ public class PeerPlaneControllerTests
     }
 
     private static PeerPlaneController ControllerFor(string? rawTarget, string routedPath, byte[] body)
+        => ControllerOver(rawTarget, routedPath, new MemoryStream(body), NullLogger<PeerPlaneController>.Instance, CancellationToken.None);
+
+    private static PeerPlaneController ControllerOver(
+        string? rawTarget,
+        string routedPath,
+        Stream body,
+        ILogger<PeerPlaneController> logger,
+        CancellationToken aborted)
     {
         var context = new DefaultHttpContext();
 
         context.Request.Method = PeerPlane.Method;
         context.Request.Path = routedPath;
-        context.Request.Body = new MemoryStream(body);
+        context.Request.Body = body;
+        context.RequestAborted = aborted;
 
         var feature = context.Features.Get<IHttpRequestFeature>();
 
@@ -318,10 +363,221 @@ public class PeerPlaneControllerTests
             feature.RawTarget = rawTarget!;
         }
 
-        return new PeerPlaneController(new PeerPlane(new RequestAuthenticator(new NoPairingKeys())))
+        return new PeerPlaneController(new PeerPlane(new RequestAuthenticator(new NoPairingKeys())), logger)
         {
             ControllerContext = new ControllerContext { HttpContext = context },
         };
+    }
+
+    /// <summary>
+    /// A fault on this side is answered with the bytes a stranger gets, and the two answers
+    /// are compared with each other rather than each with a literal. A framework error page,
+    /// a different status or a different media type would separate a path that faults from a
+    /// path that refuses, which is the one thing the single refusal code exists to prevent.
+    /// </summary>
+    /// <param name="message">The message.</param>
+    [Theory]
+    [MemberData(nameof(EveryMessage))]
+    public async Task AFaultIsAnsweredWithTheSameBytesAsAnOrdinaryRefusal(PairingMessage message)
+    {
+        var path = PeerPlane.PathFor(message);
+
+        var ordinary = Assert.IsType<ContentResult>(
+            await Invoke(ControllerFor(path, path, Encoding.ASCII.GetBytes("{}")), message).ConfigureAwait(true));
+
+        var faulted = Assert.IsType<ContentResult>(
+            await Invoke(
+                ControllerOver(path, path, new FaultingStream(Marker), new CapturingLogger(), CancellationToken.None),
+                message).ConfigureAwait(true));
+
+        Assert.Equal(ordinary.StatusCode, faulted.StatusCode);
+        Assert.Equal(ordinary.ContentType, faulted.ContentType);
+        Assert.Equal(ordinary.Content, faulted.Content);
+    }
+
+    /// <summary>
+    /// The detail of the fault is in the log and none of it is in the answer. Both halves are
+    /// asserted against the same run, because a change that stops logging and a change that
+    /// starts leaking are repaired in opposite directions, and a test watching one of them
+    /// passes while the other happens.
+    /// </summary>
+    [Fact]
+    public async Task TheDetailOfAFaultIsLoggedAndNoneOfItIsAnswered()
+    {
+        var path = PeerPlane.PathFor(PairingMessage.Rotate);
+        var log = new CapturingLogger();
+
+        var answered = Assert.IsType<ContentResult>(
+            await Invoke(
+                ControllerOver(path, path, new FaultingStream(Marker), log, CancellationToken.None),
+                PairingMessage.Rotate).ConfigureAwait(true));
+
+        var written = Assert.Single(log.Written);
+
+        Assert.Equal(LogLevel.Error, written.Level);
+        Assert.Equal(Marker, Assert.IsType<IOException>(written.Fault).Message);
+        Assert.Contains(nameof(PairingMessage.Rotate), written.Text, StringComparison.Ordinal);
+
+        Assert.DoesNotContain(Marker, answered.Content, StringComparison.Ordinal);
+        Assert.DoesNotContain(nameof(IOException), answered.Content, StringComparison.Ordinal);
+        Assert.Equal(Refusal.Body(RefusalCode.Refused), answered.Content);
+    }
+
+    /// <summary>
+    /// A caller that went away is not a fault of this side. Its request is cancelled through
+    /// the abort token, nobody is left to answer, and an error line for each disconnect fills
+    /// an operator log with the network rather than with this plugin. The cancellation leaves
+    /// the action rather than being caught, and nothing is written.
+    /// </summary>
+    [Fact]
+    public async Task ACallerThatWentAwayIsNotLoggedAsAFault()
+    {
+        var path = PeerPlane.PathFor(PairingMessage.Exchange);
+        var log = new CapturingLogger();
+
+        using var gone = new CancellationTokenSource();
+        await gone.CancelAsync().ConfigureAwait(true);
+
+        var controller = ControllerOver(path, path, new AbandonedStream(gone.Token), log, gone.Token);
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(
+            () => Invoke(controller, PairingMessage.Exchange)).ConfigureAwait(true);
+
+        Assert.Empty(log.Written);
+    }
+
+    /// <summary>
+    /// A cancellation the caller did not ask for is a fault of this side and is caught with
+    /// the rest. This is the one-change neighbour of the case above: the same exception type,
+    /// the same path, and an abort token nobody cancelled, which is the whole of what the
+    /// condition on the catch separates.
+    /// </summary>
+    [Fact]
+    public async Task ACancellationTheCallerDidNotAskForIsAFault()
+    {
+        var path = PeerPlane.PathFor(PairingMessage.Exchange);
+        var log = new CapturingLogger();
+
+        using var elsewhere = new CancellationTokenSource();
+        await elsewhere.CancelAsync().ConfigureAwait(true);
+
+        var answered = Assert.IsType<ContentResult>(
+            await Invoke(
+                ControllerOver(path, path, new AbandonedStream(elsewhere.Token), log, CancellationToken.None),
+                PairingMessage.Exchange).ConfigureAwait(true));
+
+        Assert.Equal(Refusal.Body(RefusalCode.Refused), answered.Content);
+        Assert.Equal(LogLevel.Error, Assert.Single(log.Written).Level);
+    }
+
+    private sealed class FaultingStream : Stream
+    {
+        private readonly string _saying;
+
+        public FaultingStream(string saying)
+        {
+            _saying = saying;
+        }
+
+        public override bool CanRead => true;
+
+        public override bool CanSeek => false;
+
+        public override bool CanWrite => false;
+
+        public override long Length => throw new NotSupportedException();
+
+        public override long Position
+        {
+            get => throw new NotSupportedException();
+            set => throw new NotSupportedException();
+        }
+
+        public override ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken)
+            => throw new IOException(_saying);
+
+        public override int Read(byte[] buffer, int offset, int count) => throw new IOException(_saying);
+
+        public override void Flush()
+        {
+        }
+
+        public override long Seek(long offset, SeekOrigin origin) => throw new NotSupportedException();
+
+        public override void SetLength(long value) => throw new NotSupportedException();
+
+        public override void Write(byte[] buffer, int offset, int count) => throw new NotSupportedException();
+    }
+
+    private sealed class AbandonedStream : Stream
+    {
+        private readonly CancellationToken _cancelled;
+
+        public AbandonedStream(CancellationToken cancelled)
+        {
+            _cancelled = cancelled;
+        }
+
+        public override bool CanRead => true;
+
+        public override bool CanSeek => false;
+
+        public override bool CanWrite => false;
+
+        public override long Length => throw new NotSupportedException();
+
+        public override long Position
+        {
+            get => throw new NotSupportedException();
+            set => throw new NotSupportedException();
+        }
+
+        public override ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken)
+        {
+            _cancelled.ThrowIfCancellationRequested();
+
+            return ValueTask.FromResult(0);
+        }
+
+        public override int Read(byte[] buffer, int offset, int count)
+        {
+            _cancelled.ThrowIfCancellationRequested();
+
+            return 0;
+        }
+
+        public override void Flush()
+        {
+        }
+
+        public override long Seek(long offset, SeekOrigin origin) => throw new NotSupportedException();
+
+        public override void SetLength(long value) => throw new NotSupportedException();
+
+        public override void Write(byte[] buffer, int offset, int count) => throw new NotSupportedException();
+    }
+
+    private sealed class CapturingLogger : ILogger<PeerPlaneController>
+    {
+        public List<(LogLevel Level, string Text, Exception? Fault)> Written { get; } = new();
+
+        public IDisposable? BeginScope<TState>(TState state)
+            where TState : notnull
+            => null;
+
+        public bool IsEnabled(LogLevel logLevel) => true;
+
+        public void Log<TState>(
+            LogLevel logLevel,
+            EventId eventId,
+            TState state,
+            Exception? exception,
+            Func<TState, Exception?, string> formatter)
+        {
+            ArgumentNullException.ThrowIfNull(formatter);
+
+            Written.Add((logLevel, formatter(state, exception), exception));
+        }
     }
 
     private sealed class CountingStream : MemoryStream

@@ -138,11 +138,22 @@ writing a body, or to an author from outside this repository, who is meeting
 these rules for the first time at the moment the check reds. Both skips are
 written at the point in the script that takes them.
 
-That check is not in the required set on the default branch, so a red run
-reports and does not block a merge. The required set is a repository setting and
-no change in this tree can add to it. The two annotating rules print and never
-fail, by design rather than by omission. The three items above them that a
-reader judges are refused by nobody at all.
+That check is in the required set on the default branch, so a red run blocks a
+merge. Read that set rather than this sentence. It is a repository setting, no
+change in this tree can add to it, and it moves without any commit here, which is
+why no copy of it is kept beside the reading:
+
+```
+gh api repos/Flowfin/jellyfin-plugin-server-pairing/rulesets/20464076 --jq '[.rules[] | select(.type=="required_status_checks") | .parameters.required_status_checks[].context]'
+```
+
+These lines said the check was not required until that setting moved. A copy
+would have hidden the move; the command does not.
+
+What blocks is the refusing tier and nothing else. The two annotating rules print
+and never fail, by design rather than by omission, so what they report still
+reaches the mainline unrefused. The three items above them that a reader judges
+are refused by nobody at all.
 
 ## One topic per commit and per pull request
 
