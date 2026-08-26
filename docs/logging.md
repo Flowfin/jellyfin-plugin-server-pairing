@@ -117,9 +117,9 @@ one now:
 
     git grep -nE "ILogger|_logger" -- Jellyfin.Plugin.ServerPairing
     Jellyfin.Plugin.ServerPairing/Api/PeerPlaneController.cs:38:    private readonly ILogger<PeerPlaneController> _logger;
-    Jellyfin.Plugin.ServerPairing/Api/PeerPlaneController.cs:56:    public PeerPlaneController(PeerPlane plane, ILogger<PeerPlaneController> logger)
-    Jellyfin.Plugin.ServerPairing/Api/PeerPlaneController.cs:59:        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-    Jellyfin.Plugin.ServerPairing/Api/PeerPlaneController.cs:239:            _logger.LogError(fault, "A request on the pairing plane faulted and was answered with the refusal every caller gets. Message: {PairingMessage}", message);
+    Jellyfin.Plugin.ServerPairing/Api/PeerPlaneController.cs:58:    public PeerPlaneController(PeerPlane plane, ILogger<PeerPlaneController> logger)
+    Jellyfin.Plugin.ServerPairing/Api/PeerPlaneController.cs:61:        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+    Jellyfin.Plugin.ServerPairing/Api/PeerPlaneController.cs:241:            _logger.LogError(fault, "A request on the pairing plane faulted and was answered with the refusal every caller gets. Message: {PairingMessage}", message);
 
 That is the fault row of the table above and nothing else. A capturing logger
 sits under it in the suite and asserts what that one entry holds and that none of

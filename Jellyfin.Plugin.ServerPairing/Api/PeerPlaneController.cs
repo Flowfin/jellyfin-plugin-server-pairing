@@ -43,15 +43,17 @@ public sealed class PeerPlaneController : ControllerBase
     /// <param name="plane">The plane that decides what an arriving request means.</param>
     /// <param name="logger">Where the detail of a fault on this plane goes.</param>
     /// <remarks>
-    /// The logger is the server's own. The host builds this controller out of its container,
-    /// and that container has logging in it because the server put it there, which is read at
-    /// the two lines this plugin builds against rather than assumed:
+    /// The logger is the server's own and nothing in <see cref="PluginServiceRegistrator"/>
+    /// registers one. The container this controller is built out of is a generic host's, with
+    /// Serilog installed on it, and the plugin registrators run against that same collection.
+    /// Read at the two lines this plugin builds against rather than assumed:
     /// <c>gh api -H "Accept: application/vnd.github.raw"
-    /// "repos/jellyfin/jellyfin/contents/Jellyfin.Server/Program.cs?ref=v10.11.9" | sed -n '284p'</c>
-    /// prints <c>.AddLogging(d =&gt; d.AddSerilog())</c>. So nothing in
-    /// <see cref="PluginServiceRegistrator"/> registers one, and a container assembled without
-    /// it cannot build this type - which is what the suite's own construction case has to
-    /// supply in the host's place.
+    /// "repos/jellyfin/jellyfin/contents/Jellyfin.Server/Program.cs?ref=v10.11.9" |
+    /// grep -nE 'CreateDefaultBuilder|Init\(services\)|UseSerilog\(\)'</c> prints lines 168,
+    /// 170 and 181, and the same three at <c>v12.0-rc3</c> as 169, 171 and 182. That the
+    /// builder registers the logging services is the generic host's own behaviour and is not
+    /// read out of the server's tree. A container assembled without them cannot build this
+    /// type, which is what the suite's own construction case supplies in the host's place.
     /// </remarks>
     public PeerPlaneController(PeerPlane plane, ILogger<PeerPlaneController> logger)
     {

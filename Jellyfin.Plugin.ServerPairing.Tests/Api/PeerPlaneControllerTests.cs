@@ -283,14 +283,24 @@ public class PeerPlaneControllerTests
     {
         var services = new ServiceCollection();
 
-        // What the server puts in its own container before any plugin is asked for anything,
-        // read at the line this plugin builds against rather than assumed:
+        // What the container already holds before any plugin is asked for anything. The
+        // host is a generic host with Serilog on it, and the plugin registrators run
+        // against that same collection. Read at the two lines this plugin builds against
+        // rather than assumed:
         //
-        //     gh api -H "Accept: application/vnd.github.raw"         //       "repos/jellyfin/jellyfin/contents/Jellyfin.Server/Program.cs?ref=v10.11.9" | sed -n '284p'
-        //     .AddLogging(d => d.AddSerilog())
+        //     gh api -H "Accept: application/vnd.github.raw" \
+        //       "repos/jellyfin/jellyfin/contents/Jellyfin.Server/Program.cs?ref=v10.11.9" \
+        //       | grep -nE 'CreateDefaultBuilder|Init\(services\)|UseSerilog\(\)'
+        //     168:                _jellyfinHost = Host.CreateDefaultBuilder()
+        //     170:                    .ConfigureServices(services => appHost.Init(services))
+        //     181:                    .UseSerilog()
         //
-        // It stands in for the host and not for the registrator: everything else below comes
-        // from the registrator, and a dependency it forgets still fails here.
+        // The same three at v12.0-rc3 are 169, 171 and 182. That the builder registers the
+        // logging services is the generic host's own behaviour rather than something read
+        // out of the server's tree, which is why this line stands here in the host's place.
+        //
+        // It stands in for the host and not for the registrator: everything else below
+        // comes from the registrator, and a dependency it forgets still fails here.
         services.AddLogging();
 
         new PluginServiceRegistrator().RegisterServices(services, Substitute.For<IServerApplicationHost>());
