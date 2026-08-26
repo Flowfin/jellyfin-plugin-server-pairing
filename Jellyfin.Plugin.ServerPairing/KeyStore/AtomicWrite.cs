@@ -20,6 +20,12 @@ namespace Jellyfin.Plugin.ServerPairing.KeyStore;
 /// a temporary directory is a different filesystem on more machines than not.
 /// </para>
 /// <para>
+/// The temporary file is created with the store's own permissions rather than the platform's,
+/// which is <see cref="StorePermissions"/> and issue #35. A move preserves the mode of the
+/// file being moved, so creating the temporary with a default mode would put that default on
+/// the store's file, and would do it with the key material already written under it.
+/// </para>
+/// <para>
 /// WHAT THIS DOES NOT DO is force the bytes to the platter before the move. The move is
 /// ordered after the write by this code and not by any promise the filesystem makes, so a
 /// machine that loses power between them may come back with the move done and the contents
@@ -61,14 +67,24 @@ public static class AtomicWrite
 
         if (!string.IsNullOrEmpty(directory))
         {
-            Directory.CreateDirectory(directory);
+            StorePermissions.PrepareDirectory(directory);
         }
 
         var temporary = path + TemporarySuffix;
 
         try
         {
-            File.WriteAllText(temporary, contents, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
+            // The temporary file is the one that has to be created with the store's mode, not
+            // the destination. A move preserves the mode of what is moved, so a temporary
+            // created with the platform's default and moved into place puts the default on the
+            // store's file - and does it after the key material is already on the disk under
+            // it. Writing through the stream that names the mode at creation closes that.
+            using (var stream = StorePermissions.CreateFile(temporary))
+            {
+                var bytes = new UTF8Encoding(encoderShouldEmitUTF8Identifier: false).GetBytes(contents);
+
+                stream.Write(bytes, 0, bytes.Length);
+            }
 
             (moveIntoPlace ?? Move)(temporary, path);
         }
