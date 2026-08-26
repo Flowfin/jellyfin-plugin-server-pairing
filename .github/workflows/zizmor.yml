@@ -17,9 +17,9 @@
 # not gated here and no issue on this repository holds it.
 #
 # What this gate does to a merge is read rather than written down here. This
-# job's context is not in the required set today, so a red run reports and blocks
-# nothing, and what is required is a repository setting rather than anything in
-# this tree:
+# job's context is in the required set today, so a red run blocks a merge, and
+# what is required is a repository setting rather than anything in this tree.
+# This comment said the context was not required until that setting moved:
 #
 #     gh api repos/Flowfin/jellyfin-plugin-server-pairing/rulesets/20464076 \
 #       --jq '[.rules[] | select(.type=="required_status_checks") | .parameters.required_status_checks[].context]'
