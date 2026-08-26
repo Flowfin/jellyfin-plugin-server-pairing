@@ -46,6 +46,14 @@ can open an enrolment from. Two servers cannot be paired with this version. The
 `changelog` field in `build.yaml` and `build.net10.0.yaml` carries that
 paragraph in the same words.
 
+- When the server starts, this plugin now writes one line to the log for each
+  pairing the key store already holds, naming it. The store is not in the
+  plugin's directory, so it survives an uninstall and a reinstall comes up paired
+  with whatever it was paired with before; that line is what says so instead of
+  the pairings simply being there. Nothing is written when the store holds
+  nothing, and looking at a store that does not exist does not create one. A
+  store that cannot be read produces one line at Error and leaves the server
+  running.
 - [protocol] A pairing request that runs into a fault on this server is now
   answered with the same refusal every other caller gets, rather than with
   whatever the server produces for an error. The detail is written to the log at
