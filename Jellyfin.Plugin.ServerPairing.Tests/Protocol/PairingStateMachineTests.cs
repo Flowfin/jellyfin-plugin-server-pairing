@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Jellyfin.Plugin.ServerPairing.Protocol;
+using Jellyfin.Plugin.ServerPairing.Tests.Mapping;
 using Xunit;
 
 namespace Jellyfin.Plugin.ServerPairing.Tests.Protocol;
@@ -176,7 +177,7 @@ public class PairingStateMachineTests
     [Fact]
     public void AnIdentifierNothingIsHeldForIsAbsent()
     {
-        var machine = new PairingStateMachine(new InMemoryRecords());
+        var machine = new PairingStateMachine(new InMemoryRecords(), new InMemoryUserMappings());
 
         Assert.Equal(PairingState.Absent, machine.StateOf(PairingId));
         Assert.Null(machine.RecordOf(PairingId));
@@ -190,7 +191,7 @@ public class PairingStateMachineTests
     [Fact]
     public void ALifecycleRunsThroughTheStoreAndRecordsItsLastMove()
     {
-        var machine = new PairingStateMachine(new InMemoryRecords());
+        var machine = new PairingStateMachine(new InMemoryRecords(), new InMemoryUserMappings());
 
         Assert.Equal(
             TransitionOutcome.Answered,
@@ -232,7 +233,7 @@ public class PairingStateMachineTests
     [Fact]
     public void ReachingAbsentRemovesTheRecordAndRevokedKeepsIt()
     {
-        var machine = new PairingStateMachine(new InMemoryRecords());
+        var machine = new PairingStateMachine(new InMemoryRecords(), new InMemoryUserMappings());
 
         machine.Apply(PairingId, LocalEvent.WindowOpened, Administrator, At);
         machine.Receive(PairingId, PairingMessage.Hello, OfferedKey.NotApplicable, Peer, At);
@@ -257,7 +258,7 @@ public class PairingStateMachineTests
     public void ATransitionThatDoesNotMoveTheStateWritesNothing()
     {
         var records = new InMemoryRecords();
-        var machine = new PairingStateMachine(records);
+        var machine = new PairingStateMachine(records, new InMemoryUserMappings());
 
         machine.Apply(PairingId, LocalEvent.WindowOpened, Administrator, At);
 
@@ -282,7 +283,7 @@ public class PairingStateMachineTests
     public void AWriteThatDoesNotCommitLeavesThePairingInItsPreviousState()
     {
         var records = new FailOnDemandRecords();
-        var machine = new PairingStateMachine(records);
+        var machine = new PairingStateMachine(records, new InMemoryUserMappings());
 
         machine.Apply(PairingId, LocalEvent.WindowOpened, Administrator, At);
         machine.Receive(PairingId, PairingMessage.Hello, OfferedKey.NotApplicable, Peer, At);
@@ -295,7 +296,7 @@ public class PairingStateMachineTests
             () => machine.Apply(PairingId, LocalEvent.FingerprintConfirmed, Administrator, At));
 
         Assert.Equal(PairingState.Pending, machine.StateOf(PairingId));
-        Assert.Equal(PairingState.Pending, new PairingStateMachine(records).StateOf(PairingId));
+        Assert.Equal(PairingState.Pending, new PairingStateMachine(records, new InMemoryUserMappings()).StateOf(PairingId));
 
         var record = machine.RecordOf(PairingId);
 
@@ -311,7 +312,7 @@ public class PairingStateMachineTests
     public void ARemovalThatDoesNotCommitLeavesThePairingInItsPreviousState()
     {
         var records = new FailOnDemandRecords();
-        var machine = new PairingStateMachine(records);
+        var machine = new PairingStateMachine(records, new InMemoryUserMappings());
 
         machine.Apply(PairingId, LocalEvent.WindowOpened, Administrator, At);
         records.FailTheNextWrite();
@@ -330,7 +331,7 @@ public class PairingStateMachineTests
     public void TheSameStepSucceedsWhenTheStoreIsNotFailing()
     {
         var records = new FailOnDemandRecords();
-        var machine = new PairingStateMachine(records);
+        var machine = new PairingStateMachine(records, new InMemoryUserMappings());
 
         machine.Apply(PairingId, LocalEvent.WindowOpened, Administrator, At);
         machine.Receive(PairingId, PairingMessage.Hello, OfferedKey.NotApplicable, Peer, At);
@@ -348,7 +349,7 @@ public class PairingStateMachineTests
     public void TheStateIsReadFromTheStoreEveryTime()
     {
         var records = new InMemoryRecords();
-        var machine = new PairingStateMachine(records);
+        var machine = new PairingStateMachine(records, new InMemoryUserMappings());
 
         machine.Apply(PairingId, LocalEvent.WindowOpened, Administrator, At);
 

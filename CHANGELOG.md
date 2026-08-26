@@ -101,3 +101,12 @@ paragraph in the same words.
   remembers. Two servers with no version in common are not paired at a version
   one of them cannot speak. The set has one member today, so nothing an operator
   can see changes, and nothing calls the selection yet.
+- [protocol] A pairing ending now takes the user mappings held for it. That is
+  true whether it ended by being revoked, which keeps its record, or by an
+  enrolment window expiring, which does not, and the cached peer display name
+  beside each mapping goes with it. A mapping can only be made by an
+  administrator naming themselves, only under a pairing that exists and has not
+  been revoked, and a user with no mapping is skipped rather than guessed at.
+  Nothing on the wire moved and no server answers differently: there is still no
+  page and no endpoint through which a mapping can be made, so a server installed
+  today holds an empty table.
