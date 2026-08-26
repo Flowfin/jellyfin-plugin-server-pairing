@@ -10,7 +10,8 @@ Two lists follow. The second one is the one that matters.
 ## What is logged
 
 Every entry below carries the pairing identifier, so entries about one pairing
-can be pulled out of a log holding several.
+can be pulled out of a log holding several. The last row is the exception and
+says why underneath the table.
 
 | Event | Level | Fields |
 | --- | --- | --- |
@@ -24,9 +25,25 @@ can be pulled out of a log holding several.
 | A refusal rate crossed its threshold | Warning | pairing id, the count and the window it was counted over |
 | A mapping was added, changed or removed | Information | pairing id, the administrator who did it, which direction |
 | The key store could not be read or written | Error | the operation, the reason, no path contents |
+| A request on the pairing plane faulted | Error | which of the five messages it arrived on, and the fault the runtime raised, with no pairing identifier |
 
 Debug adds timing and state machine transitions for the same events. It adds no
 field that is not in the table above.
+
+The last row is the one entry that carries no pairing identifier, and leaving it
+out is deliberate rather than an omission. A fault is reachable before the
+request has been read, so at that moment the only identifier available is the one
+the caller put in a header, unverified, on a plane where an unverified caller is
+assumed hostile. Writing it would let a stranger choose which pairing an
+operator's error line appears to be about. What the entry names instead is the
+path the request arrived on, which is this server's own fact.
+
+The fault text is the runtime's and not this plugin's, which is where the list
+below meets its one soft edge. Nothing on this plane parses a body today, so no
+exception it can raise is built out of one; the day something does, the message
+of a parse failure is a place a fragment of a body can reach a log without anyone
+writing it there. That is the case to check when a body parser lands rather than
+a defect in the tree now.
 
 ## What may never be logged, at any level, including Debug
 
@@ -93,14 +110,27 @@ are both in the tree:
     git grep -n "AdministratorRevoked = " origin/master -- Jellyfin.Plugin.ServerPairing/Protocol/LocalEvent.cs
     origin/master:Jellyfin.Plugin.ServerPairing/Protocol/LocalEvent.cs:31:    AdministratorRevoked = 3,
 
-What is missing is the logging itself. Nothing in the plugin takes a logger, so a
-capturing logger would be handed a run that writes nothing and would pass on an
-empty set, which is worse than having no test:
+What is missing is the logging itself, and it is one row short of missing rather
+than absent. This paragraph said nothing in the plugin took a logger and that a
+capturing logger would be handed a run that writes nothing. One call site takes
+one now:
 
-    git grep -nE "ILogger|_logger" origin/master -- Jellyfin.Plugin.ServerPairing ; echo "exit=$?"
-    exit=1
+    git grep -nE "ILogger|_logger" -- Jellyfin.Plugin.ServerPairing
+    Jellyfin.Plugin.ServerPairing/Api/PeerPlaneController.cs:38:    private readonly ILogger<PeerPlaneController> _logger;
+    Jellyfin.Plugin.ServerPairing/Api/PeerPlaneController.cs:58:    public PeerPlaneController(PeerPlane plane, ILogger<PeerPlaneController> logger)
+    Jellyfin.Plugin.ServerPairing/Api/PeerPlaneController.cs:61:        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+    Jellyfin.Plugin.ServerPairing/Api/PeerPlaneController.cs:241:            _logger.LogError(fault, "A request on the pairing plane faulted and was answered with the refusal every caller gets. Message: {PairingMessage}", message);
 
-Until the test exists, both lists above are a design statement and nothing
-refuses a call site that violates them. This paragraph is the whole of that
-disclosure and no later edit of this file turns it into a statement that the
-logging has been checked.
+That is the fault row of the table above and nothing else. A capturing logger
+sits under it in the suite and asserts what that one entry holds and that none of
+it reaches the caller, so the fault row is checked and every other row in the
+table is not.
+
+The test this section asks for is a different and larger thing, and it does not
+exist. It drives a full enrolment, a rotation and a revocation at Debug against a
+capturing logger and looks for the secrets the run generated, and there is still
+no enrolment to drive and nothing that writes any of the other rows. Until it
+exists, both lists above are a design statement for every entry but the fault
+one, and nothing refuses a call site that violates them. This paragraph is the
+whole of that disclosure and no later edit of this file turns it into a statement
+that the logging has been checked.

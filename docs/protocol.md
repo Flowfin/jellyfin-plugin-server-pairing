@@ -546,7 +546,7 @@ administrator opened deliberately.
 
 | Code | What caused it | Who can ever see it | Distinguishable from its neighbours |
 | --- | --- | --- | --- |
-| `refused` | An unknown pairing identifier, a signature that does not verify, a body over its limit, a malformed header value, a request in a state that does not accept it from an unverified caller, a revoked pairing, a request when no pairing exists, a second `hello` with a different key | anyone | No, and deliberately so. Every one of those causes produces the same bytes |
+| `refused` | An unknown pairing identifier, a signature that does not verify, a body over its limit, a malformed header value, a request in a state that does not accept it from an unverified caller, a revoked pairing, a request when no pairing exists, a second `hello` with a different key, a fault on this side while serving the request | anyone | No, and deliberately so. Every one of those causes produces the same bytes |
 | `clock` | The signature verified and the timestamp is outside the freshness window | only a caller holding a verifying key | Yes |
 | `version` | No version in common | a caller inside an open enrolment window, or a caller holding a verifying key | Yes, to those callers only |
 | `state` | The signature verified and the message is not accepted in this state | only a caller holding a verifying key | Yes |
@@ -602,9 +602,32 @@ is built.
 because an enrolment window is open, which is a door an administrator opened on
 purpose and which closes on a timer.
 
+The last cause in the `refused` row is the one that is not about the request at
+all, and it is in that row for the reason the row exists. A fault on this side is
+a bug, a full disk or a body stream that went away, and none of that is the
+caller's business; more to the point, a caller that can make one path fault while
+another path refuses has separated two paths, whatever the fault was. So a fault
+is caught before it leaves the plugin and is answered with the same status, the
+same media type and the same bytes as everything else in that row. What a
+framework produces for an escaping exception is none of those: a different
+status, usually a different media type, and on a server with the developer page
+turned on, a stack trace naming this plugin's types.
+
+The detail goes to the log instead, at Error, where an operator can read it and a
+stranger cannot. [`logging.md`](logging.md) carries that entry and says why it is
+the one entry in its table with no pairing identifier on it.
+
+A caller that hung up is not a fault and is not answered at all. There is nobody
+left to receive an answer, and an error line for every disconnect fills a log
+with the network rather than with this plugin.
+
 The timing of a refusal is one class. Every cause above is answered after the
 same work, so a caller cannot separate them by measurement where the codes are
 identical. Nothing in the tree enforces that today and issue #28 owes the test.
+A fault is the one cause that plainly does not take the same time as the others,
+and no reading of a tree fixes that: it is answered after however far the request
+got before it failed. The one-shape refusal bounds what a caller reads, not how
+long it waited for it.
 
 Two refusals a landed type already produces have no code in the table above, and
 saying so is what stops the table being read as the whole set. `KeyOverlap.Rotate`
