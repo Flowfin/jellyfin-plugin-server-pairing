@@ -163,12 +163,24 @@ runs a full enrolment, a rotation and a revocation in one test process.
 
 The dashboard replacement has two halves and only the first of them exists. The
 page is read as text by `ConfigurationPageTests`, which refuses a reference to
-an external host in it, so that half is carried out. The controller-level tests
-for every endpoint behind the page have no controller to be about:
+an external host in it, so that half is carried out. This paragraph said the controller-level
+tests for every endpoint behind the page had no controller to be about, and
+pasted a reading with no controller in it. There is one:
 
 ```
-git grep -l "ControllerBase" -- Jellyfin.Plugin.ServerPairing ; echo "exit=$?"
-exit=1
+git grep -l "ControllerBase" origin/master -- Jellyfin.Plugin.ServerPairing ; echo "exit=$?"
+origin/master:Jellyfin.Plugin.ServerPairing/Api/PeerPlaneController.cs
+exit=0
 ```
+
+That command also read a working tree rather than the mainline, which is what
+this document tells everybody else not to do, and it names `origin/master` now.
+
+The half that has not changed is the half the sentence was about. The controller
+that exists serves the peer plane, which a peer reaches and the dashboard page
+does not, and there is no controller for the administrative endpoints behind
+that page. `PeerPlaneControllerTests` is the controller-level suite for the plane
+and there is nothing of that shape for the page, because the endpoints it would
+call do not exist.
 
 Each of the rest arrives with the issue that builds the thing it replaces.
