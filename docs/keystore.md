@@ -108,6 +108,58 @@ not by any promise the filesystem makes, so a machine that loses power between
 them may come back with the move done and the contents not. Closing that needs a
 flush the runtime does not expose portably.
 
+## When it is created, and with what permissions
+
+Nothing exists before the first pairing. The store's directory and its file are
+brought into existence by the first write and by nothing else, so a server that
+installs this plugin and never pairs has no key file to protect.
+`StorePermissionsTests.NothingIsCreatedUntilSomethingIsWritten` drives the store
+through every read it offers and asserts that neither appears;
+`TheFirstWriteCreatesBoth` is the other half, so lazily created cannot quietly
+become never created.
+
+Where the platform expresses a Unix mode, both are created with theirs rather
+than given them afterwards:
+
+    git grep -n 'public const UnixFileMode' -- Jellyfin.Plugin.ServerPairing/KeyStore/StorePermissions.cs
+
+The directory is `0700` and the file is `0600`. **The mode is a creation
+argument in both cases, and that is the point rather than a detail.** A file
+created with the platform's default and narrowed on the next line exists, for
+that line, under whatever the umask gave it, and the key material is already in
+it. The atomic replace is where this is easy to get wrong: a move preserves the
+mode of the file being moved, so the file whose creation mode becomes the
+store's is the temporary one, not the destination.
+`StorePermissionsTests.TheTemporaryIsNarrowBeforeItBecomesTheStore` reads the
+temporary's mode while it still exists rather than inferring it from the
+destination afterwards.
+
+A directory that is already there with permissions wider than `0700` is refused
+and not narrowed. The refusal names the path. Narrowing it would be a change
+made to an operator's server without saying so, and this plugin cannot tell a
+directory somebody widened on purpose from one widened by accident; writing keys
+into it either way is the worse of the two. `EveryPermissionPastTheStoreSOwnIsRefusedOnItsOwn`
+walks every permission beyond the store's own one at a time, so a guard catching
+world-readable and letting group-writable through fails here.
+
+**On Windows none of this happens, and the residual risk is not smaller for the
+rest of this section.** A Unix mode is not expressible there, so the directory
+and the file are created with whatever the platform gives them and no check is
+made. What protects the store on a Windows server is the access control the
+operator has on the server's data directory, which this plugin neither reads nor
+sets. Every case above that needs a mode is skipped there with that reason rather
+than passed, so a green suite on Windows says nothing about the store's
+permissions:
+
+    git grep -n 'class UnixModeFactAttribute' -- Jellyfin.Plugin.ServerPairing.Tests/
+
+**What the permissions do not do.** They stop a process running as another user
+from reading the file. They stop nothing that runs as the server's own user, and
+they stop nothing that reads the disk from underneath the running system - a
+backup, a restored image, a stolen drive, or the operator themselves. The keys
+are on disk in a form anybody who can read the file can use, because nothing here
+encrypts them; that is issue #31 and it is unchanged by this section.
+
 ## What zeroing does not achieve
 
 `KeyMaterial.Destroy` calls `CryptographicOperations.ZeroMemory` on the array it
@@ -133,10 +185,11 @@ mistaken for reading a finished design.
 - **What protects the file at rest.** Nothing in this plugin encrypts it. The
   keys are on disk in a form anybody who can read the file can use. Issue #31 is
   where what protects it, and what does not, is answered.
-- **The file's permissions, and creating it.** The directory is created when
-  something is first written and the file gets whatever permissions the platform
-  gives it. Issue #35 owns creating the store lazily and with the right
-  permissions from the first byte.
+- **What a Windows server does about permissions.** The section above is what
+  happens where a Unix mode exists. On Windows the directory and the file are
+  created with whatever the platform gives them, nothing is checked, and this
+  plugin sets no access control of its own. Issue #35 landed the Unix half and
+  did not decide this one.
 - **A restored, copied or corrupt store.** A file that does not parse currently
   throws rather than being answered for, and a store restored from a backup or
   copied to a second server is not detected. Issue #33 owns all three.

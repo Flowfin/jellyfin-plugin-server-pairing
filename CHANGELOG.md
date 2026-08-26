@@ -46,6 +46,16 @@ can open an enrolment from. Two servers cannot be paired with this version. The
 `changelog` field in `build.yaml` and `build.net10.0.yaml` carries that
 paragraph in the same words.
 
+- The key store's directory and its file are created with permissions of their own
+  where the server runs on a platform that has them: the directory readable,
+  writable and traversable by its owner alone, the file readable and writable by
+  its owner alone, and both set as they are created rather than afterwards, so
+  there is no moment at which the keys sit on disk under wider ones. Nothing is
+  created at all until the first pairing. A store directory that is already there
+  with wider permissions is refused, with the path named, rather than narrowed
+  under an operator who may have widened it deliberately. On Windows none of this
+  applies: what protects the store there is the access control on the server's
+  data directory, which this plugin does not set.
 - [protocol] A sixth path is no longer served. Beside the five the specification
   fixes, the host routed a request at `/ServerPairing` itself, under no method
   constraint and with nothing of the server's credentials asked for, to a helper
