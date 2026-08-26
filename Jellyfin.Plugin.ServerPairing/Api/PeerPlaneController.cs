@@ -148,7 +148,18 @@ public sealed class PeerPlaneController : ControllerBase
     /// values for one covered field is a request two readers can disagree about, and this is
     /// the plane where that disagreement is a signature over different bytes.
     /// </para>
+    /// <para>
+    /// <see cref="NonActionAttribute"/> is the whole reason this method is not a sixth
+    /// endpoint. A public instance method declared on a controller is an action unless it
+    /// says so otherwise, whatever HTTP attributes it does or does not carry. Without this
+    /// attribute the host's own action discovery routes it at the controller's own template,
+    /// under no method constraint, on a class marked <see cref="AllowAnonymousAttribute"/> -
+    /// a reachable endpoint that is not <see cref="Serve"/> and therefore not the refusal
+    /// every named path gives. It is public because the suite drives it directly, which is
+    /// what makes the attribute load-bearing rather than tidiness.
+    /// </para>
     /// </remarks>
+    [NonAction]
     public async Task<ArrivingRequest> Arriving(PairingMessage message)
     {
         var body = await ReadBounded(

@@ -1,12 +1,81 @@
 # The endpoints this plugin adds, and what authorises a request to one
 
 Two things belong in this file. The table of endpoints and the authorization
-each one requires is issue #27, and it is not here yet, because this plugin
-adds no endpoint. What is here is the question underneath that table: how the
-host authenticates a request that arrives from the dashboard, and what an
-attacker on another origin can make a browser do with it. That is issue #53,
-and it is written first deliberately, because the answer decides what the
-endpoints are allowed to look like instead of describing them once they exist.
+each one requires is issue #27, and it is the next section. Underneath that
+table sits the question of how the host authenticates a request that arrives
+from the dashboard, and what an attacker on another origin can make a browser
+do with it. That is issue #53, and it was written first deliberately, because
+the answer decides what the endpoints are allowed to look like instead of
+describing them once they exist.
+
+## The table
+
+| Action | Method | Path | Plane | Host authorization | What decides the request |
+| --- | --- | --- | --- | --- | --- |
+| `PeerPlaneController.Hello` | `POST` | `/ServerPairing/hello` | peer | `anonymous` | the pairing signature |
+| `PeerPlaneController.Confirm` | `POST` | `/ServerPairing/confirm` | peer | `anonymous` | the pairing signature |
+| `PeerPlaneController.Rotate` | `POST` | `/ServerPairing/rotate` | peer | `anonymous` | the pairing signature |
+| `PeerPlaneController.Revoke` | `POST` | `/ServerPairing/revoke` | peer | `anonymous` | the pairing signature |
+| `PeerPlaneController.Exchange` | `POST` | `/ServerPairing/exchange` | peer | `anonymous` | the pairing signature |
+
+Five rows, all on the peer plane. The administrative plane has no endpoint yet,
+so it has no row: opening an enrolment window, confirming a ceremony, listing
+pairings, rotating, revoking and editing mappings are all still issues rather
+than actions, and a row for one of them would describe something no request can
+reach.
+
+### What the two authorization words mean
+
+`anonymous` is the host being asked for nothing. The action resolves to
+`AllowAnonymous` and carries no `Authorize`. It is not the absence of a
+credential requirement, it is the absence of a *host* credential requirement: a
+peer holds this plugin's own pairing key and none of the host's, so a request
+here carries no token the server's authentication would recognise, and
+requiring one would refuse every peer before this plugin saw it. What decides
+such a request is the pairing signature, checked in `PeerPlane` and nowhere
+else.
+
+`elevation` is the action carrying `Authorize` naming the host's
+`RequiresElevation` policy, which is the constant read out of the server source
+in the section below. No row carries it today. When an administrative endpoint
+lands it takes that word, and what decides the request is the host's elevation
+policy together with the endpoint's own repeat of the check, which is the
+third bullet under `What this plugin does about it`.
+
+The pairing between the columns is fixed rather than chosen per row: `peer` goes
+with `anonymous` and with the pairing signature, `administrative` goes with
+`elevation` and with the host's elevation policy. A row that spells one half and
+not the other is refused by the suite, because a row is the only place the two
+could be made to disagree.
+
+### What binds the table to the tree
+
+`EndpointAuthorizationTableTests` in the test project reads the rows out of this
+file and compares them against what the host would serve. An endpoint the host
+serves and this table does not name fails the suite, and so does a row naming an
+endpoint the host does not serve, a row naming the wrong method or path, and a
+row naming an authorization the action does not carry. This table is therefore
+not a description that can drift; it is the declaration a change is judged
+against.
+
+What produces the served side is the host's own action discovery rather than a
+reading of the attributes, and the difference is not academic. **A public
+instance method declared on a controller is an action whether or not it carries
+an HTTP attribute.** Counting `HttpPost` attributes counts the endpoints
+somebody meant to write; asking the discovery counts the endpoints a request can
+reach. The two disagreed in this tree. `PeerPlaneController.Arriving` is public
+because the suite drives it directly, and until it was marked `NonAction` the
+discovery returned it as a sixth action: routed at `/ServerPairing`, under no
+HTTP method constraint, on a class carrying `AllowAnonymous`. It is not `Serve`,
+so it is not the refusal the five named paths give. That is the failure issue
+#27 names, it was found by asking the discovery rather than by reading the
+source, and this table is what stops the next one.
+
+What that reading does not carry is what a request to it would have received.
+The discovery was asked in the test process, not on a running server, so the
+status and the body a real request would have got are not measured here and no
+claim is made about them. What is measured is that the host would have routed
+one there at all, with nothing of the host's asked for.
 
 ## How the claims about the host were produced
 
@@ -289,14 +358,19 @@ endpoint here may behave differently depending on which branch is live.
 
 ## What this document does not yet do
 
-It does not hold the endpoint table. That is issue #27, and it needs endpoints
-to exist first.
+The table is asserted by a test. The rest of this file is not, and that half
+does not become smaller for the table arriving: every statement about Jellyfin
+above is a reading of somebody else's source at two tags, made through the
+GitHub API and not on a running server, and no test drives any of it. That half
+is prose and stays prose.
 
-Nothing here is asserted by a test. Issue #53's third condition asks that a
-test assert every state-changing endpoint refuses a request lacking whatever
-this document names, and there is no controller in this repository to enumerate
-or to drive. Until that test exists, everything above is a reading of somebody
-else's source and this file is prose.
+Issue #53's third condition asks that a test assert every state-changing
+endpoint refuses a request lacking whatever this document names. It is not met.
+`PeerPlaneTests` does assert that a request without a verifying signature is
+refused and that its body is not handed on, but every answer this plane gives
+today is the same refusal whatever arrives, so that assertion cannot be
+distinguished from an assertion that everything is refused. Until a request can
+succeed there is nothing for the condition to bite on, and #53 carries it.
 
 It says nothing about how the dashboard page treats a string that came from a
 peer. That is a separate question with a separate failure, and it is issue #52.
