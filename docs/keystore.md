@@ -203,7 +203,7 @@ version and no answer for a file that does not parse, which are issues #55 and
 added before them is a layer the format work then has to migrate and the
 corruption work then has to tell apart from damage. Whether to add one at all,
 where the wrapping key would live, and what a server does when the file is there
-and the key is not, is on the tracker rather than in this paragraph.
+and the key is not, is issue #268 rather than this paragraph.
 
 ## Residual risk, adversary by adversary
 
@@ -273,7 +273,7 @@ mistaken for reading a finished design.
   what that does not reach, is the section above; issue #31 is answered by it.
   What is not decided is whether a wrapping layer with a key kept beside the
   store is worth adding, where that key would live, and what a server does when
-  the file is there and the key is not.
+  the file is there and the key is not. Issue #268 holds that question.
 - **What a Windows server does about permissions.** The section above is what
   happens where a Unix mode exists. On Windows the directory and the file are
   created with whatever the platform gives them, nothing is checked, and this
