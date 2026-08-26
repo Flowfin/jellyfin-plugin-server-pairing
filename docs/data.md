@@ -80,8 +80,9 @@ Two constraints on that payload are already settled and are recorded here so tha
 whoever writes the contract meets them rather than discovers them:
 
 The mapping table holds opaque identifiers, and no peer username is at rest on
-either server as truth. Issue #41 owes the record's shape and issue #36 owes the
-table being an administrator's decision.
+either server as truth. What the record holds, field by field, is the section
+below. That the table is an administrator's decision rather than an inference is
+issue #36 and is argued in [the mapping document](mapping.md).
 
 A display name may cross so that an administrator can read the mapping page, and
 it is a cache. It may be discarded at any moment, nothing is decided from it, and
@@ -90,6 +91,47 @@ it is never the identity a request is authorised against.
 Until `exchange` has its fields, this document describes the envelope of a
 transfer and not its contents. That is a real gap in a personal-data statement,
 it is named here rather than papered over, and it closes when M6 lands.
+
+## What the mapping table holds, field by field
+
+One row per field of the record this plugin keeps for one mapped user. Nothing
+else about that user is at rest here.
+
+| Field | What it is | Why it is held | When it goes |
+| --- | --- | --- | --- |
+| `PairingId` | The pairing this mapping belongs to | A mapping outside a pairing is the one thing this model does not allow, and every read is keyed by it | With the pairing, whether it was revoked or removed |
+| `LocalUserId` | The user on this server, as the server identifies them | The mapping answers who on this server a transfer is for, and nothing else identifies that user | With the mapping |
+| `PeerUserId` | The user on the peer, as the peer identifies them | The other half of the correspondence, opaque here and never parsed, compared or derived from | With the mapping |
+| `PeerDisplayName` | The peer's readable name for that user | A cache, so an administrator sees something they recognise beside an opaque identifier; nothing is decided from it and it may be discarded at any moment | With the mapping, and it may go sooner |
+| `Actor` | The administrator who decided this mapping | A mapping is a decision somebody made, and a decision with no author cannot be audited | With the mapping |
+| `At` | When they decided it | The other half of the audit trail: an administrator reading the table needs to know when this correspondence was asserted | With the mapping |
+
+**Every row's answer to the last column is at the latest the end of the
+pairing.** That is not a promise made here and checked nowhere: reaching
+`Revoked` or `Absent` sweeps the pairing's mappings, which is a property of the
+state machine rather than of a caller remembering to call something, and it is
+asserted per field rather than by the row count going to zero.
+
+**What is not on this list is the point of the list.** No email address, no
+password material, no permission set, and no copy of the peer's user list. None
+of those is needed to resolve a mapping or to tell an administrator which mapping
+is which, and every one of them is worth stealing. A table that is read or taken
+away carries two opaque identifiers, a readable name that is admitted to be a
+cache, and who decided it when.
+
+`PeerDisplayName` is the one field in the table that names a person, and it is
+held as a cache rather than as truth for exactly that reason. A report of what is
+held about somebody that lists the opaque identifier and leaves out the readable
+name beside it has left out the only field that names them, which is why the
+section on reporting below counts it.
+
+The list is checkable rather than trusted. `MappingRecordDocumentTests` reads the
+table above and the record's own members and fails on a field with no row, on a
+row naming no field, and on a row that leaves a cell empty:
+
+```
+git grep -n 'public void EveryStoredFieldHasARow' -- Jellyfin.Plugin.ServerPairing.Tests/Mapping/MappingRecordDocumentTests.cs
+```
 
 ## What is never sent anywhere else
 
