@@ -38,12 +38,9 @@ public sealed class PairingKeyStoreTests : IDisposable
     /// <inheritdoc />
     public void Dispose()
     {
-        foreach (var directory in _directories)
+        foreach (var directory in _directories.Where(candidate => Directory.Exists(candidate)))
         {
-            if (Directory.Exists(directory))
-            {
-                Directory.Delete(directory, recursive: true);
-            }
+            Directory.Delete(directory, recursive: true);
         }
 
         GC.SuppressFinalize(this);

@@ -289,10 +289,8 @@ public class PeerPlaneTests
             Signed(message, pairingId: "00000000000000000000000000000000"),
         };
 
-        foreach (var cause in causes)
+        foreach (var outcome in causes.Select(cause => Plane().Serve(message, cause)))
         {
-            var outcome = Plane().Serve(message, cause);
-
             Assert.Equal("{\"code\":\"refused\"}", Refusal.Body(outcome.Code));
         }
 

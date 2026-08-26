@@ -172,7 +172,9 @@ public class PeerPlaneControllerTests
         var limit = PeerPlane.BodyLimitFor(message);
         var body = Filled(limit);
 
-        var read = await PeerPlaneController.ReadBounded(new MemoryStream(body), limit, CancellationToken.None)
+        using var stream = new MemoryStream(body);
+
+        var read = await PeerPlaneController.ReadBounded(stream, limit, CancellationToken.None)
             .ConfigureAwait(true);
 
         Assert.False(read.Exceeded);
@@ -191,7 +193,9 @@ public class PeerPlaneControllerTests
     {
         var limit = PeerPlane.BodyLimitFor(message);
 
-        var read = await PeerPlaneController.ReadBounded(new MemoryStream(Filled(limit + 1)), limit, CancellationToken.None)
+        using var stream = new MemoryStream(Filled(limit + 1));
+
+        var read = await PeerPlaneController.ReadBounded(stream, limit, CancellationToken.None)
             .ConfigureAwait(true);
 
         Assert.True(read.Exceeded);
@@ -241,8 +245,10 @@ public class PeerPlaneControllerTests
     [Fact]
     public async Task NoBodyAtAllIsABodyOfZeroBytes()
     {
+        using var stream = new MemoryStream(Array.Empty<byte>());
+
         var read = await PeerPlaneController.ReadBounded(
-            new MemoryStream(Array.Empty<byte>()),
+            stream,
             PeerPlane.BodyLimit,
             CancellationToken.None).ConfigureAwait(true);
 
