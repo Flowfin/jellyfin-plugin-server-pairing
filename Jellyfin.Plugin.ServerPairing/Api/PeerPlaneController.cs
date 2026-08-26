@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
 
 namespace Jellyfin.Plugin.ServerPairing.Api;
 
@@ -34,14 +35,28 @@ namespace Jellyfin.Plugin.ServerPairing.Api;
 public sealed class PeerPlaneController : ControllerBase
 {
     private readonly PeerPlane _plane;
+    private readonly ILogger<PeerPlaneController> _logger;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="PeerPlaneController"/> class.
     /// </summary>
     /// <param name="plane">The plane that decides what an arriving request means.</param>
-    public PeerPlaneController(PeerPlane plane)
+    /// <param name="logger">Where the detail of a fault on this plane goes.</param>
+    /// <remarks>
+    /// The logger is the server's own. The host builds this controller out of its container,
+    /// and that container has logging in it because the server put it there, which is read at
+    /// the two lines this plugin builds against rather than assumed:
+    /// <c>gh api -H "Accept: application/vnd.github.raw"
+    /// "repos/jellyfin/jellyfin/contents/Jellyfin.Server/Program.cs?ref=v10.11.9" | sed -n '284p'</c>
+    /// prints <c>.AddLogging(d =&gt; d.AddSerilog())</c>. So nothing in
+    /// <see cref="PluginServiceRegistrator"/> registers one, and a container assembled without
+    /// it cannot build this type - which is what the suite's own construction case has to
+    /// supply in the host's place.
+    /// </remarks>
+    public PeerPlaneController(PeerPlane plane, ILogger<PeerPlaneController> logger)
     {
         _plane = plane ?? throw new ArgumentNullException(nameof(plane));
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
     /// <summary>
@@ -179,9 +194,52 @@ public sealed class PeerPlaneController : ControllerBase
             body.Exceeded);
     }
 
+    /// <summary>
+    /// Serves one request, and answers a fault on this side the same way it answers a
+    /// stranger.
+    /// </summary>
+    /// <param name="message">The message the path this arrived on belongs to.</param>
+    /// <returns>The answer.</returns>
+    /// <remarks>
+    /// Everything between reading the request and deciding it is inside the catch, because
+    /// what escapes it does not stay inside this plugin. An exception leaving an action reaches
+    /// the host's own pipeline, and what a caller then receives is whatever that pipeline is
+    /// configured to produce - a different status, a different media type, and on a server with
+    /// the developer page turned on, a stack trace naming this plugin's types. That is a
+    /// distinguishable answer, so a stranger who can make one path fault and another path refuse
+    /// has separated them, which is the whole property the single refusal code exists for.
+    /// <para>
+    /// A caller that went away is not a fault and is rethrown. Its request is cancelled through
+    /// <see cref="HttpContext.RequestAborted"/>, there is nobody left to answer, and writing an
+    /// error line per disconnect fills an operator's log with the network rather than with this
+    /// plugin. The <c>when</c> clause is what keeps that narrow: a cancellation raised for any
+    /// other reason is a fault of this side and is caught with the rest.
+    /// </para>
+    /// <para>
+    /// The detail goes to the log and nothing of it goes to the caller. <c>docs/logging.md</c>
+    /// carries the entry and the bound on what its text may hold.
+    /// </para>
+    /// </remarks>
     private async Task<IActionResult> Serve(PairingMessage message)
     {
-        var outcome = _plane.Serve(message, await Arriving(message).ConfigureAwait(false));
+        PeerPlaneOutcome outcome;
+
+        try
+        {
+            outcome = _plane.Serve(message, await Arriving(message).ConfigureAwait(false));
+        }
+        catch (OperationCanceledException) when (HttpContext.RequestAborted.IsCancellationRequested)
+        {
+            throw;
+        }
+#pragma warning disable CA1031 // Every escaping exception is the failure this catch exists for, so the type cannot be narrowed without reopening it.
+        catch (Exception fault)
+#pragma warning restore CA1031
+        {
+            _logger.LogError(fault, "A request on the pairing plane faulted and was answered with the refusal every caller gets. Message: {PairingMessage}", message);
+
+            outcome = new PeerPlaneOutcome(RefusalCode.Refused, false, ReadOnlyMemory<byte>.Empty);
+        }
 
         return new ContentResult
         {

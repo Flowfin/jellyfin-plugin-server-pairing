@@ -46,6 +46,12 @@ can open an enrolment from. Two servers cannot be paired with this version. The
 `changelog` field in `build.yaml` and `build.net10.0.yaml` carries that
 paragraph in the same words.
 
+- [protocol] A pairing request that runs into a fault on this server is now
+  answered with the same refusal every other caller gets, rather than with
+  whatever the server produces for an error. The detail is written to the log at
+  Error instead, where the operator of this server can read it and the peer
+  cannot. What such a request was answered with before was never measured on a
+  running server and nothing here claims it.
 - [protocol] A sixth path is no longer served. Beside the five the specification
   fixes, the host routed a request at `/ServerPairing` itself, under no method
   constraint and with nothing of the server's credentials asked for, to a helper

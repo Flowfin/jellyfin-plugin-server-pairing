@@ -10,6 +10,7 @@ using Jellyfin.Plugin.ServerPairing.Protocol;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Routing;
+using Microsoft.Extensions.Logging.Abstractions;
 using Xunit;
 
 namespace Jellyfin.Plugin.ServerPairing.Tests.KeyStore;
@@ -227,7 +228,7 @@ public class EndpointKeyMaterialTests
             feature.RawTarget = path;
         }
 
-        return new PeerPlaneController(new PeerPlane(new RequestAuthenticator(new NoPairingKeys())))
+        return new PeerPlaneController(new PeerPlane(new RequestAuthenticator(new NoPairingKeys())), NullLogger<PeerPlaneController>.Instance)
         {
             ControllerContext = new ControllerContext { HttpContext = context },
         };
