@@ -91,15 +91,35 @@ Jellyfin.Plugin.ServerPairing/Wording/CeremonyWording.cs
 Jellyfin.Plugin.ServerPairing/Wording/DestructiveWording.cs
 ```
 
-There is still no pairing, no key store, no endpoint and no dashboard page:
+This sentence said there was still no pairing, no key store, no endpoint and no
+dashboard page. Two of those four have arrived. There is an endpoint:
 
 ```
 git grep -l "ControllerBase" origin/master -- Jellyfin.Plugin.ServerPairing ; echo "exit=$?"
-exit=1
+origin/master:Jellyfin.Plugin.ServerPairing/Api/PeerPlaneController.cs
+exit=0
 ```
 
-So no adversary described below is currently refused by anything, because
-nothing an adversary can send reaches any of those types. What landed is the
+and there is a key store:
+
+```
+git ls-tree -r --name-only origin/master -- Jellyfin.Plugin.ServerPairing/KeyStore | wc -l
+9
+```
+
+There is still no pairing and no dashboard page, and the reason the rest of this
+section stands is narrower than the sentence it replaces. What the endpoint hands
+an adversary is one refusal, whatever arrives, because the key source the plane
+is given holds no keys:
+
+```
+git grep -n 'IPairingKeySource, ' origin/master -- Jellyfin.Plugin.ServerPairing/PluginServiceRegistrator.cs
+origin/master:Jellyfin.Plugin.ServerPairing/PluginServiceRegistrator.cs:38:        serviceCollection.AddSingleton<IPairingKeySource, NoPairingKeys>();
+```
+
+So no adversary described below is currently refused by anything that reads what
+they sent: nothing an adversary sends reaches a decision beyond that refusal.
+What landed is the
 specification expressed in code and proved against itself, which is a different
 statement from a mechanism standing between an attacker and this server.
 
@@ -683,18 +703,30 @@ exit=0
 Empty output, exit zero.
 
 None of that makes any of the six enforced, and this is the sentence that has to
-survive the correction rather than be softened by it. Nothing routes a request
-from outside this process to any of the landed types, because there is nothing
-to route it through:
+survive the correction rather than be softened by it. What supported it was that
+nothing routed a request from outside this process to any of the landed types
+because there was nothing to route it through, and that half has stopped being
+true:
 
 ```
 git grep -l "ControllerBase" origin/master -- Jellyfin.Plugin.ServerPairing ; echo "exit=$?"
-exit=1
+origin/master:Jellyfin.Plugin.ServerPairing/Api/PeerPlaneController.cs
+exit=0
 ```
 
-So what stands behind every one of the six today is a caller the test project
-stands in for, and the model is written this way so that each sentence has
-somewhere to be proved when the code arrives.
+Something routes now, and it reaches one decision and stops. The plane compares
+the target, the method and the body limit, hands the request to the
+authenticator, and the authenticator is given the key source that holds nothing:
+
+```
+git grep -n 'IPairingKeySource, ' origin/master -- Jellyfin.Plugin.ServerPairing/PluginServiceRegistrator.cs
+origin/master:Jellyfin.Plugin.ServerPairing/PluginServiceRegistrator.cs:38:        serviceCollection.AddSingleton<IPairingKeySource, NoPairingKeys>();
+```
+
+So nothing an outside caller sends reaches the state machine, the freshness
+window, the key overlap or the key store, and what stands behind every one of the
+six today is still a caller the test project stands in for. The model is written
+this way so that each sentence has somewhere to be proved when the code arrives.
 
 ## The refusal path and the oracle question
 
