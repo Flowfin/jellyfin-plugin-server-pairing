@@ -158,7 +158,94 @@ from reading the file. They stop nothing that runs as the server's own user, and
 they stop nothing that reads the disk from underneath the running system - a
 backup, a restored image, a stolen drive, or the operator themselves. The keys
 are on disk in a form anybody who can read the file can use, because nothing here
-encrypts them; that is issue #31 and it is unchanged by this section.
+encrypts them. What that leaves standing, adversary by adversary, is the two
+sections below.
+
+## What protects it at rest, and what does not
+
+**Nothing in this plugin encrypts the file.** The mechanism at rest is the two
+Unix modes in the section above, on a platform that has them, and the access
+control the operator holds on the server's data directory everywhere. That is
+the whole of it, and the rest of this section says what that buys and what it
+does not.
+
+There is no derivation, no passphrase, no wrapping key and no keyring, so there
+is no input whose location this section could write down. That sentence is here
+because its absence is the thing a reader goes looking for.
+
+**The host has no key wrapping service to ask for.** Read in a checkout of
+`jellyfin/jellyfin` at the two tags this repository supports:
+
+```
+git rev-parse v10.11.9 v12.0-rc3
+e83a7e62f26443f7dd98f126d6955ac1af090125
+fc43f151a2418cc112e116050a99dd6318917ab0
+
+git grep -l 'IDataProtectionProvider\|AddDataProtection' v10.11.9 v12.0-rc3 -- '*.cs' ; echo "exit=$?"
+exit=1
+```
+
+Neither line registers a data protection provider, so nothing in the container
+would answer a request for one. Whatever protects this store, this plugin brings
+or does without, and today it does without.
+
+**What encrypting it with a key kept beside it would buy.** It protects against
+somebody who takes one file and not the other, and against nothing else. A
+process running as the server user reads both, and so does a filesystem backup
+that copied the data directory. Naming it precisely matters because the phrase
+"encrypted at rest" is read as the whole of a protection when it is a thin slice
+of one, and a plugin that says its keys are encrypted and stops there has told an
+operator something false by leaving the rest out.
+
+**Why this file does not describe such a scheme today.** The store has no format
+version and no answer for a file that does not parse, which are issues #55 and
+#33, and both of those decide how bytes on this path are read. A wrapping layer
+added before them is a layer the format work then has to migrate and the
+corruption work then has to tell apart from damage. Whether to add one at all,
+where the wrapping key would live, and what a server does when the file is there
+and the key is not, is on the tracker rather than in this paragraph.
+
+## Residual risk, adversary by adversary
+
+The list is the one in [the threat model](threat-model.md), and this section
+answers for every adversary there that can read the filesystem. What each one
+obtains is the same bytes; the difference between the rows is what stands
+between them and the file.
+
+**A5, somebody holding a stolen file, a backup or a log.** From the key store
+they obtain every per pairing key it holds, current and superseded, in a form
+they can use directly - the file is hex inside JSON and nothing has to be broken
+to read it. What they do not obtain from it is a credential for the server: the
+keys are per pairing, so each authorises one pairing and nothing else. The log is
+not one of the places they get it from, which is [what this plugin
+logs](logging.md).
+
+**A6, somebody who can read the server filesystem, including a backup archive.**
+The same bytes, and this is the row the permissions are actually about. The
+`0700` directory and the `0600` file stop another user on the same host. They
+stop nothing that already runs as the server's own user, nothing that reads the
+disk from underneath the running system, and nothing that holds a copy of a
+backup - a backup archive carries the file's contents whatever mode it had. On
+Windows no mode is set at all and what stands in its place is the operator's
+access control on the data directory. Against a copy already taken, the answer is
+revocation after the fact rather than confidentiality of the file, because there
+is no confidentiality of the file.
+
+**A8, a compromised consumer plugin.** Its headline reach is memory rather than
+the filesystem, and it belongs here anyway: it runs in this process, as the
+server's user, so the file is readable to it as an ordinary file. The permissions
+are not a boundary against it, and neither would encryption with a key kept
+beside the store be, because it reads both.
+
+**Who is not on this list, and why.** A4, a signed in user who is not an
+administrator, reaches their own server's user API, and no path on it hands out a
+file from the data directory. A1, A2 and A3 are on the network or are the peer,
+and none of them reads this disk. A7 reaches endpoints. Their rows are in the
+threat model and none of them is about this file.
+
+**What no row of this section says.** None of them says the keys are protected
+against an adversary who has the file. They are not. Every row above is about who
+can reach the file, and the answer once somebody has is the same in all three.
 
 ## What zeroing does not achieve
 
@@ -182,9 +269,11 @@ a guarantee that the bytes are gone from the machine.
 Each of these is a real gap, open, and named so that reading this file is not
 mistaken for reading a finished design.
 
-- **What protects the file at rest.** Nothing in this plugin encrypts it. The
-  keys are on disk in a form anybody who can read the file can use. Issue #31 is
-  where what protects it, and what does not, is answered.
+- **Whether the file should be encrypted at all.** What protects it today, and
+  what that does not reach, is the section above; issue #31 is answered by it.
+  What is not decided is whether a wrapping layer with a key kept beside the
+  store is worth adding, where that key would live, and what a server does when
+  the file is there and the key is not.
 - **What a Windows server does about permissions.** The section above is what
   happens where a Unix mode exists. On Windows the directory and the file are
   created with whatever the platform gives them, nothing is checked, and this

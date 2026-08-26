@@ -27,6 +27,16 @@ It pairs two servers under one operator, and nothing else. Pairing more than
 two, pairing across operators, and pairing to something that is not a Jellyfin
 server are all outside what it is for.
 
+It does not protect the key store from anybody who can read the server's disk.
+The keys it holds are written to a file in the server's data directory and
+nothing encrypts them, so what keeps them from being read is the file
+permissions this plugin sets where the platform has them and, everywhere, the
+access control on that directory - which is the operator's to get right and not
+something a plugin can do for them. A backup of the data directory carries the
+keys with it.
+[`docs/keystore.md`](docs/keystore.md) says what that leaves standing for each
+adversary in the threat model.
+
 It has no unattended mode. An administrator at each server confirms the pairing
 by hand, and there is no way to establish one from a script. What that costs is
 said rather than hidden: an operator who wants a pairing without a person cannot

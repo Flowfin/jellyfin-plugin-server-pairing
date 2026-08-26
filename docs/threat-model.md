@@ -460,10 +460,12 @@ filesystem backup.
 The limit is thin and it is worth being blunt about it. File permissions set by
 issue #35 keep the store away from other users on the same host, and nothing
 this plugin does keeps it away from something already running as the server
-user. What protects the store at rest, and what does not, is issue #31, and this
-document does not preempt its answer. Against a stolen backup, the honest
-position today is that the store is as readable as the backup is, and the
-mitigation is revocation after the fact rather than confidentiality of the file.
+user. What protects the store at rest is those permissions and the operator's
+own access control on the data directory, and nothing else: the file is not
+encrypted, and [the key store document](keystore.md) says so and says what each
+adversary here obtains. Against a stolen backup, the honest position is that the
+store is as readable as the backup is, and the mitigation is revocation after
+the fact rather than confidentiality of the file.
 
 ### A7, someone who reaches the pairing endpoints when there is nothing to reach
 
