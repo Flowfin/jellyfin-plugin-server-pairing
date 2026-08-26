@@ -106,18 +106,26 @@ public static class StorePermissions
     /// <remarks>
     /// <see cref="FileStreamOptions.UnixCreateMode"/> is the creation argument rather than a
     /// call made afterwards, which is the whole point: the first byte of key material to reach
-    /// the disk reaches a file that is already <c>0600</c>. An existing file keeps the mode it
-    /// has, which is what the runtime does and is right here - the store's own file was created
-    /// by this method, and a file somebody else put there is not something to silently
-    /// re-permission.
+    /// the disk reaches a file that is already <c>0600</c>.
+    /// <para>
+    /// A MODE IS ONLY APPLIED TO A FILE THAT IS ACTUALLY CREATED, so anything already at this
+    /// path is removed first and the open is <see cref="System.IO.FileMode.CreateNew"/> rather
+    /// than <see cref="System.IO.FileMode.Create"/>. Truncating an existing file leaves it
+    /// carrying the mode it already had, and the file this method is called for is the
+    /// temporary one an atomic write moves into place - so a temporary left behind by a
+    /// process that died, at whatever mode that process's umask gave it, would have carried
+    /// that mode onto the store's file. The delete is what stops it.
+    /// </para>
     /// </remarks>
     public static FileStream CreateFile(string path)
     {
         ArgumentNullException.ThrowIfNull(path);
 
+        File.Delete(path);
+
         var options = new FileStreamOptions
         {
-            Mode = System.IO.FileMode.Create,
+            Mode = System.IO.FileMode.CreateNew,
             Access = FileAccess.Write,
             Share = FileShare.None,
         };
