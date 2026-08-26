@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Jellyfin.Plugin.ServerPairing.Protocol;
 
 namespace Jellyfin.Plugin.ServerPairing.Mapping;
@@ -102,15 +103,6 @@ public sealed class UserMappings
     /// peer user they are.
     /// </remarks>
     public UserMapping? Of(string pairingId, string localUserId)
-    {
-        foreach (var mapping in _mappings.For(pairingId))
-        {
-            if (string.Equals(mapping.LocalUserId, localUserId, StringComparison.Ordinal))
-            {
-                return mapping;
-            }
-        }
-
-        return null;
-    }
+        => _mappings.For(pairingId)
+            .FirstOrDefault(mapping => string.Equals(mapping.LocalUserId, localUserId, StringComparison.Ordinal));
 }
