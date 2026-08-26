@@ -114,6 +114,8 @@ been no release.
   an operator removes it
 - [`docs/matching.md`](docs/matching.md), how an item on one server is matched to
   an item on the other, and what that costs
+- [`docs/mapping.md`](docs/mapping.md), who on this server is who on the peer,
+  why nothing infers that, and what ends a mapping
 - [`docs/endpoints.md`](docs/endpoints.md), how the host authenticates a
   dashboard request and what forgery is possible against it
 - [`docs/keystore.md`](docs/keystore.md), where the key material is kept, what
@@ -138,7 +140,7 @@ That list is every document under `docs/`, and it is checkable rather than
 trusted:
 
     git ls-files 'docs/*.md' | wc -l
-    14
+    15
 
 ## Contributing
 

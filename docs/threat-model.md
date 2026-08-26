@@ -692,15 +692,37 @@ origin/master:Jellyfin.Plugin.ServerPairing/Protocol/FreshnessOutcome.cs:33:    
 origin/master:Jellyfin.Plugin.ServerPairing/Protocol/FreshnessOutcome.cs:38:    AlreadySeen = 3,
 ```
 
-The third and the fourth are the two that are owed in full. One needs a mapping
-table and the other needs a key store, and the tree holds neither:
+The third and the fourth are the two that are owed in full, and this paragraph
+said that was because the tree held neither a mapping table nor a key store. It
+holds both:
 
 ```
-git ls-tree -r --name-only origin/master -- Jellyfin.Plugin.ServerPairing/KeyStore Jellyfin.Plugin.ServerPairing/Mapping ; echo "exit=$?"
-exit=0
+git ls-tree -r --name-only origin/master -- Jellyfin.Plugin.ServerPairing/KeyStore Jellyfin.Plugin.ServerPairing/Mapping | sed -E 's@(.*)/[^/]+$@\1@' | sort -u
+Jellyfin.Plugin.ServerPairing/KeyStore
+Jellyfin.Plugin.ServerPairing/Mapping
 ```
 
-Empty output, exit zero.
+The key store landed first and the reading here was not re-run when it did; the
+mapping table arrived with #36. So what the two are owed for is no longer a
+missing type, and it is worth being exact about what each one is still owed for,
+because that is a narrower claim rather than a weaker one.
+
+The third needs an unmapped user to be unreachable, and the table that decides it
+now exists and answers nothing for such a user:
+
+```
+git grep -n 'public void AnUnmappedUserHasNoMappingRatherThanAGuessedOne' origin/master -- Jellyfin.Plugin.ServerPairing.Tests/Mapping/
+```
+
+What is missing is the reach. Nothing routes an arriving request to that table,
+so no request is refused by it, and a property nothing consults is not a control.
+Wiring it is the consumer contract in M6 and the surface in M7.
+
+The fourth needs no endpoint to return key material in any encoding. The key
+store exists and there is no endpoint that returns anything from it, which is not
+the same statement: what holds today is that the only route from outside reaches
+one refusal, and no reading of this tree says what a later endpoint will return.
+That is issue #32 and it is owed in full.
 
 None of that makes any of the six enforced, and this is the sentence that has to
 survive the correction rather than be softened by it. What supported it was that
