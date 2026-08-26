@@ -145,6 +145,35 @@ public sealed class StorePermissionsTests : IDisposable
     }
 
     /// <summary>
+    /// A temporary left behind by a process that died does not carry its permissions onto the
+    /// store's file. The temporary is what a move puts in place, so a stale one at a wide mode
+    /// truncated rather than created would hand that mode to the keys - which is what
+    /// truncating does, because a mode is only applied to a file that is actually created.
+    /// </summary>
+    [UnixModeFact]
+    [UnsupportedOSPlatform("windows")]
+    public void AWideTemporaryLeftBehindDoesNotCarryItsModeOntoTheStore()
+    {
+        var directory = Path.Combine(_root, KeyStorePath.DirectoryName);
+        var file = Path.Combine(directory, KeyStorePath.FileName);
+
+        StorePermissions.PrepareDirectory(directory);
+
+        var stale = file + AtomicWrite.TemporarySuffix;
+
+        File.WriteAllText(stale, "{}");
+        File.SetUnixFileMode(stale, StorePermissions.FileMode | UnixFileMode.OtherRead | UnixFileMode.GroupRead);
+
+        // The setup is asserted before the guard is: a stale temporary that came out narrow
+        // would leave this case asserting nothing.
+        Assert.NotEqual(UnixFileMode.None, File.GetUnixFileMode(stale) & ~StorePermissions.FileMode);
+
+        new FilePairingKeyStore(file).Add("pairing", KeyMaterial.From(new byte[32]));
+
+        Assert.Equal(StorePermissions.FileMode, File.GetUnixFileMode(file));
+    }
+
+    /// <summary>
     /// A directory that is already there with permissions wider than the store would set is
     /// refused, and the refusal names the path so that an operator's next action is obvious.
     /// It is not narrowed: taking a permission away from a directory somebody widened is a

@@ -112,7 +112,11 @@ public sealed class AtomicKeyStoreWriteTests : IDisposable
     {
         var file = FileInAFreshDirectory();
 
-        Directory.CreateDirectory(Path.GetDirectoryName(file)!);
+        // The store's own way of creating its directory, not the platform's. Since #35 a store
+        // directory found at wider permissions than the store would have set is refused rather
+        // than written into, so a setup that made this one with the platform default would be
+        // arranging that refusal instead of the leftover temporary this case is about.
+        StorePermissions.PrepareDirectory(Path.GetDirectoryName(file)!);
         File.WriteAllText(file + AtomicWrite.TemporarySuffix, "{\"not\":\"a store\"}");
 
         var store = new FilePairingKeyStore(file);
