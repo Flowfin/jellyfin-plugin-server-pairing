@@ -10,7 +10,7 @@ Two lists follow. The second one is the one that matters.
 ## What is logged
 
 Every entry below carries the pairing identifier, so entries about one pairing
-can be pulled out of a log holding several. The last row is the exception and
+can be pulled out of a log holding several. The fault row is the exception and
 says why underneath the table.
 
 | Event | Level | Fields |
@@ -26,11 +26,12 @@ says why underneath the table.
 | A mapping was added, changed or removed | Information | pairing id, the administrator who did it, which direction |
 | The key store could not be read or written | Error | the operation, the reason, no path contents |
 | A request on the pairing plane faulted | Error | which of the five messages it arrived on, and the fault the runtime raised, with no pairing identifier |
+| The plugin started against a store that already holds a pairing | Information | pairing id, one entry per pairing found |
 
 Debug adds timing and state machine transitions for the same events. It adds no
 field that is not in the table above.
 
-The last row is the one entry that carries no pairing identifier, and leaving it
+The fault row is the one entry that carries no pairing identifier, and leaving it
 out is deliberate rather than an omission. A fault is reachable before the
 request has been read, so at that moment the only identifier available is the one
 the caller put in a header, unverified, on a plane where an unverified caller is
@@ -110,9 +111,9 @@ are both in the tree:
     git grep -n "AdministratorRevoked = " origin/master -- Jellyfin.Plugin.ServerPairing/Protocol/LocalEvent.cs
     origin/master:Jellyfin.Plugin.ServerPairing/Protocol/LocalEvent.cs:31:    AdministratorRevoked = 3,
 
-What is missing is the logging itself, and it is one row short of missing rather
+What is missing is the logging itself, and it is two rows short of missing rather
 than absent. This paragraph said nothing in the plugin took a logger and that a
-capturing logger would be handed a run that writes nothing. One call site takes
+capturing logger would be handed a run that writes nothing. Two call sites take
 one now:
 
     git grep -nE "ILogger|_logger" -- Jellyfin.Plugin.ServerPairing
@@ -121,16 +122,18 @@ one now:
     Jellyfin.Plugin.ServerPairing/Api/PeerPlaneController.cs:61:        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     Jellyfin.Plugin.ServerPairing/Api/PeerPlaneController.cs:241:            _logger.LogError(fault, "A request on the pairing plane faulted and was answered with the refusal every caller gets. Message: {PairingMessage}", message);
 
-That is the fault row of the table above and nothing else. A capturing logger
-sits under it in the suite and asserts what that one entry holds and that none of
-it reaches the caller, so the fault row is checked and every other row in the
-table is not.
+Those are the fault row and the startup row of the table above, and nothing else.
+A capturing logger sits under each of them in the suite: under the fault row it
+asserts what the entry holds and that none of it reaches the caller, and under
+the startup row it asserts one entry per pairing found, each naming its
+identifier, and that none of the key material the case generated appears in any
+of them. So two rows are checked and every other row in the table is not.
 
 The test this section asks for is a different and larger thing, and it does not
 exist. It drives a full enrolment, a rotation and a revocation at Debug against a
 capturing logger and looks for the secrets the run generated, and there is still
 no enrolment to drive and nothing that writes any of the other rows. Until it
-exists, both lists above are a design statement for every entry but the fault
-one, and nothing refuses a call site that violates them. This paragraph is the
-whole of that disclosure and no later edit of this file turns it into a statement
-that the logging has been checked.
+exists, both lists above are a design statement for every entry but those two,
+and nothing refuses a call site that violates them. This paragraph is the whole
+of that disclosure and no later edit of this file turns it into a statement that
+the logging has been checked.

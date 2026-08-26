@@ -125,14 +125,32 @@ feature and it is also a surprise: an operator who uninstalled to clear a proble
 and reinstalled gets the same pairings back, including one they thought they had
 got rid of.
 
-The plugin is meant to say so on first load rather than presenting them as though
-nothing happened. It does not, and nothing in the tree could: no code runs at
-startup, and the registrator adds services and reads nothing.
+The plugin says so, in the log, once per pairing it found and naming each one.
+This paragraph used to say it did not and that nothing in the tree could, because
+no code ran at startup.
 
-    git grep -c 'AddSingleton' -- Jellyfin.Plugin.ServerPairing/PluginServiceRegistrator.cs
-    Jellyfin.Plugin.ServerPairing/PluginServiceRegistrator.cs:5
+    git grep -n 'AddHostedService' -- Jellyfin.Plugin.ServerPairing/PluginServiceRegistrator.cs
+    Jellyfin.Plugin.ServerPairing/PluginServiceRegistrator.cs:73:        serviceCollection.AddHostedService<StoreAtStartup>();
 
-Five registrations and no reader among them.
+The entry is in [`logging.md`](logging.md)'s table, at Information. Looking does
+not create the store: a server that has never paired anything still has no file
+after a start, which is the property the store's own lazy creation depends on.
+
+**What that reader is not.** It is a line in a log rather than a notice on the
+dashboard, and an operator who never opens the log sees nothing. The dashboard
+page does not exist, which is issue #49, and whoever builds it puts the notice
+there rather than repeating this reader.
+
+A store that cannot be read does not stop the server. A hosted service whose
+start throws stops the host, so a key store file that does not parse would
+otherwise take the whole server down at boot, and a file that does not parse is
+the case issue #33 says nothing answers for yet. What an operator gets instead is
+one line at Error and a server that starts. The pairings do not work either way.
+
+**Nothing runs at shutdown, and that is deliberate.** A plugin that swept,
+compacted or removed anything on the way down would be a plugin whose store
+depends on a clean shutdown, and a media server is stopped by having its power
+cut often enough that this is a property rather than a preference.
 
 **The operator action:** if the pairings coming back is not what was wanted,
 delete the directory named above and reinstall. There is no in-plugin way to do
@@ -140,11 +158,20 @@ it today.
 
 ## What this document does not settle
 
-The two conditions of issue #58 that are not a document. A plugin starting
-against a store with existing pairings does not report that it found them, and
-nothing asserts that a normal shutdown deletes nothing from the store, because
-neither a startup path nor a shutdown path exists. Whether that path belongs to
-#58 or to whichever milestone first needs one is not settled here.
+This section said the two conditions of issue #58 that are not a document had
+neither a startup path nor a shutdown path to be about, and left open whether
+that path belonged to #58 or to whichever milestone first needs one. It belongs
+here, and it is built: the reader above is the startup path, and the shutdown
+path is a method that does nothing, which is what the second of those two
+conditions is about.
+
+What is still open is where the notice belongs for an operator who reads the
+dashboard rather than the log. That is #49 and this document does not settle it.
+
+Nothing here has been observed on a running server. Every statement about what
+the host does is read from the server source at the two tags this plugin builds
+against, and the startup reader has been driven by the suite calling its two
+methods rather than by a server starting it.
 
 What a pairing's data on the peer costs when this side vanishes is
 [`data.md`](data.md) and is not repeated here. This document is about the file on

@@ -44,11 +44,32 @@ public class PluginServiceRegistrator : IPluginServiceRegistrator
         // somewhere unusual is served without a setting, and the file is nowhere near the
         // directory the host writes plugin configurations into.
         //
-        // Nothing resolves this yet. What would is the request authenticator, and reaching a
-        // store whose every read takes an instant needs the injected clock, which is issue
-        // #26. It is registered here rather than when that arrives so that a server carries
-        // one store rather than one per caller.
+        // Nothing on the request path resolves this yet. What would is the request
+        // authenticator, and reaching a store whose every read takes an instant needs the
+        // injected clock, which is issue #26. It is registered here rather than when that
+        // arrives so that a server carries one store rather than one per caller.
         serviceCollection.AddSingleton<IPairingKeyStore>(services =>
             new FilePairingKeyStore(KeyStorePath.FileFor(services.GetRequiredService<IApplicationPaths>())));
+
+        // The one thing that runs on its own rather than answering a caller. It reads the
+        // store once at startup and says what survived, because a store outside the plugin
+        // directory outlives an uninstall and a reinstall comes up paired with whatever it was
+        // paired with before.
+        //
+        // A hosted service added here is started by the server's own host: the plugin
+        // registrators run inside appHost.Init, which is a ConfigureServices callback on the
+        // generic host that Jellyfin.Server builds, read at the two lines this plugin builds
+        // against rather than assumed:
+        //
+        //     gh api -H "Accept: application/vnd.github.raw" \
+        //       "repos/jellyfin/jellyfin/contents/Jellyfin.Server/Program.cs?ref=v10.11.9" \
+        //       | grep -nE 'CreateDefaultBuilder|Init\(services\)'
+        //     168:                _jellyfinHost = Host.CreateDefaultBuilder()
+        //     170:                    .ConfigureServices(services => appHost.Init(services))
+        //
+        // The same two at v12.0-rc3 are 169 and 171. That a generic host starts what is
+        // registered as IHostedService is the host's own behaviour rather than something read
+        // out of the server's tree, and no run on a server has been made to watch it.
+        serviceCollection.AddHostedService<StoreAtStartup>();
     }
 }
