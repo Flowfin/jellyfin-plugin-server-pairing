@@ -38,6 +38,14 @@ public interface IUserMappingStore
     /// Called by <see cref="UserMappings"/> and by nothing else. A caller reaching this
     /// directly has skipped the check that a pairing exists, which is the property the whole
     /// model rests on.
+    /// <para>
+    /// THE REPLACEMENT THIS METHOD WILL PERFORM IS NOT REACHABLE THROUGH THAT ONE CALLER, and
+    /// the wording above is kept as it is on purpose. <see cref="UserMappings.Map"/> refuses a
+    /// second mapping for a local user or for a peer user rather than passing it here, so a
+    /// store implementing this by overwriting is correct and is never asked to. The wording
+    /// stays because it is what an implementer has to do when it IS asked - a partial write
+    /// leaving both rows is worse than either outcome.
+    /// </para>
     /// </remarks>
     void Put(UserMapping mapping);
 

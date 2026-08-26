@@ -305,8 +305,8 @@ will not pretend to: it holds the mapping and the pairing, and the rows are
 somebody else's.
 
 The rules that decide when a mapping may change at all, including that a second
-mapping for either side is refused rather than replacing the first, are issue
-#37. Saying this consequence at the moment of remapping, on the page rather than
+mapping for either side is refused rather than replacing the first, are in
+[the mapping document](mapping.md). Saying this consequence at the moment of remapping, on the page rather than
 in this document, is issue #40 for the surface and issue #54 for the wording.
 The wording is written and is in the tree, saying what this section says:
 
