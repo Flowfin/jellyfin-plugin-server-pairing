@@ -118,6 +118,8 @@ been no release.
   why nothing infers that, and what ends a mapping
 - [`docs/endpoints.md`](docs/endpoints.md), how the host authenticates a
   dashboard request and what forgery is possible against it
+- [`docs/configuration.md`](docs/configuration.md), every setting an operator can
+  edit, what each one defaults to and what its range is
 - [`docs/keystore.md`](docs/keystore.md), where the key material is kept, what
   protects it and what does not
 - [`docs/lifecycle.md`](docs/lifecycle.md), what disabling, uninstalling and
@@ -140,7 +142,7 @@ That list is every document under `docs/`, and it is checkable rather than
 trusted:
 
     git ls-files 'docs/*.md' | wc -l
-    15
+    16
 
 ## Contributing
 
