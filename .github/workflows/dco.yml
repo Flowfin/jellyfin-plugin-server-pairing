@@ -5,9 +5,10 @@
 # commit in the PR carries a `Signed-off-by:` trailer matching its author, i.e. the
 # author asserted the DCO in ./DCO. Fail-closed: any unsigned commit reds the check.
 #
-# Reds the check rather than blocks the merge. This job's context is not in the
-# required set, which is a repository setting rather than anything in this tree,
-# so it is read rather than restated here:
+# Reds the check, and that now blocks the merge: this job's context is in the
+# required set. That set is a repository setting rather than anything in this
+# tree, so it is read rather than restated here, and this comment said the
+# context was not required until the setting moved:
 #
 #     gh api repos/Flowfin/jellyfin-plugin-server-pairing/rulesets/20464076 \
 #       --jq '[.rules[] | select(.type=="required_status_checks") | .parameters.required_status_checks[].context]'
