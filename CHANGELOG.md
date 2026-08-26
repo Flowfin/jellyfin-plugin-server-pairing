@@ -46,6 +46,14 @@ can open an enrolment from. Two servers cannot be paired with this version. The
 `changelog` field in `build.yaml` and `build.net10.0.yaml` carries that
 paragraph in the same words.
 
+- [protocol] A sixth path is no longer served. Beside the five the specification
+  fixes, the host routed a request at `/ServerPairing` itself, under no method
+  constraint and with nothing of the server's credentials asked for, to a helper
+  the test suite drives rather than to the refusal the five paths give. It was
+  never a path the specification names: a public method on a controller is an
+  endpoint whether or not it says so, and this one did not say otherwise. It says
+  so now. What such a request was answered with was never measured on a running
+  server and nothing here claims it.
 - [protocol] A server running this plugin now answers on the five pairing paths the
   specification fixes, and every answer is the refusal a stranger gets. A request
   whose path carries a trailing slash, a query string, a percent-encoded byte or a
