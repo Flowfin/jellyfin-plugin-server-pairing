@@ -1,5 +1,7 @@
 using System;
 using System.Linq;
+using Jellyfin.Plugin.ServerPairing.Api;
+using Jellyfin.Plugin.ServerPairing.Configuration;
 using MediaBrowser.Common.Configuration;
 using MediaBrowser.Controller;
 using MediaBrowser.Controller.Plugins;
@@ -69,6 +71,66 @@ public class ServiceRegistrationTests
         new PluginServiceRegistrator().RegisterServices(services, Substitute.For<IServerApplicationHost>());
 
         AssertEveryRegisteredServiceResolves(services);
+    }
+
+    /// <summary>
+    /// The allowances the peer plane is given are the ones the configuration carries. The
+    /// numbers here are none of the defaults, so a registration that built the limit from
+    /// nothing would answer with the defaults and this would redden.
+    ///
+    /// It is the only assertion that the settings reach the object that uses them. Everything
+    /// else about them is proved at the reading, and a reading nobody hands to the plane is
+    /// three numbers in a file.
+    /// </summary>
+    [Fact]
+    public void ThePeerPlaneIsGivenTheAllowancesTheConfigurationCarries()
+    {
+        var services = new ServiceCollection();
+
+        var paths = Substitute.For<IApplicationPaths>();
+        paths.DataPath.Returns(System.IO.Path.GetTempPath());
+        services.AddSingleton(paths);
+        services.AddLogging();
+
+        // Registered before the registrator runs, which is what the TryAdd in it is for.
+        services.AddSingleton(new PluginConfiguration
+        {
+            PeerPlaneWindowSeconds = 30,
+            PeerPlaneArrivalsPerPairing = 9,
+            PeerPlaneArrivalsPerEnrolment = 3
+        });
+
+        new PluginServiceRegistrator().RegisterServices(services, Substitute.For<IServerApplicationHost>());
+
+        using var provider = services.BuildServiceProvider();
+
+        var limit = provider.GetRequiredService<ArrivalLimit>();
+
+        Assert.Equal(30, limit.CountedOverSeconds);
+        Assert.Equal(9, limit.PerPairing);
+        Assert.Equal(3, limit.PerEnrolment);
+    }
+
+    /// <summary>
+    /// One limit per server rather than one per caller. A limit held per caller is no limit:
+    /// what it counts lives in the object, so a second instance hands every flood a second
+    /// allowance.
+    /// </summary>
+    [Fact]
+    public void ThePeerPlaneGetsOneLimitRatherThanOnePerCaller()
+    {
+        var services = new ServiceCollection();
+
+        var paths = Substitute.For<IApplicationPaths>();
+        paths.DataPath.Returns(System.IO.Path.GetTempPath());
+        services.AddSingleton(paths);
+        services.AddLogging();
+
+        new PluginServiceRegistrator().RegisterServices(services, Substitute.For<IServerApplicationHost>());
+
+        using var provider = services.BuildServiceProvider();
+
+        Assert.Same(provider.GetRequiredService<ArrivalLimit>(), provider.GetRequiredService<ArrivalLimit>());
     }
 
     /// <summary>

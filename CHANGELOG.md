@@ -46,6 +46,18 @@ can open an enrolment from. Two servers cannot be paired with this version. The
 `changelog` field in `build.yaml` and `build.net10.0.yaml` carries that
 paragraph in the same words.
 
+- [protocol] How many pairing requests may arrive inside a window is now an
+  operator's setting rather than a fixed number: the length of the window, the
+  allowance one pairing identifier has inside it, and the harder allowance the
+  identifier every enrolment carries has. A server nobody has configured behaves
+  exactly as before, and a configuration file written by an older build keeps
+  behaving that way, because a setting the file does not mention keeps the value
+  the plugin ships with. A value outside its range is refused with the setting
+  named and the plane runs on the value it ships with until the value is one the
+  plugin accepts, and an enrolment allowance set above the pairing allowance is
+  refused for the same reason it is the harder of the two. Raising an allowance
+  does not make a pairing faster; it makes a flood claiming that identifier
+  cheaper.
 - [protocol] The plugin configuration now carries the address of the peer this
   server pairs with, and a setting saying whether an `http` address may be used
   for it. A fresh installation has no peer address and the acknowledgement off,

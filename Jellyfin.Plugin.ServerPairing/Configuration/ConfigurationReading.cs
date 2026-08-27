@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Jellyfin.Plugin.ServerPairing.Api;
 using Jellyfin.Plugin.ServerPairing.Protocol;
 
 namespace Jellyfin.Plugin.ServerPairing.Configuration;
@@ -30,11 +31,20 @@ namespace Jellyfin.Plugin.ServerPairing.Configuration;
 /// </remarks>
 public sealed class ConfigurationReading
 {
-    private ConfigurationReading(IReadOnlyList<SettingRefusal> refusals, PeerAddress? peer, bool cleartextAcknowledged)
+    private ConfigurationReading(
+        IReadOnlyList<SettingRefusal> refusals,
+        PeerAddress? peer,
+        bool cleartextAcknowledged,
+        int peerPlaneWindowSeconds,
+        int peerPlaneArrivalsPerPairing,
+        int peerPlaneArrivalsPerEnrolment)
     {
         Refusals = refusals;
         Peer = peer;
         CleartextAcknowledged = cleartextAcknowledged;
+        PeerPlaneWindowSeconds = peerPlaneWindowSeconds;
+        PeerPlaneArrivalsPerPairing = peerPlaneArrivalsPerPairing;
+        PeerPlaneArrivalsPerEnrolment = peerPlaneArrivalsPerEnrolment;
     }
 
     /// <summary>
@@ -54,6 +64,22 @@ public sealed class ConfigurationReading
     /// address costs.
     /// </summary>
     public bool CleartextAcknowledged { get; }
+
+    /// <summary>
+    /// Gets how long the peer plane counts an arrival allowance over, in seconds.
+    /// </summary>
+    public int PeerPlaneWindowSeconds { get; }
+
+    /// <summary>
+    /// Gets how many requests one pairing identifier may put on the peer plane inside a window.
+    /// </summary>
+    public int PeerPlaneArrivalsPerPairing { get; }
+
+    /// <summary>
+    /// Gets how many may arrive claiming the enrolment identifier, or claiming nothing the
+    /// protocol can read an identifier out of.
+    /// </summary>
+    public int PeerPlaneArrivalsPerEnrolment { get; }
 
     /// <summary>
     /// Gets a value indicating whether this configuration is one the plugin will pair on.
@@ -100,7 +126,111 @@ public sealed class ConfigurationReading
             }
         }
 
-        return new ConfigurationReading(refusals, peer, cleartextAcknowledged);
+        // The three allowances the peer plane runs on. A value outside its bounds is refused
+        // and the plane is built on the allowance a server nobody configured runs on, because
+        // a plane whose limit was refused is not a plane with no limit. Which value is in
+        // force is therefore readable here rather than inferable from whether anything was
+        // refused.
+        var windowSeconds = Bounded(
+            configuration.PeerPlaneWindowSeconds,
+            nameof(PluginConfiguration.PeerPlaneWindowSeconds),
+            1,
+            ArrivalLimit.MaximumWindowSeconds,
+            ArrivalLimit.WindowSeconds,
+            "seconds",
+            refusals);
+
+        var perPairing = Bounded(
+            configuration.PeerPlaneArrivalsPerPairing,
+            nameof(PluginConfiguration.PeerPlaneArrivalsPerPairing),
+            1,
+            ArrivalLimit.MaximumArrivals,
+            ArrivalLimit.ArrivalsPerPairing,
+            "arrivals",
+            refusals);
+
+        var perEnrolment = Bounded(
+            configuration.PeerPlaneArrivalsPerEnrolment,
+            nameof(PluginConfiguration.PeerPlaneArrivalsPerEnrolment),
+            1,
+            ArrivalLimit.MaximumArrivals,
+            ArrivalLimit.ArrivalsPerEnrolment,
+            "arrivals",
+            refusals);
+
+        // The enrolment allowance is the harder of the two because it is the one a stranger
+        // reaches without knowing anything, and an operator who raises it above the other has
+        // turned that argument off without meeting it. Both fall back rather than one, so the
+        // pair that is in force is a pair somebody argued.
+        if (perEnrolment > perPairing)
+        {
+            refusals.Add(new SettingRefusal(
+                nameof(PluginConfiguration.PeerPlaneArrivalsPerEnrolment),
+                "The enrolment allowance is the harder of the two and is never larger than '"
+                + nameof(PluginConfiguration.PeerPlaneArrivalsPerPairing) + "', which is " + perPairing
+                + ". It is the allowance a stranger reaches without knowing anything about this server."));
+
+            perPairing = ArrivalLimit.ArrivalsPerPairing;
+            perEnrolment = ArrivalLimit.ArrivalsPerEnrolment;
+        }
+
+        return new ConfigurationReading(
+            refusals,
+            peer,
+            cleartextAcknowledged,
+            windowSeconds,
+            perPairing,
+            perEnrolment);
+    }
+
+    /// <summary>
+    /// The arrival limit the peer plane runs on under this reading.
+    /// </summary>
+    /// <returns>A limit built on the allowances above.</returns>
+    /// <remarks>
+    /// One of these is built per server rather than per caller, which the registrator holds to
+    /// by registering it once: a limit held per caller hands every flood a fresh allowance.
+    /// </remarks>
+    public ArrivalLimit NewArrivalLimit()
+        => new ArrivalLimit(PeerPlaneWindowSeconds, PeerPlaneArrivalsPerPairing, PeerPlaneArrivalsPerEnrolment);
+
+    /// <summary>
+    /// One whole-number setting, judged against its bounds.
+    /// </summary>
+    /// <param name="value">What the operator set.</param>
+    /// <param name="setting">The setting's name, as it is spelled on the configuration.</param>
+    /// <param name="least">The smallest accepted value.</param>
+    /// <param name="most">The largest accepted value.</param>
+    /// <param name="fallback">What is used where the value is refused.</param>
+    /// <param name="unit">What the number counts, for the sentence the operator reads.</param>
+    /// <param name="refusals">Where a refusal is collected.</param>
+    /// <returns>The value where it is inside its bounds, otherwise the fallback.</returns>
+    /// <remarks>
+    /// The fallback is not a clamp. A clamp puts the value at the boundary it crossed, so an
+    /// operator who asked for a day gets an hour and reads neither; this puts the plane back on
+    /// the value it runs on when nobody has chosen, says which setting was refused, and leaves
+    /// the operator's own value in the file untouched.
+    /// </remarks>
+    private static int Bounded(
+        int value,
+        string setting,
+        int least,
+        int most,
+        int fallback,
+        string unit,
+        List<SettingRefusal> refusals)
+    {
+        if (value >= least && value <= most)
+        {
+            return value;
+        }
+
+        refusals.Add(new SettingRefusal(
+            setting,
+            "It is between " + least + " and " + most + " " + unit + ". Nothing was corrected: the peer plane runs on "
+            + fallback + " " + unit + " until the value is one this accepts."));
+
+        return fallback;
     }
 
     /// <summary>

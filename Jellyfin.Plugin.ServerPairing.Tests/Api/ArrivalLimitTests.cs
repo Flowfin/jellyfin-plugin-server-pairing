@@ -123,7 +123,7 @@ public class ArrivalLimitTests
         }
 
         Assert.Equal(ArrivalOutcome.TooMany, limit.Admit(ArrivalLimit.EnrolmentPairingId, Start));
-        Assert.Equal(ArrivalLimit.ArrivalsPerEnrolment, ArrivalLimit.AllowanceFor(ArrivalLimit.EnrolmentPairingId));
+        Assert.Equal(ArrivalLimit.ArrivalsPerEnrolment, limit.AllowanceFor(ArrivalLimit.EnrolmentPairingId));
     }
 
     /// <summary>
@@ -151,7 +151,7 @@ public class ArrivalLimitTests
 
         foreach (var claimed in unreadable)
         {
-            Assert.Equal(ArrivalLimit.ArrivalsPerEnrolment, ArrivalLimit.AllowanceFor(claimed));
+            Assert.Equal(ArrivalLimit.ArrivalsPerEnrolment, limit.AllowanceFor(claimed));
         }
 
         for (var i = 0; i < ArrivalLimit.ArrivalsPerEnrolment; i++)
@@ -227,6 +227,96 @@ public class ArrivalLimitTests
     }
 
     /// <summary>
+    /// The third done condition of issue #28, in its own words: the limit refuses after its
+    /// CONFIGURED count and recovers after the fake clock advances. The numbers here are none
+    /// of the defaults, so a limit that ignored what it was built with and ran on the constants
+    /// would refuse in the wrong place and this would redden.
+    /// </summary>
+    [Fact]
+    public void TheLimitRefusesAfterItsConfiguredCountAndRecoversWhenTheClockAdvances()
+    {
+        var limit = new ArrivalLimit(10, 3, 2);
+
+        for (var i = 0; i < 3; i++)
+        {
+            Assert.Equal(ArrivalOutcome.Admitted, limit.Admit(PairingId, Start));
+        }
+
+        Assert.Equal(ArrivalOutcome.TooMany, limit.Admit(PairingId, Start));
+        Assert.Equal(ArrivalOutcome.TooMany, limit.Admit(PairingId, Start.AddSeconds(9)));
+        Assert.Equal(ArrivalOutcome.Admitted, limit.Admit(PairingId, Start.AddSeconds(10)));
+    }
+
+    /// <summary>
+    /// The configured enrolment allowance is the one the enrolment identifier is held to, and
+    /// it is spent separately from the pairing allowance the same way the defaults are.
+    /// </summary>
+    [Fact]
+    public void TheConfiguredEnrolmentAllowanceIsTheHarderOne()
+    {
+        var limit = new ArrivalLimit(10, 3, 2);
+
+        Assert.Equal(2, limit.AllowanceFor(ArrivalLimit.EnrolmentPairingId));
+        Assert.Equal(3, limit.AllowanceFor(PairingId));
+
+        for (var i = 0; i < 2; i++)
+        {
+            Assert.Equal(ArrivalOutcome.Admitted, limit.Admit(ArrivalLimit.EnrolmentPairingId, Start));
+        }
+
+        Assert.Equal(ArrivalOutcome.TooMany, limit.Admit(ArrivalLimit.EnrolmentPairingId, Start));
+        Assert.Equal(ArrivalOutcome.Admitted, limit.Admit(PairingId, Start));
+    }
+
+    /// <summary>
+    /// A value outside its bounds is refused where the limit is built rather than clamped, so
+    /// the bound holds for every caller and not only for the one that read a configuration
+    /// file.
+    /// </summary>
+    [Theory]
+    [InlineData(0, 60, 6)]
+    [InlineData(-1, 60, 6)]
+    [InlineData(ArrivalLimit.MaximumWindowSeconds + 1, 60, 6)]
+    [InlineData(60, 0, 6)]
+    [InlineData(60, ArrivalLimit.MaximumArrivals + 1, 6)]
+    [InlineData(60, 60, 0)]
+    [InlineData(60, 60, ArrivalLimit.MaximumArrivals + 1)]
+    public void AnAllowanceOutsideItsBoundsIsRefusedRatherThanClamped(int seconds, int perPairing, int perEnrolment)
+    {
+        Assert.Throws<ArgumentOutOfRangeException>(
+            () => new ArrivalLimit(seconds, perPairing, perEnrolment));
+    }
+
+    /// <summary>
+    /// The enrolment allowance is never the softer of the two. It is the one a stranger
+    /// reaches without knowing anything, and a limit built the other way round would leave the
+    /// argument for the harder allowance in the comments and nowhere else.
+    /// </summary>
+    [Fact]
+    public void TheEnrolmentAllowanceIsNeverLargerThanThePairingAllowance()
+    {
+        Assert.Throws<ArgumentOutOfRangeException>(() => new ArrivalLimit(60, 10, 11));
+
+        var flat = new ArrivalLimit(60, 10, 10);
+
+        Assert.Equal(10, flat.PerEnrolment);
+    }
+
+    /// <summary>
+    /// The limit a caller who chooses nothing gets is the one the constants argue, so the
+    /// defaults and the constants cannot drift apart.
+    /// </summary>
+    [Fact]
+    public void TheLimitBuiltWithNoArgumentsCarriesTheDefaults()
+    {
+        var limit = new ArrivalLimit();
+
+        Assert.Equal(ArrivalLimit.WindowSeconds, limit.CountedOverSeconds);
+        Assert.Equal(ArrivalLimit.ArrivalsPerPairing, limit.PerPairing);
+        Assert.Equal(ArrivalLimit.ArrivalsPerEnrolment, limit.PerEnrolment);
+    }
+
+    /// <summary>
     /// The numbers themselves, so that one moved in the source without its reason being
     /// rewritten is a red suite rather than a silently different bound. They are not restated
     /// from the type: each is compared against what this protocol needs it to be.
@@ -238,6 +328,8 @@ public class ArrivalLimitTests
         Assert.Equal(60, ArrivalLimit.ArrivalsPerPairing);
         Assert.Equal(6, ArrivalLimit.ArrivalsPerEnrolment);
         Assert.Equal(4096, ArrivalLimit.PairingsCounted);
+        Assert.Equal(3600, ArrivalLimit.MaximumWindowSeconds);
+        Assert.Equal(3600, ArrivalLimit.MaximumArrivals);
     }
 
     /// <summary>
