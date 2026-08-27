@@ -18,17 +18,34 @@ calls them:
 
 ```
 git grep -lE "HKDF|ECDiffieHellman|SubjectPublicKeyInfo" origin/master -- Jellyfin.Plugin.ServerPairing Jellyfin.Plugin.ServerPairing.Tests
+origin/master:Jellyfin.Plugin.ServerPairing.Tests/KeyStore/KeyMaterialTests.cs
 origin/master:Jellyfin.Plugin.ServerPairing.Tests/Wording/CeremonyWordingTests.cs
+origin/master:Jellyfin.Plugin.ServerPairing/KeyStore/KeyMaterial.cs
 origin/master:Jellyfin.Plugin.ServerPairing/Protocol/KeyOverlap.cs
 ```
 
-and neither file calls any of them. The first is a list of words the ceremony
-wording may not use, where two of these names are there to be kept off an
-operator's screen, and the second names the derivation in a comment. There is
-still no key store and no enrolment, so no key described
-here has ever been derived, held or destroyed by this plugin. Every line below
-about those is a choice recorded before the code rather than a reading of code
-that exists.
+and none of the four calls any of them. THIS PARAGRAPH NAMED TWO FILES AND THE
+COMMAND RETURNS FOUR: the key store landed after it was written and two of its
+files name the derivation the way the other two do. `CeremonyWordingTests.cs` is
+a list of words the ceremony wording may not use, where two of these names are
+there to be kept off an operator's screen. `KeyOverlap.cs`, `KeyMaterial.cs` and
+`KeyMaterialTests.cs` name the derivation in a comment, beside the length it
+fixes. So what the command shows is a name being cited in four places rather
+than a derivation being performed in any of them. No key described here has ever
+been derived, held or destroyed by this plugin, and THE REASON GIVEN HERE HAS
+STOPPED BEING THE REASON: this sentence said there is still no key store, and
+there is one. What holds the claim up instead is that nothing calls the one
+routine that would produce a key, and nothing on a request path reaches the store
+that would hold it:
+
+```
+git grep -n 'KeyMaterial.Fresh()' origin/master -- Jellyfin.Plugin.ServerPairing/
+origin/master:Jellyfin.Plugin.ServerPairing/KeyStore/KeyMaterial.cs:81:    public static KeyMaterial Fresh() => new KeyMaterial(RandomNumberGenerator.GetBytes(Length));
+```
+
+One hit, which is the declaration itself. There is still no enrolment, and every
+line below about a key's life is a choice recorded before the code rather than a
+reading of code that exists.
 
 ## The rule this document exists to state
 
@@ -277,16 +294,22 @@ nonce lifetime. All three are constants in the protocol code, and
 [`protocol.md`](protocol.md) is where a reader implementing the wire will be
 looking for them.
 
-It does not describe how the key store holds any of this. That is M4, and issue
-#31 is where what protects it at rest, and what does not, is answered.
+It does not describe how the key store holds any of this. THIS SENTENCE SAID THAT
+WAS STILL OWED, AND IT IS WRITTEN: [`keystore.md`](keystore.md) carries what
+protects the file at rest and what does not, under a heading of its own.
 
-Three things here are asserted by a test, and one of the three assertions reads
-this file. The comparison rule is refused by `SecretComparisonTests`, which opens
-this document and requires it to go on naming the call it pins. The tag length is
-asserted by `PairingCredentialTests` against what the pairing plane accepts as a
-credential. The grouping is asserted by `CeremonyWordingTests` against the
-sentence an operator reads, and that test also refuses the names in this document
-appearing in that sentence.
+    git grep -n '^## What protects it at rest' -- docs/keystore.md
+
+Four things here are asserted by a test, and one of the four assertions reads
+this file. THIS PARAGRAPH SAID THREE; the fourth arrived with the key store. The
+comparison rule is refused by `SecretComparisonTests`, which opens this document
+and requires it to go on naming the call it pins. The tag length is asserted by
+`PairingCredentialTests` against what the pairing plane accepts as a credential.
+The grouping is asserted by `CeremonyWordingTests` against the sentence an
+operator reads, and that test also refuses the names in this document appearing
+in that sentence. The derived key's length is asserted by `KeyMaterialTests`
+against the length the rotation overlap already refuses anything else against,
+rather than against a second number beside it.
 
 The second and third hold their own copy of the value, with this document named
 in a comment beside it. That is a citation rather than a reading, and the
@@ -298,11 +321,12 @@ git grep -E 'File\.ReadAllText\(.*"crypto' origin/master -- Jellyfin.Plugin.Serv
 origin/master:Jellyfin.Plugin.ServerPairing.Tests/SecretComparisonTests.cs:        var document = File.ReadAllText(Path.Combine(RepositoryRoot(), "docs", "crypto.md"));
 ```
 
-Three name it, and a grep for the name cannot tell a citation from a reading,
+Four name it, and a grep for the name cannot tell a citation from a reading,
 which is why both commands are here rather than the second alone:
 
 ```
 git grep -l "crypto.md" origin/master -- Jellyfin.Plugin.ServerPairing.Tests
+origin/master:Jellyfin.Plugin.ServerPairing.Tests/KeyStore/KeyMaterialTests.cs
 origin/master:Jellyfin.Plugin.ServerPairing.Tests/Protocol/PairingCredentialTests.cs
 origin/master:Jellyfin.Plugin.ServerPairing.Tests/SecretComparisonTests.cs
 origin/master:Jellyfin.Plugin.ServerPairing.Tests/Wording/CeremonyWordingTests.cs

@@ -133,7 +133,7 @@ The link check walks the tracked markdown for inline links and autolinks, and a
 manifest is neither:
 
     git grep -n "files=\$(git ls-files" -- .github/link-check.sh
-    .github/link-check.sh:42:files=$(git ls-files '*.md')
+    .github/link-check.sh:52:files=$(git ls-files '*.md')
 
 So a release whose logo URL has stopped resolving fails nothing and warns nobody, and
 what a catalog shows in that case was not measured here.

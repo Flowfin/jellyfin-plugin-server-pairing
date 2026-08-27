@@ -5,9 +5,12 @@ data. An operator should not have to work that out from the source, so it is
 written here.
 
 This is a statement about the design in [`protocol.md`](protocol.md), not about
-something running. Nothing below has ever moved between two servers: there is no
+something running. Nothing below has ever moved between two servers, and THE
+REASON GIVEN HERE HAS STOPPED BEING THE REASON. This sentence said there is no
 endpoint for a request to arrive at and no key store for one to be signed
-against, and what the tree does hold instead is in
+against; both exist. What holds the claim up instead is that no key has ever been
+put in that store by anything on a request path, so every request the endpoint
+receives is refused before a body is read. What the tree does hold is in
 [what exists today](threat-model.md#what-exists-today) with the command for each
 half rather than counted a second time here. Every field named here is a field
 the specification defines, and the milestone that owes the code is named where it
@@ -183,8 +186,17 @@ signing key is refused by a test rather than by intention:
 A pairing that both administrators built can be ended by either of them alone.
 Revocation is unilateral, immediate and terminal, which is issue #24 and is the
 one of the three still open. The transition into `Revoked` is in the state
-machine and nothing destroys a key, because there is no key store to destroy one
-from, which is issue #30.
+machine, and nothing destroys a key. THIS SENTENCE SAID THAT WAS BECAUSE THERE IS
+NO KEY STORE TO DESTROY ONE FROM AND NAMED ISSUE #30 FOR IT. That store is in the
+tree and that issue is closed. What is true instead is that nothing on any path
+calls the destruction the store offers, and nothing puts a key there for it to
+destroy:
+
+    git grep -nE '\.Put\(|\.Destroy\(' -- Jellyfin.Plugin.ServerPairing/Protocol/ Jellyfin.Plugin.ServerPairing/Api/ ; echo "exit=$?"
+    exit=1
+
+Empty output, exit one, over the protocol types and the plane. Composing the
+revocation with that store is issue #24.
 
 None of the three reaches a request, and that is what this disclosure is about
 rather than which types exist. This paragraph used to say that all three were a
@@ -202,7 +214,7 @@ and every answer is the same refusal, because the key source the plane is given
 holds no keys:
 
     git grep -n 'IPairingKeySource, ' origin/master -- Jellyfin.Plugin.ServerPairing/PluginServiceRegistrator.cs
-    origin/master:Jellyfin.Plugin.ServerPairing/PluginServiceRegistrator.cs:38:        serviceCollection.AddSingleton<IPairingKeySource, NoPairingKeys>();
+    origin/master:Jellyfin.Plugin.ServerPairing/PluginServiceRegistrator.cs:40:        serviceCollection.AddSingleton<IPairingKeySource, NoPairingKeys>();
 
 So no window is consulted, no credential is checked and no revocation is applied
 on any path a request takes. The reading of the transition table above them is a

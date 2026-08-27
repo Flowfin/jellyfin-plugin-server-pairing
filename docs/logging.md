@@ -106,21 +106,29 @@ no revocation to drive. That is no longer the reason. A rotation and a revocatio
 are both in the tree:
 
     git grep -n "public RotationOutcome Rotate" origin/master -- Jellyfin.Plugin.ServerPairing/Protocol/KeyOverlap.cs
-    origin/master:Jellyfin.Plugin.ServerPairing/Protocol/KeyOverlap.cs:146:    public RotationOutcome Rotate(ReadOnlySpan<byte> replacement, DateTimeOffset at, DateTimeOffset supersededStopsAt)
+    origin/master:Jellyfin.Plugin.ServerPairing/Protocol/KeyOverlap.cs:150:    public RotationOutcome Rotate(ReadOnlySpan<byte> replacement, DateTimeOffset at, DateTimeOffset supersededStopsAt)
 
     git grep -n "AdministratorRevoked = " origin/master -- Jellyfin.Plugin.ServerPairing/Protocol/LocalEvent.cs
     origin/master:Jellyfin.Plugin.ServerPairing/Protocol/LocalEvent.cs:31:    AdministratorRevoked = 3,
 
 What is missing is the logging itself, and it is two rows short of missing rather
 than absent. This paragraph said nothing in the plugin took a logger and that a
-capturing logger would be handed a run that writes nothing. Two call sites take
-one now:
+capturing logger would be handed a run that writes nothing. Two types take one
+now, and THIS BLOCK SHOWED ONE OF THEM: the startup reader landed after the
+paste and the sentence beside it was written for both, so the reading and the
+prose disagreed about which types the two rows belong to.
 
     git grep -nE "ILogger|_logger" -- Jellyfin.Plugin.ServerPairing
-    Jellyfin.Plugin.ServerPairing/Api/PeerPlaneController.cs:38:    private readonly ILogger<PeerPlaneController> _logger;
-    Jellyfin.Plugin.ServerPairing/Api/PeerPlaneController.cs:58:    public PeerPlaneController(PeerPlane plane, ILogger<PeerPlaneController> logger)
-    Jellyfin.Plugin.ServerPairing/Api/PeerPlaneController.cs:61:        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-    Jellyfin.Plugin.ServerPairing/Api/PeerPlaneController.cs:241:            _logger.LogError(fault, "A request on the pairing plane faulted and was answered with the refusal every caller gets. Message: {PairingMessage}", message);
+    Jellyfin.Plugin.ServerPairing/Api/PeerPlaneController.cs:39:    private readonly ILogger<PeerPlaneController> _logger;
+    Jellyfin.Plugin.ServerPairing/Api/PeerPlaneController.cs:69:    public PeerPlaneController(PeerPlane plane, TimeProvider time, ILogger<PeerPlaneController> logger)
+    Jellyfin.Plugin.ServerPairing/Api/PeerPlaneController.cs:73:        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+    Jellyfin.Plugin.ServerPairing/Api/PeerPlaneController.cs:253:            _logger.LogError(fault, "A request on the pairing plane faulted and was answered with the refusal every caller gets. Message: {PairingMessage}", message);
+    Jellyfin.Plugin.ServerPairing/KeyStore/StoreAtStartup.cs:43:    private readonly ILogger<StoreAtStartup> _logger;
+    Jellyfin.Plugin.ServerPairing/KeyStore/StoreAtStartup.cs:50:    public StoreAtStartup(IPairingKeyStore store, ILogger<StoreAtStartup> logger)
+    Jellyfin.Plugin.ServerPairing/KeyStore/StoreAtStartup.cs:53:        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+    Jellyfin.Plugin.ServerPairing/KeyStore/StoreAtStartup.cs:79:            if (_logger.IsEnabled(LogLevel.Information))
+    Jellyfin.Plugin.ServerPairing/KeyStore/StoreAtStartup.cs:83:                    _logger.LogInformation(
+    Jellyfin.Plugin.ServerPairing/KeyStore/StoreAtStartup.cs:93:            _logger.LogError(fault, "The key store could not be read at startup, so what it holds is unknown and no pairing will work. The server is left running.");
 
 Those are the fault row and the startup row of the table above, and nothing else.
 A capturing logger sits under each of them in the suite: under the fault row it
