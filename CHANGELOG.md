@@ -46,6 +46,15 @@ can open an enrolment from. Two servers cannot be paired with this version. The
 `changelog` field in `build.yaml` and `build.net10.0.yaml` carries that
 paragraph in the same words.
 
+- [protocol] How long an enrolment window stays open is now an operator's setting
+  rather than a fixed ten minutes, with half an hour as the longest it accepts. A
+  value above that is refused with the setting named and the window keeps the
+  length it ships with, rather than being shortened to half an hour, because a
+  window that closes while an operator is still reading an address out is a
+  failure they have nothing to look for. The far side of a pairing sees it as how
+  long their own request has to arrive. A server nobody has configured behaves
+  exactly as before. Nothing in this version opens a window, so the setting is
+  read and refused and reaches nothing yet.
 - [protocol] How many pairing requests may arrive inside a window is now an
   operator's setting rather than a fixed number: the length of the window, the
   allowance one pairing identifier has inside it, and the harder allowance the

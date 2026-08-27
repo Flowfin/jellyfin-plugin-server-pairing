@@ -21,6 +21,7 @@ why it lives there instead:
 | Setting | Type | Default | Range |
 | --- | --- | --- | --- |
 | `AcknowledgeCleartextTransport` | `bool` | `false` | `true` or `false`; `true` also permits an `http` peer address |
+| `EnrolmentWindowSeconds` | `int` | `600` | 1 to 1800 |
 | `PeerPlaneArrivalsPerEnrolment` | `int` | `6` | 1 to 3600, and never larger than `PeerPlaneArrivalsPerPairing` |
 | `PeerPlaneArrivalsPerPairing` | `int` | `60` | 1 to 3600 |
 | `PeerPlaneWindowSeconds` | `int` | `60` | 1 to 3600 |
@@ -58,6 +59,19 @@ the mapping table among them, are readable by anything on the path between the
 two servers. The plugin writes that sentence to the log at Warning on every start
 where the setting is on, so an operator who ticked it months ago meets it again
 rather than only once.
+
+`EnrolmentWindowSeconds` is how long an enrolment window stays open. That window is
+the only moment this server answers a party it has not authenticated, so its
+length is the size of the one opening a stranger gets, and a value above the
+maximum is refused rather than shortened to it. The default and the maximum are
+argued at the constants:
+
+    git grep -nE 'public const int (LifetimeSeconds|MaximumLifetimeSeconds)' -- Jellyfin.Plugin.ServerPairing/Protocol/EnrolmentWindow.cs
+
+NOTHING IN THIS PLUGIN BUILDS A WINDOW YET, so that setting is refused out of range
+and handed to nothing. A window is opened by an administrator and by nobody else,
+which the suite refuses a second route to, so the thing that builds one is the
+administrative surface in issue #49.
 
 The three `PeerPlane` settings are the arrival allowance the peer plane runs on:
 how long an allowance is counted over, how many requests one pairing identifier
@@ -108,13 +122,15 @@ these four are worth an operator's attention. They are not.
 
 ## What is not here yet
 
-The peer address and the cleartext acknowledgement are on the type. The timings
-and the switches that turn behaviour off are not.
+The peer address, the cleartext acknowledgement, the enrolment window's lifetime
+and the peer plane's arrival allowance are on the type. The timestamp window, the
+rotation overlap, the nonce store and the switches that turn behaviour off are
+not.
 
-The timings exist already, as constants with their reason argued at each
+Those timings exist already, as constants with their reason argued at each
 constant rather than as values somebody picked:
 
-    git grep -nE 'public const int (LifetimeSeconds|MaximumLifetimeSeconds|FailuresAllowed|WindowSeconds|RememberedSeconds|NoncesPerPairing)' -- Jellyfin.Plugin.ServerPairing/Protocol/
+    git grep -nE 'public const int (FailuresAllowed|WindowSeconds|RememberedSeconds|NoncesPerPairing|MaximumOverlapSeconds)' -- Jellyfin.Plugin.ServerPairing/Protocol/
 
 A constant is a stronger position than a setting for as long as nothing needs to
 change it on a running server, and the move from one to the other is not free:
