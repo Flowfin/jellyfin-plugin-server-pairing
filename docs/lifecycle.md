@@ -130,7 +130,12 @@ This paragraph used to say it did not and that nothing in the tree could, becaus
 no code ran at startup.
 
     git grep -n 'AddHostedService' -- Jellyfin.Plugin.ServerPairing/PluginServiceRegistrator.cs
-    Jellyfin.Plugin.ServerPairing/PluginServiceRegistrator.cs:88:        serviceCollection.AddHostedService<StoreAtStartup>();
+    Jellyfin.Plugin.ServerPairing/PluginServiceRegistrator.cs:50:        serviceCollection.AddHostedService<ConfigurationAtStartup>();
+    Jellyfin.Plugin.ServerPairing/PluginServiceRegistrator.cs:124:        serviceCollection.AddHostedService<StoreAtStartup>();
+
+The second of those two is this reader. The first is the one that says a setting
+was refused, which is a different thing that also runs at startup, and this block
+returned only one line until it landed.
 
 The entry is in [`logging.md`](logging.md)'s table, at Information. Looking does
 not create the store: a server that has never paired anything still has no file
