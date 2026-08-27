@@ -192,7 +192,12 @@ violation is a refusal rather than a truncation.
 A body larger than its limit is refused without being read past the limit, and
 without being parsed at all. That ordering is deliberate: a request that fails
 verification never reaches the deserialiser, which is the limit the threat model
-gives adversary A2 and which issue #20 owes.
+gives adversary A2. THIS SENTENCE SAID ISSUE #20 OWED IT AND THAT ISSUE IS CLOSED:
+the ordering is in the request authenticator it landed, which reads a body only
+after a signature verified, and the plane refuses an oversized body before either:
+
+    git grep -n 'public VerificationOutcome VerifyThenRead' -- Jellyfin.Plugin.ServerPairing/Protocol/RequestAuthenticator.cs
+    git grep -n 'arrived.BodyExceededItsLimit' -- Jellyfin.Plugin.ServerPairing/Api/PeerPlane.cs
 
 The peer address in `hello` is the address the sending server believes it is
 talking to. Comparing it against the address the local administrator entered is
