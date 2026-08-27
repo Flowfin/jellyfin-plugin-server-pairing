@@ -359,15 +359,26 @@ public sealed class StoreFormatTests : IDisposable
             : directory.FullName;
     }
 
+    /// <summary>
+    /// A directory the store would accept as its own.
+    /// </summary>
+    /// <returns>The directory, which exists.</returns>
+    /// <remarks>
+    /// Made through <see cref="StorePermissions.PrepareDirectory"/> rather than through
+    /// <see cref="System.IO.Directory.CreateDirectory(string)"/>, because on a platform that
+    /// expresses a Unix mode the store refuses a directory wider than its own and a directory
+    /// made at the process umask is wider. The cases here need one that exists before the store
+    /// does, to put the fixture in, so they make it the way the store would.
+    /// </remarks>
     private string TemporaryDirectory()
     {
         var directory = Path.Combine(
             Path.GetTempPath(),
             "server-pairing-format-" + Guid.NewGuid().ToString("N", System.Globalization.CultureInfo.InvariantCulture));
 
-        System.IO.Directory.CreateDirectory(directory);
-
         _directories.Add(directory);
+
+        StorePermissions.PrepareDirectory(directory);
 
         return directory;
     }
