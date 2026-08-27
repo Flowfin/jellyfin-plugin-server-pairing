@@ -31,11 +31,21 @@ a list of words the ceremony wording may not use, where two of these names are
 there to be kept off an operator's screen. `KeyOverlap.cs`, `KeyMaterial.cs` and
 `KeyMaterialTests.cs` name the derivation in a comment, beside the length it
 fixes. So what the command shows is a name being cited in four places rather
-than a derivation being performed in any of them. There is
-still no key store and no enrolment, so no key described
-here has ever been derived, held or destroyed by this plugin. Every line below
-about those is a choice recorded before the code rather than a reading of code
-that exists.
+than a derivation being performed in any of them. No key described here has ever
+been derived, held or destroyed by this plugin, and THE REASON GIVEN HERE HAS
+STOPPED BEING THE REASON: this sentence said there is still no key store, and
+there is one. What holds the claim up instead is that nothing calls the one
+routine that would produce a key, and nothing on a request path reaches the store
+that would hold it:
+
+```
+git grep -n 'KeyMaterial.Fresh()' origin/master -- Jellyfin.Plugin.ServerPairing/
+origin/master:Jellyfin.Plugin.ServerPairing/KeyStore/KeyMaterial.cs:81:    public static KeyMaterial Fresh() => new KeyMaterial(RandomNumberGenerator.GetBytes(Length));
+```
+
+One hit, which is the declaration itself. There is still no enrolment, and every
+line below about a key's life is a choice recorded before the code rather than a
+reading of code that exists.
 
 ## The rule this document exists to state
 

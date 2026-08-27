@@ -320,12 +320,23 @@ acknowledgement that would ever allow it is a setting that does not exist:
     git grep -n "SchemeNotAllowed = " origin/master -- Jellyfin.Plugin.ServerPairing/Protocol/PeerAddressOutcome.cs
     origin/master:Jellyfin.Plugin.ServerPairing/Protocol/PeerAddressOutcome.cs:37:    SchemeNotAllowed = 4,
 
-None of that is enforced against this adversary, and that has not changed.
-Nothing routes a request from outside this process to any of the three types,
-because there is no endpoint, so what they bound today is a caller the test
-project stands in for. The first paragraph above therefore still describes a
-design position rather than a measured property, and this sentence is meant to
-stay until something reaches those types from the network.
+None of that is enforced against this adversary, and that has not changed. THE
+REASON GIVEN HERE HAS: this passage said nothing routes a request from outside
+this process to any of the three types because there is no endpoint, and there is
+one. A request from the network now reaches one of the three, the request
+authenticator, through the plane; it reaches neither the freshness window nor the
+peer address, because the plane is given neither of them to consult:
+
+    git grep -n 'public PeerPlane(' origin/master -- Jellyfin.Plugin.ServerPairing/Api/PeerPlane.cs
+    origin/master:Jellyfin.Plugin.ServerPairing/Api/PeerPlane.cs:50:    public PeerPlane(RequestAuthenticator authenticator, ArrivalLimit arrivals)
+
+The authenticator and the bound on arrivals, and nothing else. And what the one
+it does reach
+answers with is a refusal for every caller, because the key source it is given
+holds no keys, which is the reading pasted above under what exists today. So the
+first paragraph above still describes a design position rather than a measured
+property, and this sentence is meant to stay until something reaches those types
+from the network and verifies.
 
 ### A2, someone on the network path, active
 
