@@ -678,7 +678,11 @@ blobs and the tag shas are printed so a reader can tell.
 
 It does not reach a second pairing. Keys are per pairing, so a server paired
 with three peers holds three keys and a stolen one is worth one peer's access.
-This is a property of the key store's shape, owed by issue #30.
+THIS SENTENCE SAID THAT SHAPE WAS OWED BY ISSUE #30 AND THAT ISSUE IS CLOSED. The
+store holds and reads by pairing identifier, so the shape is the interface rather
+than a promise:
+
+    git grep -nE '\(string pairingId' -- Jellyfin.Plugin.ServerPairing/KeyStore/IPairingKeyStore.cs
 
 It does not reach an unmapped user. The mapping table is the authorisation, and
 it is an administrator's decision rather than anything the peer asserts, which
@@ -744,11 +748,18 @@ What is missing is the reach. Nothing routes an arriving request to that table,
 so no request is refused by it, and a property nothing consults is not a control.
 Wiring it is the consumer contract in M6 and the surface in M7.
 
-The fourth needs no endpoint to return key material in any encoding. The key
-store exists and there is no endpoint that returns anything from it, which is not
-the same statement: what holds today is that the only route from outside reaches
-one refusal, and no reading of this tree says what a later endpoint will return.
-That is issue #32 and it is owed in full.
+The fourth needs no endpoint to return key material in any encoding. THIS
+PARAGRAPH SAID THAT WAS OWED IN FULL BY ISSUE #32 AND THAT ISSUE IS CLOSED WITH A
+GUARD. What it landed does not depend on which endpoints exist: it walks every
+controller in the assembly by its attributes, and both what an action declares
+and what an action actually returned:
+
+    git grep -n 'public void NoTypeAnEndpointReturnsCanReachKeyMaterial\|public async Task NothingAnEndpointActuallyAnswersWithReachesKeyMaterial' -- Jellyfin.Plugin.ServerPairing.Tests/KeyStore/EndpointKeyMaterialTests.cs
+
+So an endpoint written tomorrow is walked without anybody remembering that file,
+and the sentence this replaces was right about the reason and wrong about the
+state: the only route from outside still reaches one refusal, and what a later
+endpoint may return is refused by a guard rather than left to a reading.
 
 None of that makes any of the six enforced, and this is the sentence that has to
 survive the correction rather than be softened by it. What supported it was that
