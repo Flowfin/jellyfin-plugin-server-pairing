@@ -7,6 +7,7 @@ using MediaBrowser.Controller;
 using MediaBrowser.Controller.Plugins;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Logging;
 
 namespace Jellyfin.Plugin.ServerPairing;
 
@@ -63,8 +64,16 @@ public class PluginServiceRegistrator : IPluginServiceRegistrator
         // authenticator, and reaching a store whose every read takes an instant needs the
         // injected clock, which is issue #26. It is registered here rather than when that
         // arrives so that a server carries one store rather than one per caller.
+        //
+        // The logger is handed in for one line only, which is the one saying a store written by
+        // an older build has been carried up to the format this one reads. That is the single
+        // thing the store does that nobody asked it for, and it leaves a second file holding key
+        // material beside the first.
         serviceCollection.AddSingleton<IPairingKeyStore>(services =>
-            new FilePairingKeyStore(KeyStorePath.FileFor(services.GetRequiredService<IApplicationPaths>())));
+            new FilePairingKeyStore(
+                KeyStorePath.FileFor(services.GetRequiredService<IApplicationPaths>()),
+                null,
+                services.GetRequiredService<ILogger<FilePairingKeyStore>>()));
 
         // The one thing that runs on its own rather than answering a caller. It reads the
         // store once at startup and says what survived, because a store outside the plugin

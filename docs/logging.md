@@ -27,17 +27,30 @@ says why underneath the table.
 | The key store could not be read or written | Error | the operation, the reason, no path contents |
 | A request on the pairing plane faulted | Error | which of the five messages it arrived on, and the fault the runtime raised, with no pairing identifier |
 | The plugin started against a store that already holds a pairing | Information | pairing id, one entry per pairing found |
+| The key store was carried up from an older format | Information | the format it was in, the format it is now, and the name of the copy left beside it |
 
 Debug adds timing and state machine transitions for the same events. It adds no
 field that is not in the table above.
 
-The fault row is the one entry that carries no pairing identifier, and leaving it
-out is deliberate rather than an omission. A fault is reachable before the
-request has been read, so at that moment the only identifier available is the one
-the caller put in a header, unverified, on a plane where an unverified caller is
+Three rows carry no pairing identifier and each has its own reason. **This
+paragraph said the fault row was the only one**, and the two store rows above it
+have never carried one either, so the sentence was wrong about the table it sits
+under from the day the store rows landed. It is corrected here rather than by
+adding an identifier those rows have no way to know.
+
+The fault row leaves it out deliberately. A fault is reachable before the request
+has been read, so at that moment the only identifier available is the one the
+caller put in a header, unverified, on a plane where an unverified caller is
 assumed hostile. Writing it would let a stranger choose which pairing an
 operator's error line appears to be about. What the entry names instead is the
 path the request arrived on, which is this server's own fact.
+
+The two store rows leave it out because neither is about a pairing. A store that
+cannot be read holds no identifier anybody can name, and a store being carried up
+from an older format is one event about one file however many pairings are in it.
+The migration row names the file rather than its contents on purpose: what is
+inside is key material, and a row naming contents would put every key the store
+holds into the log.
 
 The fault text is the runtime's and not this plugin's, which is where the list
 below meets its one soft edge. Nothing on this plane parses a body today, so no
