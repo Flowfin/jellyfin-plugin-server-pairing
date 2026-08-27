@@ -227,10 +227,22 @@ slash and the case of the host are all removed before two addresses are
 compared, so an administrator who typed `https://peer.example.org:443/` approved
 the same peer as one who typed `https://peer.example.org`.
 
-Plaintext is refused with no way round it today. Decision 3 in #1 allows an
-operator acknowledgement that would permit something else, and that
-acknowledgement is a setting with a safe default, a range and a refusal, which
-is issue #50 and does not exist yet. Until it does, `https` is the only scheme.
+Plaintext is refused unless the operator has acknowledged what it costs. Decision
+3 in #1 allows that acknowledgement, and it is a setting with a safe default, a
+range and a refusal, which is `AcknowledgeCleartextTransport` in
+[`docs/configuration.md`](configuration.md). Its safe value is off, and off is
+also what a configuration file that never mentions it produces, so `https` is the
+only scheme on a server nobody has changed. Where it is on, `http` is accepted as
+well and nothing else is: the acknowledgement widens the scheme rule and leaves
+every other rule above exactly where it was.
+
+    git grep -n 'CleartextScheme' -- Jellyfin.Plugin.ServerPairing/Protocol/PeerAddress.cs
+
+What an operator gives up by setting it is that request and response bodies, the
+mapping table among them, are readable by anything on the path between the two
+servers, and the statement that a passive listener gets nothing falls away with
+no replacement. The plugin writes that sentence to the log at Warning on every
+start where the setting is on.
 
 Nothing on this plane follows a redirect. A `3xx` answer is refused where it
 arrives rather than followed, because following one sends an authenticated

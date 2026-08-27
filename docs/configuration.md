@@ -20,6 +20,8 @@ why it lives there instead:
 
 | Setting | Type | Default | Range |
 | --- | --- | --- | --- |
+| `AcknowledgeCleartextTransport` | `bool` | `false` | `true` or `false`; `true` also permits an `http` peer address |
+| `PeerAddress` | `string` | `(empty)` | empty, or an absolute `https` URI of at most 255 characters with no user information, no path, no query and no fragment, whose host is a plain ASCII domain name, an IPv4 literal or a bracketed IPv6 literal; `http` where the acknowledgement above is set |
 | `TrueFalseSetting` | `bool` | `true` | `true` or `false` |
 | `AnInteger` | `int` | `2` | any whole number the serialiser accepts; the page's own input carries a lower bound of zero and nothing carries an upper one |
 | `AString` | `string` | `string` | any text |
@@ -29,6 +31,35 @@ The defaults in that table are not restated from the type. `ConfigurationDocumen
 constructs the configuration the way the host does and compares each documented
 default against the value that construction produces, so a default changed in one
 place and not the other is a red suite rather than a document nobody re-read.
+
+`(empty)` is how an empty string is written in the default column, because a blank
+cell documents nothing while looking like documentation. The guard renders a
+default the same way before it compares.
+
+## The two settings that configure something
+
+`PeerAddress` is the one address this server will send a pairing request to. A
+fresh installation has none, which is a server that pairs with nobody rather than
+a server that is misconfigured. The forms that are accepted are the ones
+[`docs/protocol.md`](protocol.md) fixes for the field, and they are read out of
+the type that decides them rather than restated here:
+
+    git grep -n 'return PeerAddressOutcome' -- Jellyfin.Plugin.ServerPairing/Protocol/PeerAddress.cs
+
+`AcknowledgeCleartextTransport` is the operator acknowledgement that decision 3 on
+issue #1 settles the shape of. Its safe value is `false`, and `false` is also what
+a missing element deserialises to, so a configuration file that never mentions it
+is a server that refuses a cleartext address. Setting it to `true` permits an
+`http` peer address, and what that gives up is that request and response bodies,
+the mapping table among them, are readable by anything on the path between the
+two servers. The plugin writes that sentence to the log at Warning on every start
+where the setting is on, so an operator who ticked it months ago meets it again
+rather than only once.
+
+Neither of the two is on the dashboard page. The page binds to the template's four
+settings, reads the whole configuration object before it saves and writes it back
+whole, so a setting it does not bind to survives a save rather than being reset -
+but an operator cannot yet type either of these there. The page is issue #49.
 
 ## THESE FOUR ARE THE TEMPLATE'S AND THEY CONFIGURE NOTHING
 
@@ -46,9 +77,8 @@ these four are worth an operator's attention. They are not.
 
 ## What is not here yet
 
-The settings this plugin will actually have are the peer address, the
-acknowledgement that turns cleartext transport on, the timings that have
-defaults, and the switches that turn behaviour off. None of them is on the type.
+The peer address and the cleartext acknowledgement are on the type. The timings
+and the switches that turn behaviour off are not.
 
 The timings exist already, as constants with their reason argued at each
 constant rather than as values somebody picked:
@@ -57,23 +87,42 @@ constant rather than as values somebody picked:
 
 A constant is a stronger position than a setting for as long as nothing needs to
 change it on a running server, and the move from one to the other is not free:
-the four settings above are what the dashboard page binds to, so removing them
-from the type leaves a page whose controls save into properties that are gone.
-The type and the page therefore move together. Issue #50 owns the settings and
-issue #49 owns the page.
+the template's four settings are what the dashboard page binds to, so removing
+them from the type leaves a page whose controls save into properties that are
+gone. The type and the page therefore move together, and each timing moves under
+the issue that fixed its own default and maximum rather than under one change
+that moves all four. Issue #49 owns the page.
 
-## Nothing refuses a value at load
+## What a bad value does
 
-An out-of-range value is not refused today, and no message names a setting.
-There is no load-time validation step anywhere in this plugin:
+It is refused with the setting named, and nothing is clamped:
 
-    git grep -nE 'IValidateOptions|ConfigurationChanged|OnConfigurationChanged' -- Jellyfin.Plugin.ServerPairing/
+    git grep -n 'new SettingRefusal(' -- Jellyfin.Plugin.ServerPairing/Configuration/ConfigurationReading.cs
 
-What issue #50 asks for is that such a value be refused with the setting named,
-rather than clamped silently to something the operator did not ask for, and that
-a configuration that fails validation leave the plugin loaded and refusing to
-pair, so that it can be repaired from the dashboard rather than from the
-filesystem. That is owed and is not written here as though it were done.
+A clamp is what this refuses to do. An operator who sets a value outside its range
+and gets a working server running on a different value has no reason to look for
+one, and the value they typed is still in the file. So the value stays where they
+put it, the setting is named, and the server does not pair.
+
+Nothing throws. A setter that threw would be a setter the host's deserialiser
+throws out of, which takes the plugin out at load - and the repair for that is a
+text editor on the server's filesystem, which is what leaving the plugin loaded
+exists to spare the operator. So the plugin loads, serves its page, and
+`MayPair` is false.
+
+    git grep -n 'public bool MayPair' -- Jellyfin.Plugin.ServerPairing/Configuration/ConfigurationReading.cs
+
+WHAT "REFUSING TO PAIR" REACHES TODAY IS SMALLER THAN THE SENTENCE SOUNDS, and it
+is a bound rather than an assurance. No administrative endpoint in this tree opens
+an enrolment window, so there is no live pairing path for the reading to stop; what
+it does stop is the peer address existing at all, since a refused address produces
+none and an enrolment window is opened against one. The endpoint is issue #49, and
+whoever builds it reads `MayPair` there.
+
+The refusals are written to the log at Error when the server starts, one line per
+setting, and the plugin keeps running:
+
+    git grep -n 'class ConfigurationAtStartup' -- Jellyfin.Plugin.ServerPairing/Configuration/
 
 ## What is refused
 
