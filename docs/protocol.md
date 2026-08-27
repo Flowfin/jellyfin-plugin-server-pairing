@@ -433,6 +433,66 @@ instant as an argument, so a case chooses the moment rather than waiting for it,
 and nothing is injected. Issue #26 owns the skew policy the refusal below rests
 on.
 
+## The arrival limit
+
+A request that survives the shape checks costs this server a signature
+computation. That is the work a stranger can ask for by sending anything at all,
+so the plane bounds how much of it one claimed identifier may ask for, and the
+bound is consulted before the work rather than after it.
+
+Sixty arrivals per identifier inside a window of sixty seconds; six for the
+enrolment identifier; four thousand and ninety-six identifiers counted at once.
+Each is a constant of the landed type with its reason argued at the constant,
+read out of it rather than restated here:
+
+    git grep -nE 'public const (int|string) (WindowSeconds|ArrivalsPerPairing|ArrivalsPerEnrolment|PairingsCounted|EnrolmentPairingId)' -- Jellyfin.Plugin.ServerPairing/Api/ArrivalLimit.cs
+
+**It counts the identifier the request claims, which is not the same as the
+identifier it turns out to hold.** Before verification there is no other
+identifier to count: the header is what arrived. So a stranger who knows a
+pairing's identifier can spend that pairing's allowance, and that is not repaired
+here. The alternative is worse rather than better. One allowance for the whole
+plane lets any flood starve every pairing at once, where this confines it to the
+identifier the flood claims, and the identifier is derived from both public keys,
+so a stranger cannot produce one for a pairing they do not already know.
+
+**Every `hello` carries the same identifier, so every enrolment shares one
+allowance, and that allowance is the harder one.** It is the only thing on this
+plane a stranger reaches knowing nothing, and an enrolment is a handful of
+requests between two operators sitting at two screens. The cost is real and is
+stated rather than hidden: a stranger spending that allowance refuses a genuine
+`hello` arriving in the same window. Anything this protocol cannot read an
+identifier out of at all is counted with them, under one shared count, because
+none of it can ever verify and counting each spelling apart would hand a
+stranger a fresh allowance per spelling.
+
+**A window is fixed rather than sliding.** It starts at the first arrival counted
+into it, so twice the allowance can arrive inside one span of sixty seconds by
+falling either side of a boundary. A sliding window removes that and costs one
+remembered instant per arrival instead of one counter per identifier, which is
+the memory this bound exists to hold down.
+
+**Nothing is dropped to make room except a window that has run out.** A flood
+claiming a fresh identifier per request fills the table and is then refused for
+want of room; it does not displace a pairing that is being counted, because the
+allowance handed back by displacing one would be somebody else's. Room comes back
+when the windows in the table run out, so a filled table is a refusal for one
+window rather than for the life of the process.
+
+**What this does not buy is availability.** No limit does. A flood large enough
+is refused and the refusals are still answered, and a peer sharing the flooded
+identifier is refused with it. What it buys is that the flood stops at a counter
+instead of reaching a signature computation per request.
+
+A refused arrival is answered with `refused`, like every other cause in that row,
+so a caller learns from it exactly what it learns from any other refusal. One
+thing it can measure is in the timing class below: an arrival past the limit is
+answered without the signature computation the others pay for, so it is faster.
+What that hands over is that the identifier the caller itself claimed has used
+its allowance, which is a fact about the caller's own sending rather than about
+this server's pairings, and the limit counts an identifier this server has never
+heard of exactly as it counts one it holds.
+
 ## The rotation overlap
 
 A key that never changes is a key that is eventually copied, so a pairing can
@@ -606,7 +666,7 @@ administrator opened deliberately.
 
 | Code | What caused it | Who can ever see it | Distinguishable from its neighbours |
 | --- | --- | --- | --- |
-| `refused` | An unknown pairing identifier, a signature that does not verify, a body over its limit, a malformed header value, a request in a state that does not accept it from an unverified caller, a revoked pairing, a request when no pairing exists, a second `hello` with a different key, a fault on this side while serving the request | anyone | No, and deliberately so. Every one of those causes produces the same bytes |
+| `refused` | An unknown pairing identifier, a signature that does not verify, a body over its limit, an arrival past the limit for the identifier it claims, a malformed header value, a request in a state that does not accept it from an unverified caller, a revoked pairing, a request when no pairing exists, a second `hello` with a different key, a fault on this side while serving the request | anyone | No, and deliberately so. Every one of those causes produces the same bytes |
 | `clock` | The signature verified and the timestamp is outside the freshness window | only a caller holding a verifying key | Yes |
 | `version` | No version in common | a caller inside an open enrolment window, or a caller holding a verifying key | Yes, to those callers only |
 | `state` | The signature verified and the message is not accepted in this state | only a caller holding a verifying key | Yes |
@@ -652,11 +712,17 @@ bound was reached here. It is also the only code a caller can act on: the same
 request is accepted once the remembered span rolls, and sending it again
 immediately is not.
 
-The per-pairing rate limit issue #28 owes is a separate mechanism from that
-bound, and whether the two become one limit or two is that issue's to settle. Two
-independent limits on one plane sharing one code between them is the state to
-avoid, and naming the bound here is what makes the choice visible when the limit
-is built.
+The arrival limit above is a second mechanism beside that bound rather than the
+same one, and that choice is taken rather than still open. They are reached at
+different moments and they cannot do each other's work: the nonce bound is per
+pairing, is reached only by a request that has already verified, and stops a
+replay being forgotten while it is still inside the freshness window; the arrival
+limit is reached by anything that survives the shape checks, verified or not, and
+stops a stranger buying a signature computation per request. Two limits sharing
+one code between them is the state that was to be avoided, and they do not share
+one: a full nonce store is `busy`, which only a caller holding a verifying key
+ever sees, and an arrival past the limit is `refused`, because the caller it
+usually answers has authenticated nothing.
 
 `version` is the one code a caller can see without holding a key, and only
 because an enrolment window is open, which is a door an administrator opened on
@@ -684,6 +750,9 @@ with the network rather than with this plugin.
 The timing of a refusal is one class. Every cause above is answered after the
 same work, so a caller cannot separate them by measurement where the codes are
 identical. Nothing in the tree enforces that today and issue #28 owes the test.
+An arrival past the limit is the second cause that does not, and it is answered
+before the signature computation rather than after it, which is what the section
+on that limit says it hands over.
 A fault is the one cause that plainly does not take the same time as the others,
 and no reading of a tree fixes that: it is answered after however far the request
 got before it failed. The one-shape refusal bounds what a caller reads, not how
