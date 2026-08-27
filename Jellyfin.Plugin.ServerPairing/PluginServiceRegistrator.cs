@@ -27,17 +27,23 @@ public class PluginServiceRegistrator : IPluginServiceRegistrator
     /// <inheritdoc />
     public void RegisterServices(IServiceCollection serviceCollection, IServerApplicationHost applicationHost)
     {
-        // What the plugin makes of the configuration the host handed it, read fresh on every
-        // resolve rather than once: an operator saves the settings page while the server is
-        // running, and a singleton here would answer with what was on disk at boot.
+        // The settings themselves. They are reached through the instance the base class sets,
+        // which is the one static this assembly has and is the host's own way of handing a
+        // plugin its settings. That happens here, in the composition root, and nowhere else.
+        // A server that has not constructed the plugin yet gets the same object a fresh
+        // installation gets rather than a null.
         //
-        // The configuration is reached through the instance the base class sets, which is the
-        // one static this assembly has and is the host's own way of handing a plugin its
-        // settings. It is read here, in the composition root, and nowhere else. A server that
-        // has not constructed the plugin yet, which is every test that builds this container,
-        // gets the same object a fresh installation gets rather than a null.
-        serviceCollection.AddTransient(_ => ConfigurationReading.Of(
-            Plugin.Instance?.Configuration ?? new PluginConfiguration()));
+        // TryAdd rather than Add, so a caller that supplied a configuration keeps it. That is
+        // what lets the wiring below be proved with allowances that are none of the defaults;
+        // without it, a container built without a server can only ever see one configuration
+        // and every assertion about what reaches the plane is an assertion about the default.
+        serviceCollection.TryAddSingleton(_ => Plugin.Instance?.Configuration ?? new PluginConfiguration());
+
+        // What the plugin makes of those settings, read fresh on every resolve rather than
+        // once: an operator saves the settings page while the server is running, and a
+        // singleton here would answer with what was on disk at boot.
+        serviceCollection.AddTransient(services => ConfigurationReading.Of(
+            services.GetRequiredService<PluginConfiguration>()));
 
         // The one thing that says a setting was refused. Without it a refused configuration is
         // a plugin that is loaded, will not pair, and has told nobody why.
@@ -59,8 +65,12 @@ public class PluginServiceRegistrator : IPluginServiceRegistrator
         serviceCollection.AddSingleton(services => new RequestAuthenticator(services.GetRequiredService<IPairingKeySource>()));
 
         // Once, because a limit held per caller is no limit. What it counts lives in this
-        // object, so a second instance would hand every flood a second allowance.
-        serviceCollection.AddSingleton(_ => new ArrivalLimit());
+        // object, so a second instance would hand every flood a second allowance. The
+        // allowances it runs on are the operator's, read through the same reading every other
+        // setting comes through, so a refused allowance is named at Error and the plane runs on
+        // the one a server nobody configured runs on rather than on no limit at all.
+        serviceCollection.AddSingleton(services =>
+            services.GetRequiredService<ConfigurationReading>().NewArrivalLimit());
         serviceCollection.AddSingleton(services => new PeerPlane(
             services.GetRequiredService<RequestAuthenticator>(),
             services.GetRequiredService<ArrivalLimit>()));

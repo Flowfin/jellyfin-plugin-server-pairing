@@ -21,6 +21,9 @@ why it lives there instead:
 | Setting | Type | Default | Range |
 | --- | --- | --- | --- |
 | `AcknowledgeCleartextTransport` | `bool` | `false` | `true` or `false`; `true` also permits an `http` peer address |
+| `PeerPlaneArrivalsPerEnrolment` | `int` | `6` | 1 to 3600, and never larger than `PeerPlaneArrivalsPerPairing` |
+| `PeerPlaneArrivalsPerPairing` | `int` | `60` | 1 to 3600 |
+| `PeerPlaneWindowSeconds` | `int` | `60` | 1 to 3600 |
 | `PeerAddress` | `string` | `(empty)` | empty, or an absolute `https` URI of at most 255 characters with no user information, no path, no query and no fragment, whose host is a plain ASCII domain name, an IPv4 literal or a bracketed IPv6 literal; `http` where the acknowledgement above is set |
 | `TrueFalseSetting` | `bool` | `true` | `true` or `false` |
 | `AnInteger` | `int` | `2` | any whole number the serialiser accepts; the page's own input carries a lower bound of zero and nothing carries an upper one |
@@ -36,7 +39,7 @@ place and not the other is a red suite rather than a document nobody re-read.
 cell documents nothing while looking like documentation. The guard renders a
 default the same way before it compares.
 
-## The two settings that configure something
+## The settings that configure something
 
 `PeerAddress` is the one address this server will send a pairing request to. A
 fresh installation has none, which is a server that pairs with nobody rather than
@@ -56,10 +59,38 @@ two servers. The plugin writes that sentence to the log at Warning on every star
 where the setting is on, so an operator who ticked it months ago meets it again
 rather than only once.
 
-Neither of the two is on the dashboard page. The page binds to the template's four
+The three `PeerPlane` settings are the arrival allowance the peer plane runs on:
+how long an allowance is counted over, how many requests one pairing identifier
+may put on the plane inside that span, and how many may arrive claiming the
+enrolment identifier or claiming nothing the protocol can read an identifier out
+of. The third is the harder of the two allowances because it is the one a stranger
+reaches without knowing anything, and it is refused where it is set above the
+second rather than quietly becoming the softer limit. The defaults and the bounds
+are argued at the constants rather than here:
+
+    git grep -nE 'public const int (WindowSeconds|ArrivalsPerPairing|ArrivalsPerEnrolment|MaximumWindowSeconds|MaximumArrivals)' -- Jellyfin.Plugin.ServerPairing/Api/ArrivalLimit.cs
+
+What is NOT a setting on that plane is how many identifiers are counted at once.
+That is a bound on memory rather than a rate an operator tunes, an operator who
+raises it buys a larger table for a flood to fill, and it stays a constant with
+its argument at the constant.
+
+None of these is on the dashboard page. The page binds to the template's four
 settings, reads the whole configuration object before it saves and writes it back
 whole, so a setting it does not bind to survives a save rather than being reset -
-but an operator cannot yet type either of these there. The page is issue #49.
+but an operator cannot yet type any of these there. The page is issue #49.
+
+A configuration file written before a setting existed does not mention it, and
+what that produces is the value the constructor set rather than the value the type
+would have on its own. The serialiser builds the object through the parameterless
+constructor and assigns only the members the document carries, which is measured
+rather than assumed:
+
+    git grep -n 'AMissingElementKeepsTheValueTheConstructorSet' -- Jellyfin.Plugin.ServerPairing.Tests/
+
+That is why a count's default is written in the constructor even though a count
+has a type default already. Zero is not a small allowance; it is a plane that
+refuses everything.
 
 ## THESE FOUR ARE THE TEMPLATE'S AND THEY CONFIGURE NOTHING
 
@@ -103,6 +134,14 @@ A clamp is what this refuses to do. An operator who sets a value outside its ran
 and gets a working server running on a different value has no reason to look for
 one, and the value they typed is still in the file. So the value stays where they
 put it, the setting is named, and the server does not pair.
+
+WHAT A REFUSED PEER-PLANE ALLOWANCE FALLS BACK TO IS NOT NOTHING, and it is worth
+separating from the sentence above. A plane whose limit was refused is not a plane
+with no limit, so it runs on the allowance a server nobody configured runs on: the
+default, not the boundary the operator's value crossed. The difference from a clamp
+is that a clamp answers a request for a day with an hour and says nothing, where
+this names the setting at Error, leaves the operator's value in the file, and puts
+the plane on a number somebody argued.
 
 Nothing throws. A setter that threw would be a setter the host's deserialiser
 throws out of, which takes the plugin out at load - and the repair for that is a

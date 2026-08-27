@@ -6,6 +6,7 @@ using System.Reflection;
 using System.Threading;
 using System.Xml;
 using System.Xml.Serialization;
+using Jellyfin.Plugin.ServerPairing.Api;
 using Jellyfin.Plugin.ServerPairing.Configuration;
 using Jellyfin.Plugin.ServerPairing.Protocol;
 using Microsoft.Extensions.Logging;
@@ -62,6 +63,155 @@ public class ConfigurationReadingTests
     {
         Assert.False(Deserialised("<PluginConfiguration />").AcknowledgeCleartextTransport);
         Assert.False(new PluginConfiguration().AcknowledgeCleartextTransport);
+    }
+
+    /// <summary>
+    /// What a configuration file written before a setting existed produces. The serialiser
+    /// builds the object through the parameterless constructor and assigns only the members
+    /// the document carries, so a missing element keeps what the constructor set rather than
+    /// falling to what the type would produce on its own.
+    ///
+    /// This is measured rather than reasoned about because it was reasoned about wrongly: the
+    /// remark on the configuration type asserted the opposite until this was run. It decides
+    /// whether an upgrade is quiet or whether every server that has ever saved a settings page
+    /// comes up on zeroes, and a count of zero is not a small allowance, it is a plane that
+    /// refuses everything.
+    /// </summary>
+    [Fact]
+    public void AMissingElementKeepsTheValueTheConstructorSet()
+    {
+        var missing = Deserialised("<PluginConfiguration />");
+        var constructed = new PluginConfiguration();
+
+        Assert.Equal(constructed.AnInteger, missing.AnInteger);
+        Assert.NotEqual(0, missing.AnInteger);
+
+        Assert.Equal(ArrivalLimit.WindowSeconds, missing.PeerPlaneWindowSeconds);
+        Assert.Equal(ArrivalLimit.ArrivalsPerPairing, missing.PeerPlaneArrivalsPerPairing);
+        Assert.Equal(ArrivalLimit.ArrivalsPerEnrolment, missing.PeerPlaneArrivalsPerEnrolment);
+    }
+
+    /// <summary>
+    /// A value the file does carry is the one that is used, or the setting configures nothing
+    /// and the assertion above is about a document nobody can affect.
+    /// </summary>
+    [Fact]
+    public void AnElementThatIsThereIsTheValueThatIsUsed()
+    {
+        var configured = Deserialised(
+            "<PluginConfiguration><PeerPlaneArrivalsPerPairing>17</PeerPlaneArrivalsPerPairing></PluginConfiguration>");
+
+        Assert.Equal(17, configured.PeerPlaneArrivalsPerPairing);
+        Assert.Equal(17, ConfigurationReading.Of(configured).PeerPlaneArrivalsPerPairing);
+    }
+
+    /// <summary>
+    /// An allowance outside its bounds is refused with the setting named, and the plane runs
+    /// on the allowance a server nobody configured runs on rather than on the boundary the
+    /// value crossed. A plane whose limit was refused is not a plane with no limit.
+    /// </summary>
+    [Theory]
+    [InlineData(0)]
+    [InlineData(-1)]
+    [InlineData(ArrivalLimit.MaximumWindowSeconds + 1)]
+    public void AWindowOutsideItsBoundsIsRefusedAndThePlaneRunsOnTheDefault(int seconds)
+    {
+        var reading = ConfigurationReading.Of(new PluginConfiguration { PeerPlaneWindowSeconds = seconds });
+
+        var refusal = Assert.Single(reading.Refusals);
+
+        Assert.Equal(nameof(PluginConfiguration.PeerPlaneWindowSeconds), refusal.Setting);
+        Assert.False(reading.MayPair);
+        Assert.Equal(ArrivalLimit.WindowSeconds, reading.PeerPlaneWindowSeconds);
+    }
+
+    /// <summary>
+    /// The same for the two allowances, and the number in the sentence is the one the plane is
+    /// actually running on, because a refusal that names a different number than the one in
+    /// force sends an operator looking for a behaviour they do not have.
+    /// </summary>
+    [Fact]
+    public void AnAllowanceOutsideItsBoundsIsRefusedAndNamesWhatThePlaneRunsOn()
+    {
+        var reading = ConfigurationReading.Of(new PluginConfiguration
+        {
+            PeerPlaneArrivalsPerPairing = ArrivalLimit.MaximumArrivals + 1,
+            PeerPlaneArrivalsPerEnrolment = 0
+        });
+
+        Assert.Equal(2, reading.Refusals.Count);
+        Assert.Equal(ArrivalLimit.ArrivalsPerPairing, reading.PeerPlaneArrivalsPerPairing);
+        Assert.Equal(ArrivalLimit.ArrivalsPerEnrolment, reading.PeerPlaneArrivalsPerEnrolment);
+
+        Assert.All(
+            reading.Refusals,
+            refusal => Assert.Contains(
+                refusal.Setting == nameof(PluginConfiguration.PeerPlaneArrivalsPerPairing)
+                    ? ArrivalLimit.ArrivalsPerPairing.ToString(System.Globalization.CultureInfo.InvariantCulture)
+                    : ArrivalLimit.ArrivalsPerEnrolment.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                refusal.Reason,
+                StringComparison.Ordinal));
+    }
+
+    /// <summary>
+    /// The enrolment allowance is the harder of the two, so an operator who raises it above
+    /// the other is refused rather than quietly given a plane on which the limit a stranger
+    /// reaches is the softer one. Both fall back, because a pair where one half was argued and
+    /// the other was not is not a pair anybody argued.
+    /// </summary>
+    [Fact]
+    public void AnEnrolmentAllowanceAboveThePairingAllowanceIsRefusedAndBothFallBack()
+    {
+        var reading = ConfigurationReading.Of(new PluginConfiguration
+        {
+            PeerPlaneArrivalsPerPairing = 10,
+            PeerPlaneArrivalsPerEnrolment = 11
+        });
+
+        var refusal = Assert.Single(reading.Refusals);
+
+        Assert.Equal(nameof(PluginConfiguration.PeerPlaneArrivalsPerEnrolment), refusal.Setting);
+        Assert.Contains(nameof(PluginConfiguration.PeerPlaneArrivalsPerPairing), refusal.Reason, StringComparison.Ordinal);
+
+        Assert.Equal(ArrivalLimit.ArrivalsPerPairing, reading.PeerPlaneArrivalsPerPairing);
+        Assert.Equal(ArrivalLimit.ArrivalsPerEnrolment, reading.PeerPlaneArrivalsPerEnrolment);
+    }
+
+    /// <summary>
+    /// Equal allowances are accepted. The rule is that the enrolment allowance is never the
+    /// softer one, not that it is strictly harder, and a rule refusing equality would refuse a
+    /// server an operator deliberately set flat.
+    /// </summary>
+    [Fact]
+    public void EqualAllowancesAreAccepted()
+    {
+        var reading = ConfigurationReading.Of(new PluginConfiguration
+        {
+            PeerPlaneArrivalsPerPairing = 12,
+            PeerPlaneArrivalsPerEnrolment = 12
+        });
+
+        Assert.Empty(reading.Refusals);
+        Assert.Equal(12, reading.PeerPlaneArrivalsPerEnrolment);
+    }
+
+    /// <summary>
+    /// The limit the plane is given carries the allowances that were read, or the settings
+    /// above are three numbers nothing consults.
+    /// </summary>
+    [Fact]
+    public void TheLimitTheReadingBuildsCarriesTheAllowancesThatWereRead()
+    {
+        var limit = ConfigurationReading.Of(new PluginConfiguration
+        {
+            PeerPlaneWindowSeconds = 30,
+            PeerPlaneArrivalsPerPairing = 9,
+            PeerPlaneArrivalsPerEnrolment = 3
+        }).NewArrivalLimit();
+
+        Assert.Equal(30, limit.CountedOverSeconds);
+        Assert.Equal(9, limit.PerPairing);
+        Assert.Equal(3, limit.PerEnrolment);
     }
 
     /// <summary>

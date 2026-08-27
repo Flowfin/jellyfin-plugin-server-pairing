@@ -46,7 +46,8 @@ namespace Jellyfin.Plugin.ServerPairing.Api;
 public sealed class ArrivalLimit
 {
     /// <summary>
-    /// How long an allowance is counted over, in seconds.
+    /// How long an allowance is counted over, in seconds, where an operator has not chosen
+    /// otherwise.
     /// </summary>
     /// <remarks>
     /// The window is fixed rather than sliding: it starts at the first arrival counted into it
@@ -60,7 +61,8 @@ public sealed class ArrivalLimit
     public const int WindowSeconds = 60;
 
     /// <summary>
-    /// How many requests one pairing identifier may put on this plane inside a window.
+    /// How many requests one pairing identifier may put on this plane inside a window, where
+    /// an operator has not chosen otherwise.
     /// </summary>
     /// <remarks>
     /// One a second sustained, which is far above what two servers exchanging watch state do
@@ -72,7 +74,8 @@ public sealed class ArrivalLimit
 
     /// <summary>
     /// How many requests may arrive inside a window claiming the enrolment identifier, or
-    /// claiming nothing this protocol can read an identifier out of.
+    /// claiming nothing this protocol can read an identifier out of, where an operator has not
+    /// chosen otherwise.
     /// </summary>
     /// <remarks>
     /// This is the harder limit, and it is harder because it is the one a stranger reaches
@@ -82,6 +85,28 @@ public sealed class ArrivalLimit
     /// allowance, a genuine <c>hello</c> arriving in the same window is refused with them.
     /// </remarks>
     public const int ArrivalsPerEnrolment = 6;
+
+    /// <summary>
+    /// The longest span an allowance may be counted over, in seconds.
+    /// </summary>
+    /// <remarks>
+    /// An hour. Past it a refusal outlives the burst that caused it by longer than anybody
+    /// watching a pairing will connect the two, so an operator reads a pairing that is broken
+    /// rather than one that is being held back, and the limit stops being a thing they can
+    /// reason about at all.
+    /// </remarks>
+    public const int MaximumWindowSeconds = 3600;
+
+    /// <summary>
+    /// The largest allowance either counter may be given.
+    /// </summary>
+    /// <remarks>
+    /// One arrival a second sustained across the longest window this accepts, which is the
+    /// same argument the default allowance is picked on one window down. Above it the counter
+    /// is not a limit: the work this bound exists to hold down is a signature computation per
+    /// request, and an allowance a real flood never reaches holds nothing down.
+    /// </remarks>
+    public const int MaximumArrivals = 3600;
 
     /// <summary>
     /// The most identifiers counted at once.
@@ -110,20 +135,110 @@ public sealed class ArrivalLimit
 
     private readonly Lock _gate = new Lock();
 
+    private readonly int _windowSeconds;
+
+    private readonly int _perPairing;
+
+    private readonly int _perEnrolment;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ArrivalLimit"/> class with the allowances
+    /// an operator who has chosen nothing gets.
+    /// </summary>
+    public ArrivalLimit()
+        : this(WindowSeconds, ArrivalsPerPairing, ArrivalsPerEnrolment)
+    {
+    }
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ArrivalLimit"/> class.
+    /// </summary>
+    /// <param name="windowSeconds">How long an allowance is counted over.</param>
+    /// <param name="arrivalsPerPairing">How many requests one pairing identifier may put on
+    /// this plane inside a window.</param>
+    /// <param name="arrivalsPerEnrolment">How many may arrive claiming the enrolment
+    /// identifier, or claiming nothing this protocol can read an identifier out of.</param>
+    /// <exception cref="ArgumentOutOfRangeException">
+    /// A value is outside its bounds, or the enrolment allowance is larger than the pairing
+    /// allowance.
+    /// </exception>
+    /// <remarks>
+    /// The bounds are refused here rather than clamped, so they hold for every caller and not
+    /// only for the one that reads a configuration file. The last of them is the ordering: the
+    /// enrolment allowance is the harder one because it is the one a stranger reaches without
+    /// knowing anything, and an operator who raises it above the other has turned that
+    /// argument off without meeting it.
+    /// </remarks>
+    public ArrivalLimit(int windowSeconds, int arrivalsPerPairing, int arrivalsPerEnrolment)
+    {
+        if (windowSeconds < 1 || windowSeconds > MaximumWindowSeconds)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(windowSeconds),
+                windowSeconds,
+                "An arrival window lasts between one second and " + MaximumWindowSeconds + " seconds.");
+        }
+
+        if (arrivalsPerPairing < 1 || arrivalsPerPairing > MaximumArrivals)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(arrivalsPerPairing),
+                arrivalsPerPairing,
+                "An allowance is between one arrival and " + MaximumArrivals + " arrivals.");
+        }
+
+        if (arrivalsPerEnrolment < 1 || arrivalsPerEnrolment > MaximumArrivals)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(arrivalsPerEnrolment),
+                arrivalsPerEnrolment,
+                "An allowance is between one arrival and " + MaximumArrivals + " arrivals.");
+        }
+
+        if (arrivalsPerEnrolment > arrivalsPerPairing)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(arrivalsPerEnrolment),
+                arrivalsPerEnrolment,
+                "The enrolment allowance is the harder of the two and is never larger than the pairing allowance, which is "
+                + arrivalsPerPairing + ".");
+        }
+
+        _windowSeconds = windowSeconds;
+        _perPairing = arrivalsPerPairing;
+        _perEnrolment = arrivalsPerEnrolment;
+    }
+
+    /// <summary>
+    /// Gets how long this instance counts an allowance over, in seconds.
+    /// </summary>
+    public int CountedOverSeconds => _windowSeconds;
+
+    /// <summary>
+    /// Gets how many requests one pairing identifier may put on this plane inside a window.
+    /// </summary>
+    public int PerPairing => _perPairing;
+
+    /// <summary>
+    /// Gets how many may arrive claiming the enrolment identifier, or claiming nothing this
+    /// protocol can read an identifier out of.
+    /// </summary>
+    public int PerEnrolment => _perEnrolment;
+
     /// <summary>
     /// The allowance an identifier has, which is the harder one for the enrolment identifier
     /// and for anything this protocol cannot read an identifier out of.
     /// </summary>
     /// <param name="pairingId">The identifier a request claimed, as it arrived.</param>
     /// <returns>The number of arrivals allowed inside one window.</returns>
-    public static int AllowanceFor(string? pairingId)
+    public int AllowanceFor(string? pairingId)
     {
         var counted = CountedUnder(pairingId);
 
         return string.Equals(counted, EnrolmentPairingId, StringComparison.Ordinal)
             || string.Equals(counted, Unreadable, StringComparison.Ordinal)
-                ? ArrivalsPerEnrolment
-                : ArrivalsPerPairing;
+                ? _perEnrolment
+                : _perPairing;
     }
 
     /// <summary>
@@ -222,7 +337,7 @@ public sealed class ArrivalLimit
     /// longer rather than ending early, and an allowance already spent is not handed back by
     /// the time moving underneath it. That is the safe direction of the two.
     /// </remarks>
-    private static bool Elapsed(Window window, long here) => here - window.Started >= WindowSeconds;
+    private bool Elapsed(Window window, long here) => here - window.Started >= _windowSeconds;
 
     /// <summary>
     /// Which counter an arriving identifier is counted under.

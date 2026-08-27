@@ -1,3 +1,4 @@
+using Jellyfin.Plugin.ServerPairing.Api;
 using MediaBrowser.Model.Plugins;
 
 namespace Jellyfin.Plugin.ServerPairing.Configuration;
@@ -27,11 +28,21 @@ public enum SomeOptions
 /// <c>ConfigurationKeyMaterialTests</c> refuses rather than leaves to a reader, and
 /// <c>docs/keystore.md</c> is where key material lives instead.
 /// <para>
-/// A missing element deserialises to the type's default rather than to the value the
-/// constructor set, so every setting's safe value is the one its type already has where that
-/// is possible: <c>false</c> for a switch that weakens something, and an empty address for a
-/// peer nobody has entered. A setting whose safe value is not its type's default is set in
-/// the constructor and is documented as the value a fresh installation gets.
+/// A missing element keeps the value this constructor set. The serialiser builds the object
+/// through the parameterless constructor and then assigns only the members the document
+/// carries, so a configuration file written by an older build, which mentions none of the
+/// settings added since, comes up on the defaults below rather than on zeroes. That was
+/// asserted the wrong way round here until it was measured:
+/// <c>ConfigurationReadingTests.AMissingElementKeepsTheValueTheConstructorSet</c> is the
+/// measurement, and it is a test rather than this sentence because the sentence is what was
+/// wrong.
+/// </para>
+/// <para>
+/// So a safe value is written in the constructor whether or not it happens to match what the
+/// type would produce on its own: <c>false</c> for a switch that weakens something, an empty
+/// address for a peer nobody has entered, and the allowance the peer plane runs on for a
+/// count. A count left to the type's own default would be zero, and zero is not a small
+/// allowance, it is a plane that refuses everything.
 /// </para>
 /// <para>
 /// What a bad value does is <see cref="ConfigurationReading"/> rather than a setter here. A
@@ -53,6 +64,10 @@ public class PluginConfiguration : BasePluginConfiguration
         AString = "string";
 
         PeerAddress = string.Empty;
+
+        PeerPlaneWindowSeconds = ArrivalLimit.WindowSeconds;
+        PeerPlaneArrivalsPerPairing = ArrivalLimit.ArrivalsPerPairing;
+        PeerPlaneArrivalsPerEnrolment = ArrivalLimit.ArrivalsPerEnrolment;
     }
 
     /// <summary>
@@ -100,4 +115,37 @@ public class PluginConfiguration : BasePluginConfiguration
     /// cleartext has read the sentence saying so and set this themselves.
     /// </remarks>
     public bool AcknowledgeCleartextTransport { get; set; }
+
+    /// <summary>
+    /// Gets or sets how long the peer plane counts an arrival allowance over, in seconds.
+    /// </summary>
+    /// <remarks>
+    /// The window is fixed rather than sliding, so it starts at the first arrival counted into
+    /// it and every arrival inside it counts against the same allowance. The argument for the
+    /// default and for the bound is at the constants in <see cref="ArrivalLimit"/> rather than
+    /// here, because that is where the behaviour is.
+    /// </remarks>
+    public int PeerPlaneWindowSeconds { get; set; }
+
+    /// <summary>
+    /// Gets or sets how many requests one pairing identifier may put on the peer plane inside
+    /// a window.
+    /// </summary>
+    /// <remarks>
+    /// This bounds the work a stranger who knows a pairing's identifier can make this server
+    /// do. Raising it does not make a pairing faster; it makes a flood claiming that
+    /// identifier cheaper.
+    /// </remarks>
+    public int PeerPlaneArrivalsPerPairing { get; set; }
+
+    /// <summary>
+    /// Gets or sets how many requests may arrive inside a window claiming the enrolment
+    /// identifier, or claiming nothing the protocol can read an identifier out of.
+    /// </summary>
+    /// <remarks>
+    /// The harder of the two, because it is the one a stranger reaches without knowing
+    /// anything, and it is refused where an operator sets it above the other rather than
+    /// quietly becoming the softer limit.
+    /// </remarks>
+    public int PeerPlaneArrivalsPerEnrolment { get; set; }
 }
