@@ -74,7 +74,7 @@ version negotiation.
 
 ```
 git ls-tree -r --name-only origin/master -- Jellyfin.Plugin.ServerPairing/Protocol | wc -l
-34
+35
 ```
 
 That count rises whenever a file lands under that directory, so a reader who
@@ -104,7 +104,7 @@ and there is a key store:
 
 ```
 git ls-tree -r --name-only origin/master -- Jellyfin.Plugin.ServerPairing/KeyStore | wc -l
-10
+12
 ```
 
 There is still no pairing and no dashboard page, and the reason the rest of this
@@ -114,7 +114,7 @@ is given holds no keys:
 
 ```
 git grep -n 'IPairingKeySource, ' origin/master -- Jellyfin.Plugin.ServerPairing/PluginServiceRegistrator.cs
-origin/master:Jellyfin.Plugin.ServerPairing/PluginServiceRegistrator.cs:40:        serviceCollection.AddSingleton<IPairingKeySource, NoPairingKeys>();
+origin/master:Jellyfin.Plugin.ServerPairing/PluginServiceRegistrator.cs:64:        serviceCollection.AddSingleton<IPairingKeySource, NoPairingKeys>();
 ```
 
 So no adversary described below is currently refused by anything that reads what
@@ -222,7 +222,7 @@ THIS PARAGRAPH SAID THERE WAS NOWHERE TO HOLD ONE AND PASTED AN EMPTY READING
 FOR IT. There is a store, and a document about it:
 
     git ls-tree -r --name-only origin/master -- Jellyfin.Plugin.ServerPairing/KeyStore docs/keystore.md | wc -l
-    11
+    13
 
 The three issues named here as owing the store, the path it lives at and what
 protects it at rest are closed:
@@ -520,21 +520,27 @@ failures counted against the window rather than against a source address:
 ```
 git grep -nE "public const int (LifetimeSeconds|MaximumLifetimeSeconds|FailuresAllowed)" origin/master -- Jellyfin.Plugin.ServerPairing/Protocol/EnrolmentWindow.cs
 origin/master:Jellyfin.Plugin.ServerPairing/Protocol/EnrolmentWindow.cs:47:    public const int LifetimeSeconds = 600;
-origin/master:Jellyfin.Plugin.ServerPairing/Protocol/EnrolmentWindow.cs:58:    public const int MaximumLifetimeSeconds = 1800;
-origin/master:Jellyfin.Plugin.ServerPairing/Protocol/EnrolmentWindow.cs:70:    public const int FailuresAllowed = 3;
+origin/master:Jellyfin.Plugin.ServerPairing/Protocol/EnrolmentWindow.cs:60:    public const int MaximumLifetimeSeconds = 1800;
+origin/master:Jellyfin.Plugin.ServerPairing/Protocol/EnrolmentWindow.cs:72:    public const int FailuresAllowed = 3;
 ```
 
 The paragraph above this section still holds over it. Nothing routes a stranger's
 bytes to that type, so what it bounds today is a caller the test project stands
-in for. Issue #18 is still open on two things rather than the one this paragraph
-used to name. The first is the lifetime living in the configuration, where a
-value above the maximum is refused as the configuration is read rather than as
-the type is constructed. The second is the operator being told while a window is
-open, which the type answers and nothing reads:
+in for. THIS PARAGRAPH SAID ISSUE #18 WAS OPEN ON TWO THINGS AND THE FIRST OF THEM
+HAS LANDED. The lifetime lives in the configuration, with a documented maximum and
+a value above it refused as the configuration is read rather than shortened to it:
+
+```
+git grep -n '`EnrolmentWindowSeconds` | ' origin/master -- docs/configuration.md
+origin/master:docs/configuration.md:24:| `EnrolmentWindowSeconds` | `int` | `600` | 1 to 1800 |
+```
+
+What is left is the second, the operator being told while a window is open, which
+the type answers and nothing reads:
 
 ```
 git grep -n "public IReadOnlyList<string> OpenAddresses" origin/master -- Jellyfin.Plugin.ServerPairing/Protocol/EnrolmentWindow.cs
-origin/master:Jellyfin.Plugin.ServerPairing/Protocol/EnrolmentWindow.cs:262:    public IReadOnlyList<string> OpenAddresses(DateTimeOffset at)
+origin/master:Jellyfin.Plugin.ServerPairing/Protocol/EnrolmentWindow.cs:264:    public IReadOnlyList<string> OpenAddresses(DateTimeOffset at)
 ```
 
 There is no page to render that and no endpoint to ask it, which matters to this
@@ -779,7 +785,7 @@ authenticator, and the authenticator is given the key source that holds nothing:
 
 ```
 git grep -n 'IPairingKeySource, ' origin/master -- Jellyfin.Plugin.ServerPairing/PluginServiceRegistrator.cs
-origin/master:Jellyfin.Plugin.ServerPairing/PluginServiceRegistrator.cs:40:        serviceCollection.AddSingleton<IPairingKeySource, NoPairingKeys>();
+origin/master:Jellyfin.Plugin.ServerPairing/PluginServiceRegistrator.cs:64:        serviceCollection.AddSingleton<IPairingKeySource, NoPairingKeys>();
 ```
 
 So nothing an outside caller sends reaches the state machine, the freshness
