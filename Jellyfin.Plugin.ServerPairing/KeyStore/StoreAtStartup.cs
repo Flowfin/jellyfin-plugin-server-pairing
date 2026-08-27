@@ -17,10 +17,12 @@ namespace Jellyfin.Plugin.ServerPairing.KeyStore;
 /// This type is the half of it that says so rather than presenting the pairings as though
 /// nothing happened.
 /// <para>
-/// It reads and never writes. A store the operator does not have is not created by looking at
-/// it, which is the property issue #35 landed for the write path and which this must not
-/// undo: <see cref="IPairingKeyStore.Pairings"/> over an absent file answers with nothing and
-/// leaves the disk alone.
+/// It asks the store what it holds and changes nothing itself. A store the operator does not
+/// have is not created by looking at it, which is the property issue #35 landed for the write
+/// path and which this must not undo: <see cref="IPairingKeyStore.Pairings"/> over an absent
+/// file answers with nothing and leaves the disk alone. WHAT A READ CAN DO ON A FILE THAT IS
+/// THERE is carry it up to the current format, which <see cref="StoreFormat"/> describes, so
+/// this is also the moment a store written by an older build is migrated.
 /// </para>
 /// <para>
 /// A read that throws is caught. A hosted service whose <see cref="StartAsync"/> throws stops
