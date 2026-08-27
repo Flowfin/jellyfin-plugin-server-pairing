@@ -46,6 +46,16 @@ can open an enrolment from. Two servers cannot be paired with this version. The
 `changelog` field in `build.yaml` and `build.net10.0.yaml` carries that
 paragraph in the same words.
 
+- The key store's file now carries the number of the format it is in, and a
+  plugin that meets one written by a newer plugin refuses it instead of reading
+  the parts it recognises. Every pairing stops working until the newer plugin is
+  installed again or the file is moved aside, and the message says which format
+  was found and which this build understands. A file written before this version
+  is carried up to the new shape the first time it is read, with a copy of what
+  was there left beside it named for the format it is in; nothing removes that
+  copy and nothing is written to the log when it appears. A migration that fails
+  part way leaves the original file exactly as it was and the plugin refusing to
+  pair, rather than running on half of one.
 - [protocol] A pairing request is now refused when too many have already arrived
   claiming the same pairing identifier: sixty inside a minute, and six for the
   identifier every enrolment carries, which every enrolment shares. It is

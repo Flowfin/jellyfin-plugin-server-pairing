@@ -52,6 +52,66 @@ run out is not a key any more, and a store that answered with one because nobody
 had swept it would hand a caller something the rotation already ended. The
 boundary is the instant itself: a key exactly at its own end is gone.
 
+## The format number the file carries, and what an older file does
+
+The file is an object with two members: `format`, which is a number, and
+`pairings`, which is the map described above. The number is written from the
+first write onwards, so no file this build produces is in an unnumbered shape.
+
+The number exists so that a build meeting a file it does not understand says so
+instead of reading what it recognises and dropping the rest. Two directions, and
+they are answered differently.
+
+**A file older than this build is carried up.** `StoreFormat` holds one
+migration per format, and a read walks them in order from whatever the file
+declares to the format this build writes. One rung at a time rather than a jump,
+because a jump has to be rewritten every time a rung is added below it and a file
+three formats old would then travel a path no fixture ever took. Every rung works
+on the parsed document rather than on this plugin's own types, so a member a rung
+does not name is carried across untouched.
+
+**A file newer than this build is refused.** `StoreFormatRefusedException`, and
+every operation on the store raises it, because every operation reads the file.
+That is the downgrade case: an operator installs a newer plugin, pairs, rolls the
+plugin back, and the file on disk was written by a build that knew more. Reading
+it as far as it parses would drop whatever the newer format added, and the drop
+would land on key material. So no pairing works and the message says which format
+was found, which is the highest this build understands, and what to do about it.
+
+**Format 0 is not a format anybody designed.** It is what this store wrote before
+the number existed: the bare map, no envelope. It is named so a file already on
+an operator's disk has a rung to start from, and
+`Jellyfin.Plugin.ServerPairing.Tests/KeyStore/Fixtures/keys.format-0.json` is a
+file in it, produced by running the store at the commit before the envelope
+rather than typed out. That is the rule the migration cases are held to: a case
+that builds the old shape out of the current types is a case about the current
+types.
+
+**Migrating writes two files and a read is where it happens.** The copy of what
+was there goes beside the store, named for the format it is in, so an operator
+can see it without opening it; then the migrated file replaces the store, through
+the same atomic write as everything else. The copy is written first on purpose. A
+migration that fails at the second write leaves the original store exactly as it
+was, a copy of that same original beside it, and every operation still refusing -
+rather than a store that has been half replaced. The next call reads the original
+again and tries the same migration, which is what an operator who has just freed
+some disk space wants.
+
+**What the copy is, and what it is not.** It holds key material, so it is written
+with the store's own permissions, and it is not a backup an operator should rely
+on: it is the one file the last migration replaced, and a second migration away
+from a different format writes a different name rather than rotating this one.
+Nothing removes it, and nothing reads it.
+
+**What this does not do**, stated so the section is not read as more than it is.
+Nothing writes a log line when a migration happens, so an operator learns of it
+from the file appearing rather than from the log. The migration preserves a
+member it does not recognise on the way up, and the next write does not: a write
+serialises this build's own type and holds only what that type holds. And the
+plugin configuration carries no format number, which is the other half of issue
+#55 and waits on the settings in issue #50, because what is on that type today is
+still the plugin template's example fields.
+
 ## The type key material travels in
 
 Key material has its own type rather than being an array of bytes. That is not
@@ -197,11 +257,13 @@ that copied the data directory. Naming it precisely matters because the phrase
 of one, and a plugin that says its keys are encrypted and stops there has told an
 operator something false by leaving the rest out.
 
-**Why this file does not describe such a scheme today.** The store has no format
-version and no answer for a file that does not parse, which are issues #55 and
-#33, and both of those decide how bytes on this path are read. A wrapping layer
-added before them is a layer the format work then has to migrate and the
-corruption work then has to tell apart from damage. Whether to add one at all,
+**Why this file does not describe such a scheme today.** The store has no answer
+for a file that does not parse, which is issue #33, and that decides how bytes on
+this path are read. It does carry a format version now, so the half of this
+paragraph that named issue #55 has an answer: a wrapping layer arriving later is
+a rung on the ladder above rather than a shape nothing can migrate. What is left
+is the corruption half, and a wrapping layer added before it is a layer that work
+then has to tell apart from damage. Whether to add one at all,
 where the wrapping key would live, and what a server does when the file is there
 and the key is not, is issue #268 rather than this paragraph.
 
@@ -281,4 +343,15 @@ mistaken for reading a finished design.
   did not decide this one.
 - **A restored, copied or corrupt store.** A file that does not parse currently
   throws rather than being answered for, and a store restored from a backup or
-  copied to a second server is not detected. Issue #33 owns all three.
+  copied to a second server is not detected. Issue #33 owns all three. The format
+  number above does not reach any of them: it separates a file this build is too
+  old to read from one it can, and says nothing about a file that is damaged or
+  about one that is an older copy of this same store.
+- **What an operator is told when a migration happens.** The copy appears beside
+  the store and nothing is written to the log, so the event is visible in the
+  directory rather than in the place an operator looks. Issue #55 asks for the
+  line and it is not built.
+- **A format number on the plugin configuration.** Only the key store carries
+  one. What is on the configuration type is still the plugin template's example
+  settings, so a number stamped on it today would version fields no operator will
+  ever set. Issue #50 fixes what that type holds and issue #55 holds the number.

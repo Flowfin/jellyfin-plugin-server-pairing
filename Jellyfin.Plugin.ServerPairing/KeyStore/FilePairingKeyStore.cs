@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
 using System.Threading;
 
@@ -40,6 +41,22 @@ namespace Jellyfin.Plugin.ServerPairing.KeyStore;
 /// corrupt store does is issue #33, and a file that does not parse currently throws rather
 /// than being answered for. Reading this class as covering either is the mistake this
 /// paragraph exists to stop.
+/// </para>
+/// <para>
+/// The file carries the format number <see cref="StoreFormat"/> declares, and a read is where
+/// an older one is carried up to it. So a READ CAN WRITE, which the rest of this class does
+/// not otherwise do: meeting a file in an older format writes a copy of it beside the store
+/// and then the migrated file, both through <see cref="AtomicWrite"/>. A file that is absent
+/// is still not created by looking at it, and a file already in the current format is not
+/// rewritten.
+/// </para>
+/// <para>
+/// A MIGRATION PRESERVES A MEMBER IT DOES NOT KNOW AND THE NEXT WRITE DOES NOT. The ladder
+/// works on the parsed document, so a member some other build wrote inside a pairing survives
+/// the way up; the next call that writes serialises this build's own type and holds only what
+/// that type holds. That is the same bound the store had before the envelope existed, and it
+/// is the reason <see cref="StoreFormatRefusedException"/> refuses a NEWER file outright rather
+/// than reading what it recognises.
 /// </para>
 /// </remarks>
 public sealed class FilePairingKeyStore : IPairingKeyStore
@@ -189,16 +206,69 @@ public sealed class FilePairingKeyStore : IPairingKeyStore
 
         var json = System.IO.File.ReadAllText(_file);
 
-        var read = JsonSerializer.Deserialize<Dictionary<string, StoredPairing>>(json, _format);
+        // A file holding the literal null answered with an empty store before the envelope
+        // existed and answers the same way now. Anything else that is not an object threw
+        // then and throws now: what a damaged store should do instead is issue #33, and it is
+        // deliberately not decided here.
+        if (JsonNode.Parse(json) is not JsonObject document)
+        {
+            return new Dictionary<string, StoredPairing>(StringComparer.Ordinal);
+        }
+
+        var format = StoreFormat.Read(document);
+
+        if (format > StoreFormat.Current)
+        {
+            throw new StoreFormatRefusedException(format, StoreFormat.Current, _file);
+        }
+
+        if (format < StoreFormat.Current)
+        {
+            document = MigrateOnDisk(json, document, format);
+        }
+
+        var read = StoreFormat.Pairings(document).Deserialize<Dictionary<string, StoredPairing>>(_format);
 
         return read is null
             ? new Dictionary<string, StoredPairing>(StringComparer.Ordinal)
             : new Dictionary<string, StoredPairing>(read, StringComparer.Ordinal);
     }
 
+    /// <summary>
+    /// Carries an older file up to the current format and puts the result on disk, keeping a
+    /// copy of what was there beside it.
+    /// </summary>
+    /// <param name="json">The bytes read from the file.</param>
+    /// <param name="document">Those bytes parsed.</param>
+    /// <param name="from">The format they are in.</param>
+    /// <returns>The document in the current format.</returns>
+    /// <remarks>
+    /// The copy is written first and the store second, so a migration that fails at the write
+    /// leaves the original file exactly as it was and a copy of that same original beside it.
+    /// The alternative ordering leaves a copy of a file the store no longer holds.
+    /// <para>
+    /// A failed write throws out of here and therefore out of whichever store operation asked,
+    /// so the plugin refuses rather than answering from a half-migrated file. The next call
+    /// reads the original again and tries the same migration, which is the behaviour an
+    /// operator who fixes a full disk wants.
+    /// </para>
+    /// </remarks>
+    private JsonObject MigrateOnDisk(string json, JsonObject document, int from)
+    {
+        var migrated = StoreFormat.Migrate(document, _file);
+
+        AtomicWrite.Replace(_file + StoreFormat.BackupSuffix(from), json);
+
+        AtomicWrite.Replace(_file, migrated.ToJsonString(_format), _moveIntoPlace);
+
+        return migrated;
+    }
+
     private void Write(Dictionary<string, StoredPairing> held)
     {
-        AtomicWrite.Replace(_file, JsonSerializer.Serialize(held, _format), _moveIntoPlace);
+        var pairings = JsonSerializer.SerializeToNode(held, _format) ?? new JsonObject();
+
+        AtomicWrite.Replace(_file, StoreFormat.Wrap(pairings).ToJsonString(_format), _moveIntoPlace);
     }
 
     /// <summary>
