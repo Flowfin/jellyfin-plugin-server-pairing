@@ -25,6 +25,7 @@ why it lives there instead:
 | `PeerPlaneArrivalsPerEnrolment` | `int` | `6` | 1 to 3600, and never larger than `PeerPlaneArrivalsPerPairing` |
 | `PeerPlaneArrivalsPerPairing` | `int` | `60` | 1 to 3600 |
 | `PeerPlaneWindowSeconds` | `int` | `60` | 1 to 3600 |
+| `TimestampWindowSeconds` | `int` | `300` | 1 to 900 |
 | `PeerAddress` | `string` | `(empty)` | empty, or an absolute `https` URI of at most 255 characters with no user information, no path, no query and no fragment, whose host is a plain ASCII domain name, an IPv4 literal or a bracketed IPv6 literal; `http` where the acknowledgement above is set |
 | `TrueFalseSetting` | `bool` | `true` | `true` or `false` |
 | `AnInteger` | `int` | `2` | any whole number the serialiser accepts; the page's own input carries a lower bound of zero and nothing carries an upper one |
@@ -72,6 +73,26 @@ NOTHING IN THIS PLUGIN BUILDS A WINDOW YET, so that setting is refused out of ra
 and handed to nothing. A window is opened by an administrator and by nobody else,
 which the suite refuses a second route to, so the thing that builds one is the
 administrative surface in issue #49.
+
+`TimestampWindowSeconds` is the tolerated skew: how far an arriving request's
+timestamp may be from this server's clock in either direction. Two home servers
+disagree by seconds without anything being wrong and by minutes when one of them
+has no time source, which is why it is an operator's number rather than one value
+for a server on a time service and a server on a box that lost its clock. It is
+also exactly how long a captured request stays useful to whoever captured it, so
+every second added to it is a second of replay window bought, and the bound is
+argued at the constant on that basis:
+
+    git grep -nE 'public const int (WindowSeconds|MaximumWindowSeconds)' -- Jellyfin.Plugin.ServerPairing/Protocol/FreshnessWindow.cs
+
+How long a nonce is remembered is NOT a setting beside it. It is the window taken
+in both directions and is derived from it, because two numbers an operator can set
+apart are two numbers they can set into a state where the store forgets a replay
+it exists to refuse.
+
+NOTHING ON THE PEER PLANE CONSULTS A FRESHNESS WINDOW YET, which the refusal
+taxonomy says of its `clock` code in as many words, so the skew is refused out of
+range and reaches a window nothing asks. Wiring the plane to one is issue #21.
 
 The three `PeerPlane` settings are the arrival allowance the peer plane runs on:
 how long an allowance is counted over, how many requests one pairing identifier
@@ -122,15 +143,15 @@ these four are worth an operator's attention. They are not.
 
 ## What is not here yet
 
-The peer address, the cleartext acknowledgement, the enrolment window's lifetime
-and the peer plane's arrival allowance are on the type. The timestamp window, the
-rotation overlap, the nonce store and the switches that turn behaviour off are
+The peer address, the cleartext acknowledgement, the enrolment window's lifetime,
+the tolerated skew and the peer plane's arrival allowance are on the type. The
+rotation overlap, the nonce count and the switches that turn behaviour off are
 not.
 
-Those timings exist already, as constants with their reason argued at each
-constant rather than as values somebody picked:
+Those exist already, as constants with their reason argued at each constant
+rather than as values somebody picked:
 
-    git grep -nE 'public const int (FailuresAllowed|WindowSeconds|RememberedSeconds|NoncesPerPairing|MaximumOverlapSeconds)' -- Jellyfin.Plugin.ServerPairing/Protocol/
+    git grep -nE 'public const int (FailuresAllowed|NoncesPerPairing|MaximumOverlapSeconds)' -- Jellyfin.Plugin.ServerPairing/Protocol/
 
 A constant is a stronger position than a setting for as long as nothing needs to
 change it on a running server, and the move from one to the other is not free:

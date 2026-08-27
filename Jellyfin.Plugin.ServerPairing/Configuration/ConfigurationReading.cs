@@ -36,6 +36,7 @@ public sealed class ConfigurationReading
         PeerAddress? peer,
         bool cleartextAcknowledged,
         int enrolmentWindowSeconds,
+        int timestampWindowSeconds,
         int peerPlaneWindowSeconds,
         int peerPlaneArrivalsPerPairing,
         int peerPlaneArrivalsPerEnrolment)
@@ -44,6 +45,7 @@ public sealed class ConfigurationReading
         Peer = peer;
         CleartextAcknowledged = cleartextAcknowledged;
         EnrolmentWindowSeconds = enrolmentWindowSeconds;
+        TimestampWindowSeconds = timestampWindowSeconds;
         PeerPlaneWindowSeconds = peerPlaneWindowSeconds;
         PeerPlaneArrivalsPerPairing = peerPlaneArrivalsPerPairing;
         PeerPlaneArrivalsPerEnrolment = peerPlaneArrivalsPerEnrolment;
@@ -71,6 +73,12 @@ public sealed class ConfigurationReading
     /// Gets how long an enrolment window stays open, in seconds.
     /// </summary>
     public int EnrolmentWindowSeconds { get; }
+
+    /// <summary>
+    /// Gets how far an arriving request's timestamp may be from this server's clock, in
+    /// seconds, in either direction.
+    /// </summary>
+    public int TimestampWindowSeconds { get; }
 
     /// <summary>
     /// Gets how long the peer plane counts an arrival allowance over, in seconds.
@@ -145,6 +153,19 @@ public sealed class ConfigurationReading
             "seconds",
             refusals);
 
+        // The tolerated skew, which is also how long a captured request stays useful. Refused
+        // above its bound rather than narrowed to it, for the same reason as everything else
+        // here: an operator whose pairing then fails on a clock they widened the window for
+        // has been given a number they did not choose.
+        var timestampWindowSeconds = Bounded(
+            configuration.TimestampWindowSeconds,
+            nameof(PluginConfiguration.TimestampWindowSeconds),
+            1,
+            FreshnessWindow.MaximumWindowSeconds,
+            FreshnessWindow.WindowSeconds,
+            "seconds",
+            refusals);
+
         // The three allowances the peer plane runs on. A value outside its bounds is refused
         // and the plane is built on the allowance a server nobody configured runs on, because
         // a plane whose limit was refused is not a plane with no limit. Which value is in
@@ -198,6 +219,7 @@ public sealed class ConfigurationReading
             peer,
             cleartextAcknowledged,
             enrolmentWindowSeconds,
+            timestampWindowSeconds,
             windowSeconds,
             perPairing,
             perEnrolment);
@@ -219,6 +241,18 @@ public sealed class ConfigurationReading
     /// </remarks>
     public EnrolmentWindow NewEnrolmentWindow(IPairedPeers paired)
         => new EnrolmentWindow(paired, EnrolmentWindowSeconds);
+
+    /// <summary>
+    /// A freshness window with the tolerated skew this reading accepted.
+    /// </summary>
+    /// <returns>A window that refuses a timestamp further out than the configured skew.</returns>
+    /// <remarks>
+    /// NOTHING ON THE PEER PLANE CONSULTS A FRESHNESS WINDOW YET, which the refusal taxonomy
+    /// says of the <c>clock</c> code in as many words. So the skew is refused out of range and
+    /// reaches a window only here and in the test that proves it does. Wiring the plane to a
+    /// freshness window is issue #21.
+    /// </remarks>
+    public FreshnessWindow NewFreshnessWindow() => new FreshnessWindow(TimestampWindowSeconds);
 
     /// <summary>
     /// The arrival limit the peer plane runs on under this reading.

@@ -67,6 +67,7 @@ public class PluginConfiguration : BasePluginConfiguration
         PeerAddress = string.Empty;
 
         EnrolmentWindowSeconds = EnrolmentWindow.LifetimeSeconds;
+        TimestampWindowSeconds = FreshnessWindow.WindowSeconds;
 
         PeerPlaneWindowSeconds = ArrivalLimit.WindowSeconds;
         PeerPlaneArrivalsPerPairing = ArrivalLimit.ArrivalsPerPairing;
@@ -131,6 +132,20 @@ public class PluginConfiguration : BasePluginConfiguration
     /// here, because that is where the bound is held.
     /// </remarks>
     public int EnrolmentWindowSeconds { get; set; }
+
+    /// <summary>
+    /// Gets or sets how far an arriving request's timestamp may be from this server's clock,
+    /// in seconds, in either direction.
+    /// </summary>
+    /// <remarks>
+    /// The tolerated skew. Two home servers disagree by seconds without anything being wrong
+    /// and by minutes when one of them has no time source, which is why this is an operator's
+    /// number rather than one value for both a server on a time service and a server on a box
+    /// that lost its clock. It is also exactly how long a captured request stays useful to
+    /// whoever captured it, so every second added to it is a second of replay window bought.
+    /// How long a nonce is remembered follows this rather than being set beside it.
+    /// </remarks>
+    public int TimestampWindowSeconds { get; set; }
 
     /// <summary>
     /// Gets or sets how long the peer plane counts an arrival allowance over, in seconds.

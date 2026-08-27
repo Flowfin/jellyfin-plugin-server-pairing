@@ -165,6 +165,71 @@ public class ConfigurationReadingTests
     }
 
     /// <summary>
+    /// The third done condition of issue #26. The tolerated skew is a setting with a
+    /// documented maximum, and a value outside it is refused with the setting named rather
+    /// than narrowed to the maximum.
+    ///
+    /// Narrowing is the outcome worth refusing here rather than the safer-looking one: an
+    /// operator who widened the window because one of their servers has no time source, and
+    /// whose pairing then fails on a clock anyway, has been given a number they did not
+    /// choose and has no reason to look for it.
+    /// </summary>
+    [Theory]
+    [InlineData(0)]
+    [InlineData(-1)]
+    [InlineData(FreshnessWindow.MaximumWindowSeconds + 1)]
+    public void ASkewOutsideItsBoundsIsRefusedRatherThanNarrowed(int seconds)
+    {
+        var reading = ConfigurationReading.Of(new PluginConfiguration { TimestampWindowSeconds = seconds });
+
+        var refusal = Assert.Single(reading.Refusals);
+
+        Assert.Equal(nameof(PluginConfiguration.TimestampWindowSeconds), refusal.Setting);
+        Assert.False(reading.MayPair);
+        Assert.Equal(FreshnessWindow.WindowSeconds, reading.TimestampWindowSeconds);
+    }
+
+    /// <summary>
+    /// A skew inside the bounds reaches the window and decides what it refuses, or the setting
+    /// is a number the server refuses out of range and nothing else.
+    /// </summary>
+    [Fact]
+    public void ASkewInsideItsBoundsReachesTheWindow()
+    {
+        var reading = ConfigurationReading.Of(new PluginConfiguration { TimestampWindowSeconds = 30 });
+
+        Assert.Empty(reading.Refusals);
+        Assert.Equal(30, reading.TimestampWindowSeconds);
+
+        var window = reading.NewFreshnessWindow();
+
+        Assert.Equal(30, window.AcceptedSkewSeconds);
+
+        var now = new DateTimeOffset(2026, 8, 27, 12, 0, 0, TimeSpan.Zero);
+
+        Assert.Equal(
+            FreshnessOutcome.Fresh,
+            window.Judge("a", new string('1', 32), Stamp(now.AddSeconds(-30)), now));
+
+        Assert.Equal(
+            FreshnessOutcome.OutsideTheWindow,
+            window.Judge("a", new string('2', 32), Stamp(now.AddSeconds(-31)), now));
+    }
+
+    /// <summary>
+    /// The default skew is the one the constant argues, so a fresh installation and the type
+    /// cannot drift apart.
+    /// </summary>
+    [Fact]
+    public void TheDefaultSkewIsTheOneTheConstantArgues()
+    {
+        Assert.Equal(FreshnessWindow.WindowSeconds, new PluginConfiguration().TimestampWindowSeconds);
+        Assert.Equal(
+            FreshnessWindow.WindowSeconds,
+            Deserialised("<PluginConfiguration />").TimestampWindowSeconds);
+    }
+
+    /// <summary>
     /// An allowance outside its bounds is refused with the setting named, and the plane runs
     /// on the allowance a server nobody configured runs on rather than on the boundary the
     /// value crossed. A plane whose limit was refused is not a plane with no limit.
@@ -585,6 +650,14 @@ public class ConfigurationReadingTests
         => RefusedAddresses()
             .SelectMany(address => ConfigurationReading.Of(new PluginConfiguration { PeerAddress = address }).Refusals)
             .ToArray();
+
+    /// <summary>
+    /// A timestamp in the spelling the protocol fixes, which is seconds since the epoch.
+    /// </summary>
+    /// <param name="at">The instant.</param>
+    /// <returns>The timestamp as it travels.</returns>
+    private static string Stamp(DateTimeOffset at)
+        => at.ToUnixTimeSeconds().ToString(System.Globalization.CultureInfo.InvariantCulture);
 
     /// <summary>
     /// An address, for the cases that need one and are not about parsing it.

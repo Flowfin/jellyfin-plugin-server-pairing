@@ -46,6 +46,19 @@ can open an enrolment from. Two servers cannot be paired with this version. The
 `changelog` field in `build.yaml` and `build.net10.0.yaml` carries that
 paragraph in the same words.
 
+- [protocol] How far an arriving request's timestamp may be from this server's
+  clock is now an operator's setting rather than a fixed five minutes, with a
+  quarter of an hour as the widest it accepts. Two servers disagree by seconds
+  without anything being wrong and by minutes when one of them has no time source,
+  which is what the setting is for; what a second added to it buys is a second in
+  which a request captured off the network is still worth sending. A value outside
+  its range is refused with the setting named and the server keeps the span it
+  ships with rather than being narrowed to the widest accepted one. How long a
+  repeated request is remembered follows the setting and is not a second setting,
+  so the two cannot be put into a state where a repeat is forgotten while it would
+  still be accepted. A server nobody has configured behaves exactly as before, and
+  nothing in this version consults the window, so the setting is read and refused
+  and reaches nothing yet.
 - [protocol] How long an enrolment window stays open is now an operator's setting
   rather than a fixed ten minutes, with half an hour as the longest it accepts. A
   value above that is refused with the setting named and the window keeps the
