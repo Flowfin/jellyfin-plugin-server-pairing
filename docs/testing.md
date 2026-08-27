@@ -87,24 +87,27 @@ a clean test project prints, so the input is counted before the result is read:
 git ls-files -- '*Tests*'
 ```
 
-First run at `d070084`, over a test project of five files. Counted again on a
-clean checkout of `a1ebd36`, which reads the index rather than a commit:
+First run at `d070084`, over a test project of five files, and again on a clean
+checkout of `a1ebd36`, which answered 27. Neither is what a reader has. Counted
+at `c0532599b0dc8ce1debced4637eadb9bc04d85bb`, which reads the index rather than
+a commit:
 
 ```
 git ls-files -- '*Tests*' | wc -l
-27
+48
 ```
 
-and each of the three greps returns nothing and exits 1 over those twenty-seven.
+and each of the three greps returns nothing and exits 1 over those forty-eight.
 That is what makes the empty results above worth reading: the pathspec matched a
 project rather than nothing.
 
-The count is re-run rather than carried over on purpose. What stood here was the
-five-file listing from `d070084` and the sentence that the project carries none
-of the three refused things today, and those two do not go together: the reading
-was of a tree twenty-two files smaller than the one a reader has, and a
-present-tense sentence resting on it is the exact defect the paragraph above it
-argues against.
+The count is re-run rather than carried over on purpose, AND IT HAD BEEN CARRIED
+OVER AGAIN. What stood here first was the five-file listing from `d070084` beside
+a present-tense sentence; the paragraph that replaced it said so and pasted 27,
+and the tree left that behind in its turn, by twenty-one files. So the paragraph
+warning against a stale count went stale, which is the argument for the count
+being derived rather than written down: it stops being true on the next commit
+that adds a file the pathspec matches, and nothing in this tree says when it has.
 
 It is a grep and not a gate: it reads the names in the source and never what the
 code does, and nothing refuses a change that reintroduces one of them. #67 is
