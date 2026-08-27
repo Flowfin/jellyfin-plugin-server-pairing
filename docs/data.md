@@ -214,7 +214,7 @@ and every answer is the same refusal, because the key source the plane is given
 holds no keys:
 
     git grep -n 'IPairingKeySource, ' origin/master -- Jellyfin.Plugin.ServerPairing/PluginServiceRegistrator.cs
-    origin/master:Jellyfin.Plugin.ServerPairing/PluginServiceRegistrator.cs:40:        serviceCollection.AddSingleton<IPairingKeySource, NoPairingKeys>();
+    origin/master:Jellyfin.Plugin.ServerPairing/PluginServiceRegistrator.cs:64:        serviceCollection.AddSingleton<IPairingKeySource, NoPairingKeys>();
 
 So no window is consulted, no credential is checked and no revocation is applied
 on any path a request takes. The reading of the transition table above them is a

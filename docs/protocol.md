@@ -29,7 +29,7 @@ and there is a key store:
 
 ```
 git ls-tree -r --name-only origin/master -- Jellyfin.Plugin.ServerPairing/KeyStore | wc -l
-10
+12
 ```
 
 What has not changed is the thing that made the old sentence right. No request
@@ -38,7 +38,7 @@ source the plane is given is the one that holds none:
 
 ```
 git grep -n 'IPairingKeySource, ' origin/master -- Jellyfin.Plugin.ServerPairing/PluginServiceRegistrator.cs
-origin/master:Jellyfin.Plugin.ServerPairing/PluginServiceRegistrator.cs:40:        serviceCollection.AddSingleton<IPairingKeySource, NoPairingKeys>();
+origin/master:Jellyfin.Plugin.ServerPairing/PluginServiceRegistrator.cs:64:        serviceCollection.AddSingleton<IPairingKeySource, NoPairingKeys>();
 ```
 
 So the five paths are served and every one of them refuses, and nothing has ever
@@ -651,7 +651,7 @@ to hold it under. The wire already says as much about the request that arrives i
 that state:
 
     git grep -n "^them. Its .X-Pairing-Id. is 32" origin/master -- docs/protocol.md
-    origin/master:docs/protocol.md:384:them. Its `X-Pairing-Id` is 32 `0` characters, which is what line 5 of its
+    origin/master:docs/protocol.md:401:them. Its `X-Pairing-Id` is 32 `0` characters, which is what line 5 of its
 
 and nothing carries that over to the record.
 
@@ -672,7 +672,7 @@ window is held against the peer address, which is how a `hello` is matched to a
 window, and it writes no record and calls no state machine.
 
     git grep -n 'OpenAddresses' origin/master -- Jellyfin.Plugin.ServerPairing/Protocol/EnrolmentWindow.cs
-    origin/master:Jellyfin.Plugin.ServerPairing/Protocol/EnrolmentWindow.cs:262:    public IReadOnlyList<string> OpenAddresses(DateTimeOffset at)
+    origin/master:Jellyfin.Plugin.ServerPairing/Protocol/EnrolmentWindow.cs:264:    public IReadOnlyList<string> OpenAddresses(DateTimeOffset at)
 
 That is enough for the bounds issue #18 owns and it is not enough for this
 transition. Whoever wires the window to the state machine meets this question
@@ -851,11 +851,19 @@ the longest lifetime a caller may ask for are constants on `EnrolmentWindow`:
 ```
 git grep -nE "public const int (LifetimeSeconds|MaximumLifetimeSeconds|FailuresAllowed)" origin/master -- Jellyfin.Plugin.ServerPairing/Protocol/EnrolmentWindow.cs
 origin/master:Jellyfin.Plugin.ServerPairing/Protocol/EnrolmentWindow.cs:47:    public const int LifetimeSeconds = 600;
-origin/master:Jellyfin.Plugin.ServerPairing/Protocol/EnrolmentWindow.cs:58:    public const int MaximumLifetimeSeconds = 1800;
-origin/master:Jellyfin.Plugin.ServerPairing/Protocol/EnrolmentWindow.cs:70:    public const int FailuresAllowed = 3;
+origin/master:Jellyfin.Plugin.ServerPairing/Protocol/EnrolmentWindow.cs:60:    public const int MaximumLifetimeSeconds = 1800;
+origin/master:Jellyfin.Plugin.ServerPairing/Protocol/EnrolmentWindow.cs:72:    public const int FailuresAllowed = 3;
 ```
 
-Making the first of those a setting rather than a constant is issue #18.
+The first of those is the default behind a setting now rather than the only value
+a server runs on, which is the half of issue #18 that has landed. A value above
+the maximum is refused as the configuration is read rather than shortened to it,
+and the range is in [`configuration.md`](configuration.md):
+
+```
+git grep -n '`EnrolmentWindowSeconds` | ' origin/master -- docs/configuration.md
+origin/master:docs/configuration.md:24:| `EnrolmentWindowSeconds` | `int` | `600` | 1 to 1800 |
+```
 
 The cryptographic parameters. [`crypto.md`](crypto.md) holds them, and the three
 this document repeats are named at the top.
