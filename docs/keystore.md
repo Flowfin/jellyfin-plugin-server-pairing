@@ -116,8 +116,18 @@ and a line on every read is a line an operator learns to skip. The row is in
 The migration preserves a member it does not recognise on the way up, and the next
 write does not: a write serialises this build's own type and holds only what that
 type holds. And the plugin configuration carries no format number, which is the
-other half of issue #55 and waits on the settings in issue #50, because what is on
-that type today is still the plugin template's example fields.
+other half of issue #55. THIS SENTENCE SAID THAT HALF WAITED ON ISSUE #50 BECAUSE
+THE CONFIGURATION TYPE HELD ONLY THE TEMPLATE'S EXAMPLE FIELDS. It holds settings
+an operator sets now, and issue #50 is closed:
+
+```
+git grep -n 'public int EnrolmentWindowSeconds\|public string PeerAddress' origin/master -- Jellyfin.Plugin.ServerPairing/Configuration/PluginConfiguration.cs
+origin/master:Jellyfin.Plugin.ServerPairing/Configuration/PluginConfiguration.cs:106:    public string PeerAddress { get; set; }
+origin/master:Jellyfin.Plugin.ServerPairing/Configuration/PluginConfiguration.cs:134:    public int EnrolmentWindowSeconds { get; set; }
+```
+
+So what that half waits on is a decision about which number to stamp and when,
+which is issue #55's, rather than a type with nothing on it worth versioning.
 
 ## The type key material travels in
 
@@ -355,6 +365,10 @@ mistaken for reading a finished design.
   old to read from one it can, and says nothing about a file that is damaged or
   about one that is an older copy of this same store.
 - **A format number on the plugin configuration.** Only the key store carries
-  one. What is on the configuration type is still the plugin template's example
-  settings, so a number stamped on it today would version fields no operator will
-  ever set. Issue #50 fixes what that type holds and issue #55 holds the number.
+  one. This entry said the configuration type held only the template's example
+  settings, so that a number stamped on it would version fields no operator ever
+  sets. That type carries settings an operator sets now, which is issue #50 closed
+  rather than a reason that still holds, and the section above reads the two of
+  them out of it. Issue #55 holds the number, and what it is waiting on is a
+  decision about when to stamp one rather than a type with nothing worth
+  versioning on it.
