@@ -35,14 +35,24 @@ namespace Jellyfin.Plugin.ServerPairing.Api;
 public sealed class PeerPlaneController : ControllerBase
 {
     private readonly PeerPlane _plane;
+    private readonly TimeProvider _time;
     private readonly ILogger<PeerPlaneController> _logger;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="PeerPlaneController"/> class.
     /// </summary>
     /// <param name="plane">The plane that decides what an arriving request means.</param>
+    /// <param name="time">Where the instant an arrival is judged at comes from.</param>
     /// <param name="logger">Where the detail of a fault on this plane goes.</param>
     /// <remarks>
+    /// The clock enters the plugin here and nowhere else on this path. Everything the plane
+    /// decides is judged at an instant handed in, which is what makes an expiry testable
+    /// without waiting for one, and a request arriving from a peer carries no instant this
+    /// server may believe: the timestamp in its headers is the caller's. So the edge is where
+    /// the time has to be read, and <see cref="TimeProvider"/> is what a test replaces to move
+    /// it. Issue #26 owns that rule and <c>ClockSourceTests</c> is what refuses a second place
+    /// from reading one.
+    /// <para>
     /// The logger is the server's own and nothing in <see cref="PluginServiceRegistrator"/>
     /// registers one. The container this controller is built out of is a generic host's, with
     /// Serilog installed on it, and the plugin registrators run against that same collection.
@@ -54,10 +64,12 @@ public sealed class PeerPlaneController : ControllerBase
     /// builder registers the logging services is the generic host's own behaviour and is not
     /// read out of the server's tree. A container assembled without them cannot build this
     /// type, which is what the suite's own construction case supplies in the host's place.
+    /// </para>
     /// </remarks>
-    public PeerPlaneController(PeerPlane plane, ILogger<PeerPlaneController> logger)
+    public PeerPlaneController(PeerPlane plane, TimeProvider time, ILogger<PeerPlaneController> logger)
     {
         _plane = plane ?? throw new ArgumentNullException(nameof(plane));
+        _time = time ?? throw new ArgumentNullException(nameof(time));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -228,7 +240,7 @@ public sealed class PeerPlaneController : ControllerBase
 
         try
         {
-            outcome = _plane.Serve(message, await Arriving(message).ConfigureAwait(false));
+            outcome = _plane.Serve(message, await Arriving(message).ConfigureAwait(false), _time.GetUtcNow());
         }
         catch (OperationCanceledException) when (HttpContext.RequestAborted.IsCancellationRequested)
         {

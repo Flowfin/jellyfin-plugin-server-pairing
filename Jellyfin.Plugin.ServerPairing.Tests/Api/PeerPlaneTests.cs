@@ -23,6 +23,13 @@ public class PeerPlaneTests
     private const string Version = "1";
     private const string Timestamp = "1786000000";
 
+    /// <summary>
+    /// The instant every case hands the plane. Time only matters here through the arrival
+    /// limit, and no case in this file sends enough to reach one, so one instant serves them
+    /// all; <c>ArrivalLimitTests</c> is where time is moved.
+    /// </summary>
+    private static readonly DateTimeOffset At = DateTimeOffset.FromUnixTimeSeconds(1786000000);
+
     private static byte[] Key { get; } = RandomNumberGenerator.GetBytes(32);
 
     /// <summary>
@@ -88,7 +95,7 @@ public class PeerPlaneTests
 
         foreach (var deviation in deviations)
         {
-            var outcome = Plane().Serve(message, Signed(message, target: deviation));
+            var outcome = Plane().Serve(message, Signed(message, target: deviation), At);
 
             Assert.Equal(RefusalCode.Refused, outcome.Code);
             Assert.False(outcome.BodyWasHandedOn);
@@ -105,7 +112,7 @@ public class PeerPlaneTests
     [MemberData(nameof(EveryMessage))]
     public void ARequestWithNoReadableTargetIsRefused(PairingMessage message)
     {
-        var outcome = Plane().Serve(message, Signed(message, target: null));
+        var outcome = Plane().Serve(message, Signed(message, target: null), At);
 
         Assert.Equal(RefusalCode.Refused, outcome.Code);
         Assert.False(outcome.BodyWasHandedOn);
@@ -123,7 +130,7 @@ public class PeerPlaneTests
     {
         foreach (var method in new[] { "GET", "PUT", "DELETE", "post" })
         {
-            var outcome = Plane().Serve(message, Signed(message, method: method));
+            var outcome = Plane().Serve(message, Signed(message, method: method), At);
 
             Assert.Equal(RefusalCode.Refused, outcome.Code);
             Assert.False(outcome.BodyWasHandedOn);
@@ -149,7 +156,7 @@ public class PeerPlaneTests
 
         foreach (var signature in signatures)
         {
-            var outcome = Plane().Serve(message, Signed(message, signature: signature));
+            var outcome = Plane().Serve(message, Signed(message, signature: signature), At);
 
             Assert.Equal(RefusalCode.Refused, outcome.Code);
             Assert.False(outcome.BodyWasHandedOn);
@@ -166,7 +173,7 @@ public class PeerPlaneTests
     [MemberData(nameof(EveryMessage))]
     public void ARequestNamingAnUnknownPairingIsRefused(PairingMessage message)
     {
-        var outcome = Plane().Serve(message, Signed(message, pairingId: "00000000000000000000000000000000"));
+        var outcome = Plane().Serve(message, Signed(message, pairingId: "00000000000000000000000000000000"), At);
 
         Assert.Equal(RefusalCode.Refused, outcome.Code);
         Assert.False(outcome.BodyWasHandedOn);
@@ -184,7 +191,7 @@ public class PeerPlaneTests
     {
         foreach (var without in new[] { "id", "version", "timestamp", "nonce" })
         {
-            var outcome = Plane().Serve(message, Signed(message, drop: without));
+            var outcome = Plane().Serve(message, Signed(message, drop: without), At);
 
             Assert.Equal(RefusalCode.Refused, outcome.Code);
             Assert.False(outcome.BodyWasHandedOn);
@@ -203,7 +210,7 @@ public class PeerPlaneTests
     {
         var body = Encoding.ASCII.GetBytes("{\"probe\":\"body\"}");
 
-        var outcome = Plane().Serve(message, Signed(message, body: body));
+        var outcome = Plane().Serve(message, Signed(message, body: body), At);
 
         Assert.True(outcome.BodyWasHandedOn);
         Assert.Equal(body, outcome.VerifiedBody.ToArray());
@@ -242,7 +249,7 @@ public class PeerPlaneTests
     [MemberData(nameof(EveryMessage))]
     public void ABodyOverItsLimitIsRefusedAndNeverHandedOn(PairingMessage message)
     {
-        var outcome = Plane().Serve(message, Signed(message, body: new byte[8], exceeded: true));
+        var outcome = Plane().Serve(message, Signed(message, body: new byte[8], exceeded: true), At);
 
         Assert.Equal(RefusalCode.Refused, outcome.Code);
         Assert.False(outcome.BodyWasHandedOn);
@@ -265,7 +272,7 @@ public class PeerPlaneTests
         Assert.Equal(TransitionOutcome.Refused, transition.Outcome);
         Assert.Equal(PairingState.Absent, transition.To);
 
-        Assert.Equal(RefusalCode.Refused, Plane().Serve(message, Signed(message)).Code);
+        Assert.Equal(RefusalCode.Refused, Plane().Serve(message, Signed(message), At).Code);
     }
 
     /// <summary>
@@ -289,7 +296,7 @@ public class PeerPlaneTests
             Signed(message, pairingId: "00000000000000000000000000000000"),
         };
 
-        foreach (var outcome in causes.Select(cause => Plane().Serve(message, cause)))
+        foreach (var outcome in causes.Select(cause => Plane().Serve(message, cause, At)))
         {
             Assert.Equal("{\"code\":\"refused\"}", Refusal.Body(outcome.Code));
         }
@@ -343,7 +350,98 @@ public class PeerPlaneTests
         Assert.Throws<ArgumentOutOfRangeException>(() => Refusal.Wire((RefusalCode)99));
     }
 
-    private static PeerPlane Plane() => new PeerPlane(new RequestAuthenticator(new KnownKeys(PairingId, Key)));
+    /// <summary>
+    /// An arrival past the limit is refused before it is verified. The requests before it
+    /// carry the same signature and are handed on, so what separates the last one from them is
+    /// the count and nothing else, and the body never reaching verification is what says the
+    /// limit sits in front of the cryptography rather than behind it.
+    /// </summary>
+    /// <param name="message">The message.</param>
+    [Theory]
+    [MemberData(nameof(EveryMessage))]
+    public void AnArrivalPastTheLimitIsRefusedBeforeItIsVerified(PairingMessage message)
+    {
+        var plane = Plane();
+
+        for (var i = 0; i < ArrivalLimit.ArrivalsPerPairing; i++)
+        {
+            Assert.True(plane.Serve(message, Signed(message), At).BodyWasHandedOn);
+        }
+
+        var past = plane.Serve(message, Signed(message), At);
+
+        Assert.False(past.BodyWasHandedOn);
+        Assert.Equal(RefusalCode.Refused, past.Code);
+        Assert.Equal("{\"code\":\"refused\"}", Refusal.Body(past.Code));
+    }
+
+    /// <summary>
+    /// The allowance comes back a window later, so a peer that sent too fast is refused for a
+    /// window rather than until the server is restarted. The instant is the only thing that
+    /// differs between the refused arrival and the admitted one.
+    /// </summary>
+    /// <param name="message">The message.</param>
+    [Theory]
+    [MemberData(nameof(EveryMessage))]
+    public void TheAllowanceComesBackAWindowLater(PairingMessage message)
+    {
+        var plane = Plane();
+
+        for (var i = 0; i < ArrivalLimit.ArrivalsPerPairing; i++)
+        {
+            plane.Serve(message, Signed(message), At);
+        }
+
+        Assert.False(plane.Serve(message, Signed(message), At).BodyWasHandedOn);
+        Assert.True(plane.Serve(message, Signed(message), At.AddSeconds(ArrivalLimit.WindowSeconds)).BodyWasHandedOn);
+    }
+
+    /// <summary>
+    /// A flood claiming the enrolment identifier does not spend a pairing's allowance. The two
+    /// are counted apart, which is the property that keeps a stranger who can reach this plane
+    /// from ending a pairing's traffic by sending hellos at it.
+    /// </summary>
+    /// <param name="message">The message.</param>
+    [Theory]
+    [MemberData(nameof(EveryMessage))]
+    public void AFloodOnTheEnrolmentIdentifierLeavesAPairingsAllowanceAlone(PairingMessage message)
+    {
+        var plane = Plane();
+
+        for (var i = 0; i < ArrivalLimit.ArrivalsPerEnrolment * 4; i++)
+        {
+            plane.Serve(message, Signed(message, pairingId: ArrivalLimit.EnrolmentPairingId), At);
+        }
+
+        Assert.True(plane.Serve(message, Signed(message), At).BodyWasHandedOn);
+    }
+
+    /// <summary>
+    /// An arrival past the limit costs no key lookup and no signature computation. That is
+    /// what the limit is for: a caller that has spent its allowance is refused before this
+    /// server does the work, rather than after it has already done it.
+    /// </summary>
+    /// <param name="message">The message.</param>
+    [Theory]
+    [MemberData(nameof(EveryMessage))]
+    public void AnArrivalPastTheLimitCostsNoVerification(PairingMessage message)
+    {
+        var keys = new KnownKeys(PairingId, Key);
+        var plane = new PeerPlane(new RequestAuthenticator(keys), new ArrivalLimit());
+
+        for (var i = 0; i < ArrivalLimit.ArrivalsPerPairing; i++)
+        {
+            plane.Serve(message, Signed(message), At);
+        }
+
+        var asked = keys.Asked;
+
+        Assert.Equal(ArrivalLimit.ArrivalsPerPairing, asked);
+        Assert.False(plane.Serve(message, Signed(message), At).BodyWasHandedOn);
+        Assert.Equal(asked, keys.Asked);
+    }
+
+    private static PeerPlane Plane() => new PeerPlane(new RequestAuthenticator(new KnownKeys(PairingId, Key)), new ArrivalLimit());
 
     private static ArrivingRequest Signed(
         PairingMessage message,
@@ -405,9 +503,20 @@ public class PeerPlaneTests
             _material = material;
         }
 
+        /// <summary>
+        /// Gets how many times a key has been asked for. A request the plane refuses before it
+        /// verifies never reaches here, which is what makes the ordering observable rather
+        /// than a claim about the source it is written in.
+        /// </summary>
+        public int Asked { get; private set; }
+
         public ReadOnlyMemory<byte> ArrivingKey(string pairingId)
-            => string.Equals(pairingId, _known, StringComparison.Ordinal)
+        {
+            Asked++;
+
+            return string.Equals(pairingId, _known, StringComparison.Ordinal)
                 ? _material
                 : ReadOnlyMemory<byte>.Empty;
+        }
     }
 }

@@ -40,13 +40,17 @@ public sealed class PeerPlane
 
     private readonly RequestAuthenticator _authenticator;
 
+    private readonly ArrivalLimit _arrivals;
+
     /// <summary>
     /// Initializes a new instance of the <see cref="PeerPlane"/> class.
     /// </summary>
     /// <param name="authenticator">What decides whether an arriving request is authentic.</param>
-    public PeerPlane(RequestAuthenticator authenticator)
+    /// <param name="arrivals">How much of this plane one claimed identifier may use.</param>
+    public PeerPlane(RequestAuthenticator authenticator, ArrivalLimit arrivals)
     {
         _authenticator = authenticator ?? throw new ArgumentNullException(nameof(authenticator));
+        _arrivals = arrivals ?? throw new ArgumentNullException(nameof(arrivals));
     }
 
     /// <summary>
@@ -83,14 +87,23 @@ public sealed class PeerPlane
     /// </summary>
     /// <param name="message">The message the path this arrived on belongs to.</param>
     /// <param name="arrived">The request as it arrived.</param>
+    /// <param name="at">This server's clock, which the arrival limit is judged against.</param>
     /// <returns>What the caller is told, and whether the body was handed past verification.</returns>
     /// <remarks>
     /// The order of the checks is the security property rather than a style. The path is
     /// compared before anything else because a request on the wrong path is not a request on
     /// this plane at all. A body over its limit is refused before a signature is computed, so
-    /// a stranger cannot make this server do cryptographic work by sending a large body.
+    /// a stranger cannot make this server do cryptographic work by sending a large body. The
+    /// arrival limit sits in the same place and for the same reason: what it bounds is the work
+    /// a caller can ask for, so it has to answer before the work is done rather than after.
     /// Verification runs before the body is handed on, so nothing richer than bytes exists for
     /// an unauthenticated caller to reach.
+    /// <para>
+    /// An arrival the limit refuses is answered with the undistinguished refusal, like every
+    /// other cause. A caller learns from it exactly what it learns from any other refusal,
+    /// which is nothing, and a stranger cannot use it to find out whether an identifier it
+    /// guessed is one this server holds.
+    /// </para>
     /// <para>
     /// Every answer today is <see cref="RefusalCode.Refused"/>, and that is the transition
     /// table rather than a placeholder. No key store and no record store exist, so every
@@ -100,7 +113,7 @@ public sealed class PeerPlane
     /// answer to the table instead of to this sentence.
     /// </para>
     /// </remarks>
-    public PeerPlaneOutcome Serve(PairingMessage message, ArrivingRequest arrived)
+    public PeerPlaneOutcome Serve(PairingMessage message, ArrivingRequest arrived, DateTimeOffset at)
     {
         var path = PathFor(message);
 
@@ -108,6 +121,11 @@ public sealed class PeerPlane
             || !string.Equals(arrived.RawTarget, path, StringComparison.Ordinal)
             || !string.Equals(arrived.Method, Method, StringComparison.Ordinal)
             || arrived.BodyExceededItsLimit)
+        {
+            return new PeerPlaneOutcome(RefusalCode.Refused, false, ReadOnlyMemory<byte>.Empty);
+        }
+
+        if (_arrivals.Admit(arrived.PairingId, at) != ArrivalOutcome.Admitted)
         {
             return new PeerPlaneOutcome(RefusalCode.Refused, false, ReadOnlyMemory<byte>.Empty);
         }

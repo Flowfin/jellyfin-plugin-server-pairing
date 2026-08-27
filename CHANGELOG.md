@@ -46,6 +46,15 @@ can open an enrolment from. Two servers cannot be paired with this version. The
 `changelog` field in `build.yaml` and `build.net10.0.yaml` carries that
 paragraph in the same words.
 
+- [protocol] A pairing request is now refused when too many have already arrived
+  claiming the same pairing identifier: sixty inside a minute, and six for the
+  identifier every enrolment carries, which every enrolment shares. It is
+  answered with the same refusal every other caller gets, it is counted against
+  the identifier the request claims rather than one it has proved, and the
+  allowance comes back a minute after the first request that spent it. Nothing
+  on this server was measured under a flood; what the limit is for is that a
+  stranger cannot make this server compute a signature per request, and it does
+  not keep a pairing reachable while somebody is flooding the identifier it uses.
 - When the server starts, this plugin now writes one line to the log for each
   pairing the key store already holds, naming it. The store is not in the
   plugin's directory, so it survives an uninstall and a reinstall comes up paired

@@ -1,3 +1,4 @@
+using System;
 using Jellyfin.Plugin.ServerPairing.Api;
 using Jellyfin.Plugin.ServerPairing.KeyStore;
 using Jellyfin.Plugin.ServerPairing.Protocol;
@@ -5,6 +6,7 @@ using MediaBrowser.Common.Configuration;
 using MediaBrowser.Controller;
 using MediaBrowser.Controller.Plugins;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace Jellyfin.Plugin.ServerPairing;
 
@@ -37,7 +39,20 @@ public class PluginServiceRegistrator : IPluginServiceRegistrator
         // it replaces.
         serviceCollection.AddSingleton<IPairingKeySource, NoPairingKeys>();
         serviceCollection.AddSingleton(services => new RequestAuthenticator(services.GetRequiredService<IPairingKeySource>()));
-        serviceCollection.AddSingleton(services => new PeerPlane(services.GetRequiredService<RequestAuthenticator>()));
+
+        // Once, because a limit held per caller is no limit. What it counts lives in this
+        // object, so a second instance would hand every flood a second allowance.
+        serviceCollection.AddSingleton(_ => new ArrivalLimit());
+        serviceCollection.AddSingleton(services => new PeerPlane(
+            services.GetRequiredService<RequestAuthenticator>(),
+            services.GetRequiredService<ArrivalLimit>()));
+
+        // The one place in this plugin that reads a real clock. Everything downstream judges
+        // at an instant handed in, so a test moves time by handing in a different one, and
+        // ClockSourceTests refuses a second site from reading the wall clock. TryAdd rather
+        // than Add: the host may already have registered one, and two clocks in a container is
+        // two answers to what time it is.
+        serviceCollection.TryAddSingleton(TimeProvider.System);
 
         // The key store, over the file the host's own paths put it at. The path is derived
         // from IApplicationPaths rather than written down, so a server whose data directory is

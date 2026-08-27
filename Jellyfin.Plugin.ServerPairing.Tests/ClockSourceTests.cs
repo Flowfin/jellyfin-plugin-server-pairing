@@ -38,6 +38,29 @@ public class ClockSourceTests
     };
 
     /// <summary>
+    /// The one call that produces a real clock, and the one file allowed to name it.
+    /// </summary>
+    /// <remarks>
+    /// A clock has to enter the plugin somewhere: a request from a peer carries no instant
+    /// this server may believe, so the edge that serves it reads the time and hands it in.
+    /// What this refuses is a second place doing the same, because a clock resolved wherever
+    /// it is wanted is a clock no test can move, which is the state the two assertions above
+    /// exist to keep this plugin out of.
+    /// <para>
+    /// The composition root is the exception because that is where a dependency is chosen
+    /// rather than used. Everything it hands the clock to takes it as an argument, so a test
+    /// replaces it by constructing the type it is testing, and nothing has to reach past a
+    /// static to do it.
+    /// </para>
+    /// </remarks>
+    private const string RealClockCall = "TimeProvider.System";
+
+    /// <summary>
+    /// The one file that may name the call above.
+    /// </summary>
+    private const string CompositionRoot = "PluginServiceRegistrator.cs";
+
+    /// <summary>
     /// The calls that wait for real time. They are assembled from pieces rather than
     /// written out, because this file is inside the set the assertion below reads and a
     /// literal here would make the guard refuse itself.
@@ -79,6 +102,23 @@ public class ClockSourceTests
     }
 
     /// <summary>
+    /// One file names the real clock and no other does. The composition root is where a
+    /// dependency is chosen; a type that resolved one for itself would be a type whose expiry
+    /// nobody can move, and that is the habit the whole of this file is about.
+    /// </summary>
+    [Fact]
+    public void OnlyTheCompositionRootReachesForARealClock()
+    {
+        var reaching = Occurrences(SourceFiles(PluginSourceDirectory()), new[] { RealClockCall })
+            .Select(o => o.Split(':')[0])
+            .Distinct(StringComparer.Ordinal)
+            .OrderBy(f => f, StringComparer.Ordinal)
+            .ToArray();
+
+        Assert.Equal(new[] { CompositionRoot }, reaching);
+    }
+
+    /// <summary>
     /// The two assertions above pass trivially if the directory walk finds nothing, which
     /// is what happens the day somebody moves a project or renames a folder. This fixes
     /// the floor: both scans have to be reading a real set of files, and this file is one
@@ -106,6 +146,8 @@ public class ClockSourceTests
     {
         Assert.NotEmpty(WallClockCalls);
         Assert.NotEmpty(SleepingCalls);
+        Assert.NotEmpty(RealClockCall);
+        Assert.NotEmpty(CompositionRoot);
     }
 
     /// <summary>

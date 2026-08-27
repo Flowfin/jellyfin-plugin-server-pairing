@@ -339,6 +339,69 @@ public class PeerPlaneControllerTests
         return bytes;
     }
 
+    /// <summary>
+    /// The instant the plane judges an arrival at is the one this controller reads from its
+    /// own time source, and it is read per request rather than once. A controller holding a
+    /// clock it read at construction would count every request of a server's life into one
+    /// window, and the count coming back to one after the source moves is what says it does
+    /// not.
+    /// </summary>
+    /// <remarks>
+    /// This is asserted through what the limit counted rather than by watching a call, because
+    /// every answer this plane gives is the same bytes and an instant that never moved would
+    /// look identical from outside.
+    /// </remarks>
+    [Fact]
+    public async Task TheInstantAnArrivalIsJudgedAtIsReadFromTheClockPerRequest()
+    {
+        var limit = new ArrivalLimit();
+        var plane = new PeerPlane(new RequestAuthenticator(new NoPairingKeys()), limit);
+        var clock = new MovableClock(DateTimeOffset.FromUnixTimeSeconds(1786000000));
+
+        await Over(plane, clock).Hello().ConfigureAwait(true);
+
+        Assert.Equal(1, limit.Counted(ArrivalLimit.EnrolmentPairingId));
+
+        await Over(plane, clock).Hello().ConfigureAwait(true);
+
+        Assert.Equal(2, limit.Counted(ArrivalLimit.EnrolmentPairingId));
+
+        clock.MoveTo(clock.GetUtcNow().AddSeconds(ArrivalLimit.WindowSeconds));
+
+        await Over(plane, clock).Hello().ConfigureAwait(true);
+
+        Assert.Equal(1, limit.Counted(ArrivalLimit.EnrolmentPairingId));
+    }
+
+    /// <summary>
+    /// A controller over a given plane and clock, reached on the hello path with no headers,
+    /// so the identifier it is counted under is the one an unreadable header produces.
+    /// </summary>
+    /// <param name="plane">The plane.</param>
+    /// <param name="clock">The time source.</param>
+    /// <returns>The controller.</returns>
+    private static PeerPlaneController Over(PeerPlane plane, TimeProvider clock)
+    {
+        var context = new DefaultHttpContext();
+
+        context.Request.Method = PeerPlane.Method;
+        context.Request.Path = "/ServerPairing/hello";
+        context.Request.Body = new MemoryStream(Array.Empty<byte>());
+        context.Request.Headers["X-Pairing-Id"] = ArrivalLimit.EnrolmentPairingId;
+
+        var feature = context.Features.Get<IHttpRequestFeature>();
+
+        if (feature is not null)
+        {
+            feature.RawTarget = PeerPlane.PathFor(PairingMessage.Hello);
+        }
+
+        return new PeerPlaneController(plane, clock, NullLogger<PeerPlaneController>.Instance)
+        {
+            ControllerContext = new ControllerContext { HttpContext = context },
+        };
+    }
+
     private static PeerPlaneController ControllerFor(string? rawTarget, string routedPath, byte[] body)
         => ControllerOver(rawTarget, routedPath, new MemoryStream(body), NullLogger<PeerPlaneController>.Instance, CancellationToken.None);
 
@@ -363,7 +426,7 @@ public class PeerPlaneControllerTests
             feature.RawTarget = rawTarget!;
         }
 
-        return new PeerPlaneController(new PeerPlane(new RequestAuthenticator(new NoPairingKeys())), logger)
+        return new PeerPlaneController(new PeerPlane(new RequestAuthenticator(new NoPairingKeys()), new ArrivalLimit()), TimeProvider.System, logger)
         {
             ControllerContext = new ControllerContext { HttpContext = context },
         };
@@ -611,5 +674,26 @@ public class PeerPlaneControllerTests
 
         public override ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default)
             => base.ReadAsync(buffer[..Math.Min(_atMost, buffer.Length)], cancellationToken);
+    }
+
+    /// <summary>
+    /// A time source a test moves on command. It is here rather than in the plugin, because
+    /// nothing in the plugin may read a clock and nothing in the suite may wait for one.
+    /// </summary>
+    private sealed class MovableClock : TimeProvider
+    {
+        private DateTimeOffset _now;
+
+        public MovableClock(DateTimeOffset now)
+        {
+            _now = now;
+        }
+
+        public override DateTimeOffset GetUtcNow() => _now;
+
+        public void MoveTo(DateTimeOffset now)
+        {
+            _now = now;
+        }
     }
 }
