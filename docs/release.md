@@ -123,9 +123,9 @@ number.
 One leg of the hygiene check reads those two markers on the way in:
 
     git grep -n 'marked_change' origin/master -- .github/pr-hygiene.sh
-    origin/master:.github/pr-hygiene.sh:190:marked_change() {
-    origin/master:.github/pr-hygiene.sh:213:marked_change protocol "$protocol_paths"
-    origin/master:.github/pr-hygiene.sh:214:marked_change contract "$contract_paths"
+    origin/master:.github/pr-hygiene.sh:195:marked_change() {
+    origin/master:.github/pr-hygiene.sh:218:marked_change protocol "$protocol_paths"
+    origin/master:.github/pr-hygiene.sh:219:marked_change contract "$contract_paths"
 
 It refuses a pull request that touches the protocol or the contract and adds no
 line carrying the marker for what it touched. That bound now stands in front of a

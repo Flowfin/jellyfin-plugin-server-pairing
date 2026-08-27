@@ -29,7 +29,7 @@ and there is a key store:
 
 ```
 git ls-tree -r --name-only origin/master -- Jellyfin.Plugin.ServerPairing/KeyStore | wc -l
-9
+10
 ```
 
 What has not changed is the thing that made the old sentence right. No request
@@ -38,7 +38,7 @@ source the plane is given is the one that holds none:
 
 ```
 git grep -n 'IPairingKeySource, ' origin/master -- Jellyfin.Plugin.ServerPairing/PluginServiceRegistrator.cs
-origin/master:Jellyfin.Plugin.ServerPairing/PluginServiceRegistrator.cs:38:        serviceCollection.AddSingleton<IPairingKeySource, NoPairingKeys>();
+origin/master:Jellyfin.Plugin.ServerPairing/PluginServiceRegistrator.cs:40:        serviceCollection.AddSingleton<IPairingKeySource, NoPairingKeys>();
 ```
 
 So the five paths are served and every one of them refuses, and nothing has ever
@@ -622,8 +622,8 @@ this table says a pairing moves from `Absent` to `Offered` there is no identifie
 to hold it under. The wire already says as much about the request that arrives in
 that state:
 
-    git grep -n "Its .X-Pairing-Id. is 32" origin/master -- docs/protocol.md
-    origin/master:docs/protocol.md:364:them. Its `X-Pairing-Id` is 32 `0` characters, which is what line 5 of its
+    git grep -n "^them. Its .X-Pairing-Id. is 32" origin/master -- docs/protocol.md
+    origin/master:docs/protocol.md:384:them. Its `X-Pairing-Id` is 32 `0` characters, which is what line 5 of its
 
 and nothing carries that over to the record.
 

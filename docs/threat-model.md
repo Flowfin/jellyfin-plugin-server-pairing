@@ -104,7 +104,7 @@ and there is a key store:
 
 ```
 git ls-tree -r --name-only origin/master -- Jellyfin.Plugin.ServerPairing/KeyStore | wc -l
-9
+10
 ```
 
 There is still no pairing and no dashboard page, and the reason the rest of this
@@ -114,7 +114,7 @@ is given holds no keys:
 
 ```
 git grep -n 'IPairingKeySource, ' origin/master -- Jellyfin.Plugin.ServerPairing/PluginServiceRegistrator.cs
-origin/master:Jellyfin.Plugin.ServerPairing/PluginServiceRegistrator.cs:38:        serviceCollection.AddSingleton<IPairingKeySource, NoPairingKeys>();
+origin/master:Jellyfin.Plugin.ServerPairing/PluginServiceRegistrator.cs:40:        serviceCollection.AddSingleton<IPairingKeySource, NoPairingKeys>();
 ```
 
 So no adversary described below is currently refused by anything that reads what
@@ -204,25 +204,38 @@ and inherited members at any depth, and refuses a member whose type is a run of
 bytes or comes from the cryptography namespace:
 
     git grep -n "public void NoMemberReachableFromThePluginConfigurationCanHoldKeyMaterial" origin/master -- Jellyfin.Plugin.ServerPairing.Tests/ConfigurationKeyMaterialTests.cs
-    origin/master:Jellyfin.Plugin.ServerPairing.Tests/ConfigurationKeyMaterialTests.cs:68:    public void NoMemberReachableFromThePluginConfigurationCanHoldKeyMaterial()
+    origin/master:Jellyfin.Plugin.ServerPairing.Tests/ConfigurationKeyMaterialTests.cs:78:    public void NoMemberReachableFromThePluginConfigurationCanHoldKeyMaterial()
 
 Two assertions stand under that one, because a walk that reached nothing and a
 configuration with nothing wrong on it produce the same empty result, and so
 does a refusal that has stopped refusing anything:
 
     git grep -n "public void TheWalkReachesEverySettingOnTheConfiguration\|public void EveryShapeAKeyIsPassedAroundInIsRefused" origin/master -- Jellyfin.Plugin.ServerPairing.Tests/ConfigurationKeyMaterialTests.cs
-    origin/master:Jellyfin.Plugin.ServerPairing.Tests/ConfigurationKeyMaterialTests.cs:89:    public void TheWalkReachesEverySettingOnTheConfiguration()
-    origin/master:Jellyfin.Plugin.ServerPairing.Tests/ConfigurationKeyMaterialTests.cs:111:    public void EveryShapeAKeyIsPassedAroundInIsRefused()
+    origin/master:Jellyfin.Plugin.ServerPairing.Tests/ConfigurationKeyMaterialTests.cs:99:    public void TheWalkReachesEverySettingOnTheConfiguration()
+    origin/master:Jellyfin.Plugin.ServerPairing.Tests/ConfigurationKeyMaterialTests.cs:121:    public void EveryShapeAKeyIsPassedAroundInIsRefused()
 
 What that settles is one object and not the asset. It refuses key material
 reaching the thing the host serialises; it says nothing about how a key is held
-once there is somewhere to hold it, because there is no store:
+once there is somewhere to hold it.
 
-    git ls-tree -r --name-only origin/master -- Jellyfin.Plugin.ServerPairing/KeyStore docs/keystore.md ; echo "exit=$?"
-    exit=0
+THIS PARAGRAPH SAID THERE WAS NOWHERE TO HOLD ONE AND PASTED AN EMPTY READING
+FOR IT. There is a store, and a document about it:
 
-Empty output, exit zero. The store, the path it lives at and what protects it at
-rest are what M4 still owes, in issues #30, #31 and #35.
+    git ls-tree -r --name-only origin/master -- Jellyfin.Plugin.ServerPairing/KeyStore docs/keystore.md | wc -l
+    11
+
+The three issues named here as owing the store, the path it lives at and what
+protects it at rest are closed:
+
+    for n in 30 31 35; do gh issue view $n --repo Flowfin/jellyfin-plugin-server-pairing --json number,state --jq '[.number, .state] | @tsv'; done
+    30	CLOSED
+    31	CLOSED
+    35	CLOSED
+
+What the sentence above still does is bound this guard rather than the asset, and
+that half is unchanged: nothing in `ConfigurationKeyMaterialTests` reads the key
+store, and what protects the store's file is [`keystore.md`](keystore.md)'s own
+section rather than anything asserted here.
 
 ### What the server's own backup does and does not take
 
@@ -497,7 +510,7 @@ failures counted against the window rather than against a source address:
 git grep -nE "public const int (LifetimeSeconds|MaximumLifetimeSeconds|FailuresAllowed)" origin/master -- Jellyfin.Plugin.ServerPairing/Protocol/EnrolmentWindow.cs
 origin/master:Jellyfin.Plugin.ServerPairing/Protocol/EnrolmentWindow.cs:47:    public const int LifetimeSeconds = 600;
 origin/master:Jellyfin.Plugin.ServerPairing/Protocol/EnrolmentWindow.cs:58:    public const int MaximumLifetimeSeconds = 1800;
-origin/master:Jellyfin.Plugin.ServerPairing/Protocol/EnrolmentWindow.cs:69:    public const int FailuresAllowed = 3;
+origin/master:Jellyfin.Plugin.ServerPairing/Protocol/EnrolmentWindow.cs:70:    public const int FailuresAllowed = 3;
 ```
 
 The paragraph above this section still holds over it. Nothing routes a stranger's
@@ -510,7 +523,7 @@ open, which the type answers and nothing reads:
 
 ```
 git grep -n "public IReadOnlyList<string> OpenAddresses" origin/master -- Jellyfin.Plugin.ServerPairing/Protocol/EnrolmentWindow.cs
-origin/master:Jellyfin.Plugin.ServerPairing/Protocol/EnrolmentWindow.cs:261:    public IReadOnlyList<string> OpenAddresses(DateTimeOffset at)
+origin/master:Jellyfin.Plugin.ServerPairing/Protocol/EnrolmentWindow.cs:262:    public IReadOnlyList<string> OpenAddresses(DateTimeOffset at)
 ```
 
 There is no page to render that and no endpoint to ask it, which matters to this
@@ -682,7 +695,7 @@ the ones holding the second and the fifth:
 git grep -n "public void AHostCredentialUsedAsTheSigningKeyIsRefused\|public void AKeyIsAcceptedOnlyForThePairingItBelongsTo\|public void AKeyThatStopsBeingLiveStopsVerifyingOnTheNextRequest" origin/master -- Jellyfin.Plugin.ServerPairing.Tests/Protocol/PairingCredentialTests.cs
 origin/master:Jellyfin.Plugin.ServerPairing.Tests/Protocol/PairingCredentialTests.cs:121:    public void AHostCredentialUsedAsTheSigningKeyIsRefused(string encoding)
 origin/master:Jellyfin.Plugin.ServerPairing.Tests/Protocol/PairingCredentialTests.cs:145:    public void AKeyIsAcceptedOnlyForThePairingItBelongsTo()
-origin/master:Jellyfin.Plugin.ServerPairing.Tests/Protocol/PairingCredentialTests.cs:173:    public void AKeyThatStopsBeingLiveStopsVerifyingOnTheNextRequest()
+origin/master:Jellyfin.Plugin.ServerPairing.Tests/Protocol/PairingCredentialTests.cs:176:    public void AKeyThatStopsBeingLiveStopsVerifyingOnTheNextRequest()
 ```
 
 The sixth is a landed type as well, which separates a timestamp outside the
@@ -744,7 +757,7 @@ authenticator, and the authenticator is given the key source that holds nothing:
 
 ```
 git grep -n 'IPairingKeySource, ' origin/master -- Jellyfin.Plugin.ServerPairing/PluginServiceRegistrator.cs
-origin/master:Jellyfin.Plugin.ServerPairing/PluginServiceRegistrator.cs:38:        serviceCollection.AddSingleton<IPairingKeySource, NoPairingKeys>();
+origin/master:Jellyfin.Plugin.ServerPairing/PluginServiceRegistrator.cs:40:        serviceCollection.AddSingleton<IPairingKeySource, NoPairingKeys>();
 ```
 
 So nothing an outside caller sends reaches the state machine, the freshness

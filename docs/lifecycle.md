@@ -130,7 +130,7 @@ This paragraph used to say it did not and that nothing in the tree could, becaus
 no code ran at startup.
 
     git grep -n 'AddHostedService' -- Jellyfin.Plugin.ServerPairing/PluginServiceRegistrator.cs
-    Jellyfin.Plugin.ServerPairing/PluginServiceRegistrator.cs:73:        serviceCollection.AddHostedService<StoreAtStartup>();
+    Jellyfin.Plugin.ServerPairing/PluginServiceRegistrator.cs:88:        serviceCollection.AddHostedService<StoreAtStartup>();
 
 The entry is in [`logging.md`](logging.md)'s table, at Information. Looking does
 not create the store: a server that has never paired anything still has no file
