@@ -159,6 +159,51 @@ public class PeerAddressTests
     }
 
     /// <summary>
+    /// A cleartext address approves the claim a cleartext peer makes about itself. The claim
+    /// goes through the same parse the address did, so an address accepted under the
+    /// operator's acknowledgement would otherwise approve nothing at all and every hello from
+    /// the peer the operator entered would be refused for naming the address it was given.
+    /// </summary>
+    [Fact]
+    public void ACleartextAddressApprovesTheClaimACleartextPeerMakes()
+    {
+        Assert.Equal(PeerAddressOutcome.Accepted, PeerAddress.Parse("http://peer.example", true, out var approved));
+
+        Assert.True(approved!.Approves("http://peer.example"));
+        Assert.True(approved.Approves("HTTP://Peer.Example:80/"));
+    }
+
+    /// <summary>
+    /// It widens nothing. A claim under the other scheme canonicalises to a different value
+    /// and fails the comparison in both directions, so a peer cannot move a pairing from one
+    /// scheme to the other by claiming it.
+    /// </summary>
+    [Fact]
+    public void NeitherSchemeApprovesAClaimUnderTheOther()
+    {
+        Assert.Equal(PeerAddressOutcome.Accepted, PeerAddress.Parse("http://peer.example", true, out var cleartext));
+        Assert.Equal(PeerAddressOutcome.Accepted, PeerAddress.Parse("https://peer.example", out var secure));
+
+        Assert.False(cleartext!.Approves("https://peer.example"));
+        Assert.False(secure!.Approves("http://peer.example"));
+    }
+
+    /// <summary>
+    /// The overload that takes no acknowledgement refuses in the closed direction, so a
+    /// caller who has read no setting cannot reach the permissive answer by forgetting to
+    /// pass one.
+    /// </summary>
+    [Fact]
+    public void TheOverloadTakingNoAcknowledgementRefusesCleartext()
+    {
+        Assert.Equal(PeerAddressOutcome.SchemeNotAllowed, PeerAddress.Parse("http://peer.example", out var refused));
+        Assert.Null(refused);
+
+        Assert.Equal(PeerAddressOutcome.SchemeNotAllowed, PeerAddress.Parse("http://peer.example", false, out var alsoRefused));
+        Assert.Null(alsoRefused);
+    }
+
+    /// <summary>
     /// The shape the scan above exists to refuse. It lives in the test assembly, which the
     /// scan does not read, so it proves the scan without being caught by it.
     /// </summary>

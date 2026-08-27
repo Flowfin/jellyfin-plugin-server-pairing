@@ -8,7 +8,8 @@ namespace Jellyfin.Plugin.ServerPairing.Protocol;
 /// <remarks>
 /// The address is operator-entered configuration, and everything sent to it is a request this
 /// server makes on its own behalf, which is the server-side request forgery surface. So the
-/// accepted forms are a list, in <see cref="Parse"/> and in <c>docs/protocol.md</c>, rather
+/// accepted forms are a list, in <see cref="Parse(string?, bool, out PeerAddress?)"/> and in
+/// <c>docs/protocol.md</c>, rather
 /// than a pattern that happens to pass the examples that were tried.
 /// <para>
 /// A peer names an address of its own in <c>hello</c>. That value is compared against this one
@@ -17,9 +18,12 @@ namespace Jellyfin.Plugin.ServerPairing.Protocol;
 /// that writes one.
 /// </para>
 /// <para>
-/// Plaintext is refused. <c>docs/protocol.md</c> gives the field as an absolute <c>https</c>
-/// URI, and the operator acknowledgement that would allow anything else is a setting, which is
-/// issue #50 and does not exist. Until it does this refuses in the closed direction.
+/// Plaintext is refused unless the operator has acknowledged what it costs.
+/// <c>docs/protocol.md</c> gives the field as an absolute <c>https</c> URI, and the
+/// acknowledgement is the setting decision 3 on issue #1 fixes the shape of:
+/// <c>AcknowledgeCleartextTransport</c> on the plugin configuration. The overload taking no
+/// acknowledgement refuses in the closed direction, so a caller that has not read a setting
+/// cannot reach the permissive answer by forgetting to pass one.
 /// </para>
 /// </remarks>
 public sealed class PeerAddress
@@ -31,9 +35,21 @@ public sealed class PeerAddress
     public const int LengthLimit = 255;
 
     /// <summary>
-    /// The only scheme the pairing plane runs over.
+    /// The scheme the pairing plane runs over wherever the operator has acknowledged nothing.
     /// </summary>
     public const string AllowedScheme = "https";
+
+    /// <summary>
+    /// The scheme an operator reaches only by acknowledging what it costs.
+    /// </summary>
+    /// <remarks>
+    /// What is given up is that request and response bodies, the mapping table among them,
+    /// are readable by anything on the path between the two servers. That sentence is the
+    /// reason the setting exists rather than the behaviour being silent, and it is carried to
+    /// the operator by <see cref="Configuration.ConfigurationReading"/> rather than left
+    /// here for somebody to find.
+    /// </remarks>
+    public const string CleartextScheme = "http";
 
     private PeerAddress(string value, Uri uri)
     {
@@ -53,6 +69,11 @@ public sealed class PeerAddress
     public Uri Uri { get; }
 
     /// <summary>
+    /// Gets a value indicating whether this address is one a listener on the path can read.
+    /// </summary>
+    private bool IsCleartext => string.Equals(Uri.Scheme, CleartextScheme, StringComparison.Ordinal);
+
+    /// <summary>
     /// Judges a candidate against the list of accepted forms.
     /// </summary>
     /// <param name="candidate">What was entered.</param>
@@ -60,6 +81,24 @@ public sealed class PeerAddress
     /// <see cref="PeerAddressOutcome.Accepted"/>.</param>
     /// <returns>Which rule accepted or refused it.</returns>
     public static PeerAddressOutcome Parse(string? candidate, out PeerAddress? address)
+        => Parse(candidate, false, out address);
+
+    /// <summary>
+    /// Judges a candidate against the list of accepted forms, under a scheme policy the
+    /// operator set.
+    /// </summary>
+    /// <param name="candidate">What was entered.</param>
+    /// <param name="cleartextAcknowledged">Whether the operator has acknowledged what a
+    /// cleartext address costs. Where they have not, <see cref="CleartextScheme"/> is refused
+    /// like any other scheme that is not <see cref="AllowedScheme"/>.</param>
+    /// <param name="address">The accepted address, or null where the outcome is not
+    /// <see cref="PeerAddressOutcome.Accepted"/>.</param>
+    /// <returns>Which rule accepted or refused it.</returns>
+    /// <remarks>
+    /// The acknowledgement widens the scheme rule and nothing else. Every other refusal is
+    /// unmoved by it, because none of them is about what a listener on the path can read.
+    /// </remarks>
+    public static PeerAddressOutcome Parse(string? candidate, bool cleartextAcknowledged, out PeerAddress? address)
     {
         address = null;
 
@@ -101,7 +140,8 @@ public sealed class PeerAddress
             return PeerAddressOutcome.NotAnAbsoluteUri;
         }
 
-        if (!string.Equals(uri.Scheme, AllowedScheme, StringComparison.Ordinal))
+        if (!string.Equals(uri.Scheme, AllowedScheme, StringComparison.Ordinal)
+            && !(cleartextAcknowledged && string.Equals(uri.Scheme, CleartextScheme, StringComparison.Ordinal)))
         {
             return PeerAddressOutcome.SchemeNotAllowed;
         }
@@ -150,14 +190,20 @@ public sealed class PeerAddress
     /// <param name="claimed">The address carried in the message.</param>
     /// <returns>True only where the claim parses to this same address.</returns>
     /// <remarks>
-    /// The claim is put through <see cref="Parse"/> before it is compared, so a peer cannot
-    /// match by spelling the approved address in a form this plugin would never send to. A
-    /// claim that does not parse is not the approved address, which is the same answer as a
-    /// claim that parses to a different one: nothing here tells the peer which it was.
+    /// The claim is put through the same parse before it is compared, so a peer cannot match
+    /// by spelling the approved address in a form this plugin would never send to. A claim
+    /// that does not parse is not the approved address, which is the same answer as a claim
+    /// that parses to a different one: nothing here tells the peer which it was.
+    /// <para>
+    /// The scheme policy the claim is parsed under is this address's own, so a cleartext
+    /// pairing can approve the cleartext address it was built from. It widens nothing: a
+    /// claim under a different scheme canonicalises to a different value and fails the
+    /// comparison whichever policy parsed it.
+    /// </para>
     /// </remarks>
     public bool Approves(string? claimed)
     {
-        return Parse(claimed, out var parsed) == PeerAddressOutcome.Accepted
+        return Parse(claimed, IsCleartext, out var parsed) == PeerAddressOutcome.Accepted
             && string.Equals(Value, parsed!.Value, StringComparison.Ordinal);
     }
 

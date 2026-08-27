@@ -246,6 +246,12 @@ public class ConfigurationDocumentTests
     {
         null => "(unset)",
         bool flag => flag ? "true" : "false",
+
+        // An empty default is written as a word rather than as an empty cell. A row whose
+        // default cell is blank documents nothing while looking like documentation, which is
+        // the state EveryRowDocumentsATypeADefaultAndARange refuses, so a setting whose safe
+        // value is the empty string would otherwise be undocumentable rather than documented.
+        string { Length: 0 } => "(empty)",
         string text => text,
         IFormattable formattable => formattable.ToString(null, CultureInfo.InvariantCulture),
         _ => "(unwritable)",

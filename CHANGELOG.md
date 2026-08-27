@@ -46,6 +46,19 @@ can open an enrolment from. Two servers cannot be paired with this version. The
 `changelog` field in `build.yaml` and `build.net10.0.yaml` carries that
 paragraph in the same words.
 
+- [protocol] The plugin configuration now carries the address of the peer this
+  server pairs with, and a setting saying whether an `http` address may be used
+  for it. A fresh installation has no peer address and the acknowledgement off,
+  which is a server that pairs with nobody and refuses a cleartext address. An
+  address outside the forms the specification fixes is refused when the
+  configuration is read, with the setting named and the value left exactly where
+  it was put rather than corrected to something else, and the plugin stays loaded
+  and does not pair. The refusals are written to the log at Error when the server
+  starts, and a server whose acknowledgement is on writes one line at Warning on
+  every start saying that request and response bodies, the mapping table among
+  them, are readable by anything on the path between the two servers. Neither
+  setting is on the settings page yet, so both are edited in the configuration
+  file for now.
 - The key store's file now carries the number of the format it is in, and a
   plugin that meets one written by a newer plugin refuses it instead of reading
   the parts it recognises. Every pairing stops working until the newer plugin is

@@ -1,5 +1,6 @@
 using System;
 using Jellyfin.Plugin.ServerPairing.Api;
+using Jellyfin.Plugin.ServerPairing.Configuration;
 using Jellyfin.Plugin.ServerPairing.KeyStore;
 using Jellyfin.Plugin.ServerPairing.Protocol;
 using MediaBrowser.Common.Configuration;
@@ -26,6 +27,22 @@ public class PluginServiceRegistrator : IPluginServiceRegistrator
     /// <inheritdoc />
     public void RegisterServices(IServiceCollection serviceCollection, IServerApplicationHost applicationHost)
     {
+        // What the plugin makes of the configuration the host handed it, read fresh on every
+        // resolve rather than once: an operator saves the settings page while the server is
+        // running, and a singleton here would answer with what was on disk at boot.
+        //
+        // The configuration is reached through the instance the base class sets, which is the
+        // one static this assembly has and is the host's own way of handing a plugin its
+        // settings. It is read here, in the composition root, and nowhere else. A server that
+        // has not constructed the plugin yet, which is every test that builds this container,
+        // gets the same object a fresh installation gets rather than a null.
+        serviceCollection.AddTransient(_ => ConfigurationReading.Of(
+            Plugin.Instance?.Configuration ?? new PluginConfiguration()));
+
+        // The one thing that says a setting was refused. Without it a refused configuration is
+        // a plugin that is loaded, will not pair, and has told nobody why.
+        serviceCollection.AddHostedService<ConfigurationAtStartup>();
+
         // The outbound side, once, with the handler the plugin runs against a real peer. It
         // is registered here so that the client carrying the timeouts and the redirect
         // refusal is the client every caller gets, rather than one each caller builds.
