@@ -40,9 +40,9 @@ public sealed class EnrolmentWindow
     /// <remarks>
     /// Ten minutes. It is long enough for two operators who are already talking to each other
     /// to read an address to one side and press a button on the other, and short enough that a
-    /// window somebody opened and forgot is closed before they have left the room. The
-    /// configuration surface this belongs on is issue #50 and does not exist, so this is the
-    /// value until it does.
+    /// window somebody opened and forgot is closed before they have left the room. It is what
+    /// an operator gets who has chosen nothing: <c>EnrolmentWindowSeconds</c> on the plugin
+    /// configuration is where one is chosen, and this is the value that setting defaults to.
     /// </remarks>
     public const int LifetimeSeconds = 600;
 
@@ -52,8 +52,10 @@ public sealed class EnrolmentWindow
     /// <remarks>
     /// Half an hour, and a configured value above it is refused rather than clamped, because a
     /// clamp gives an operator a window of a length they did not ask for and no reason to look
-    /// for one. Refusing at construction is what makes the bound hold for every caller; issue
-    /// #50 owes the same refusal at the moment a configuration file is read.
+    /// for one. Refusing at construction is what makes the bound hold for every caller, and
+    /// <see cref="Configuration.ConfigurationReading"/> refuses the same value again at the
+    /// moment the configuration is read, so the operator is told which setting was refused
+    /// rather than meeting an exception at the moment they open a window.
     /// </remarks>
     public const int MaximumLifetimeSeconds = 1800;
 

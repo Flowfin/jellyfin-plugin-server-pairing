@@ -35,6 +35,7 @@ public sealed class ConfigurationReading
         IReadOnlyList<SettingRefusal> refusals,
         PeerAddress? peer,
         bool cleartextAcknowledged,
+        int enrolmentWindowSeconds,
         int peerPlaneWindowSeconds,
         int peerPlaneArrivalsPerPairing,
         int peerPlaneArrivalsPerEnrolment)
@@ -42,6 +43,7 @@ public sealed class ConfigurationReading
         Refusals = refusals;
         Peer = peer;
         CleartextAcknowledged = cleartextAcknowledged;
+        EnrolmentWindowSeconds = enrolmentWindowSeconds;
         PeerPlaneWindowSeconds = peerPlaneWindowSeconds;
         PeerPlaneArrivalsPerPairing = peerPlaneArrivalsPerPairing;
         PeerPlaneArrivalsPerEnrolment = peerPlaneArrivalsPerEnrolment;
@@ -64,6 +66,11 @@ public sealed class ConfigurationReading
     /// address costs.
     /// </summary>
     public bool CleartextAcknowledged { get; }
+
+    /// <summary>
+    /// Gets how long an enrolment window stays open, in seconds.
+    /// </summary>
+    public int EnrolmentWindowSeconds { get; }
 
     /// <summary>
     /// Gets how long the peer plane counts an arrival allowance over, in seconds.
@@ -126,6 +133,18 @@ public sealed class ConfigurationReading
             }
         }
 
+        // How long the one moment this server answers a stranger lasts. Refused above its
+        // maximum rather than clamped down to it: a window an operator asked to be a day long
+        // and silently got half an hour of is a window they will not go looking for.
+        var enrolmentWindowSeconds = Bounded(
+            configuration.EnrolmentWindowSeconds,
+            nameof(PluginConfiguration.EnrolmentWindowSeconds),
+            1,
+            EnrolmentWindow.MaximumLifetimeSeconds,
+            EnrolmentWindow.LifetimeSeconds,
+            "seconds",
+            refusals);
+
         // The three allowances the peer plane runs on. A value outside its bounds is refused
         // and the plane is built on the allowance a server nobody configured runs on, because
         // a plane whose limit was refused is not a plane with no limit. Which value is in
@@ -178,10 +197,28 @@ public sealed class ConfigurationReading
             refusals,
             peer,
             cleartextAcknowledged,
+            enrolmentWindowSeconds,
             windowSeconds,
             perPairing,
             perEnrolment);
     }
+
+    /// <summary>
+    /// An enrolment window with the lifetime this reading accepted.
+    /// </summary>
+    /// <param name="paired">What this server is already paired with, which a window is refused
+    /// against.</param>
+    /// <returns>A window that closes after the configured lifetime.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="paired"/> is null.</exception>
+    /// <remarks>
+    /// NOTHING IN THIS PLUGIN CALLS THIS YET, and that is a bound rather than an oversight. A
+    /// window is opened by an administrator and by nobody else, so the thing that builds one is
+    /// the administrative surface, which is issue #49 and does not exist. Until it does, the
+    /// only caller is the test that proves the lifetime reaches the window, and the setting is
+    /// a number the server refuses out of range and hands to nothing.
+    /// </remarks>
+    public EnrolmentWindow NewEnrolmentWindow(IPairedPeers paired)
+        => new EnrolmentWindow(paired, EnrolmentWindowSeconds);
 
     /// <summary>
     /// The arrival limit the peer plane runs on under this reading.

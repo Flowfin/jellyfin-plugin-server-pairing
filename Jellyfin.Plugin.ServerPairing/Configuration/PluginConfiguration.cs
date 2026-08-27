@@ -1,4 +1,5 @@
 using Jellyfin.Plugin.ServerPairing.Api;
+using Jellyfin.Plugin.ServerPairing.Protocol;
 using MediaBrowser.Model.Plugins;
 
 namespace Jellyfin.Plugin.ServerPairing.Configuration;
@@ -65,6 +66,8 @@ public class PluginConfiguration : BasePluginConfiguration
 
         PeerAddress = string.Empty;
 
+        EnrolmentWindowSeconds = EnrolmentWindow.LifetimeSeconds;
+
         PeerPlaneWindowSeconds = ArrivalLimit.WindowSeconds;
         PeerPlaneArrivalsPerPairing = ArrivalLimit.ArrivalsPerPairing;
         PeerPlaneArrivalsPerEnrolment = ArrivalLimit.ArrivalsPerEnrolment;
@@ -115,6 +118,19 @@ public class PluginConfiguration : BasePluginConfiguration
     /// cleartext has read the sentence saying so and set this themselves.
     /// </remarks>
     public bool AcknowledgeCleartextTransport { get; set; }
+
+    /// <summary>
+    /// Gets or sets how long an enrolment window stays open, in seconds.
+    /// </summary>
+    /// <remarks>
+    /// The window is the only moment this server answers a party it has not authenticated, so
+    /// this is the setting on the configuration that decides how long that moment lasts. It is
+    /// long enough by default for two operators who are already talking to each other to read
+    /// an address to one side and press a button on the other. The argument for the default
+    /// and for the maximum is at the constants in <see cref="EnrolmentWindow"/> rather than
+    /// here, because that is where the bound is held.
+    /// </remarks>
+    public int EnrolmentWindowSeconds { get; set; }
 
     /// <summary>
     /// Gets or sets how long the peer plane counts an arrival allowance over, in seconds.

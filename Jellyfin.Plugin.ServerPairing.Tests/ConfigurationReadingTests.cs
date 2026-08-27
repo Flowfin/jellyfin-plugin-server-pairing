@@ -106,6 +106,65 @@ public class ConfigurationReadingTests
     }
 
     /// <summary>
+    /// The second done condition of issue #18. The window's lifetime is a setting, it has a
+    /// maximum the document carries, and a value above that maximum is refused with the
+    /// setting named rather than shortened to the maximum.
+    ///
+    /// Shortening is the outcome worth refusing rather than the obvious convenience: an
+    /// operator who asked for a long window and silently got half an hour has a window that
+    /// closes while they are still reading an address out, and nothing tells them why.
+    /// </summary>
+    [Theory]
+    [InlineData(0)]
+    [InlineData(-1)]
+    [InlineData(EnrolmentWindow.MaximumLifetimeSeconds + 1)]
+    public void AWindowLifetimeOutsideItsBoundsIsRefusedRatherThanShortened(int seconds)
+    {
+        var reading = ConfigurationReading.Of(new PluginConfiguration { EnrolmentWindowSeconds = seconds });
+
+        var refusal = Assert.Single(reading.Refusals);
+
+        Assert.Equal(nameof(PluginConfiguration.EnrolmentWindowSeconds), refusal.Setting);
+        Assert.False(reading.MayPair);
+        Assert.NotEqual(EnrolmentWindow.MaximumLifetimeSeconds, seconds);
+        Assert.Equal(EnrolmentWindow.LifetimeSeconds, reading.EnrolmentWindowSeconds);
+    }
+
+    /// <summary>
+    /// A lifetime inside the bounds is the one that is used, and it reaches the window rather
+    /// than stopping at the reading. Without this the setting is a number the server refuses
+    /// out of range and nothing else.
+    /// </summary>
+    [Fact]
+    public void AWindowLifetimeInsideItsBoundsReachesTheWindow()
+    {
+        var reading = ConfigurationReading.Of(new PluginConfiguration { EnrolmentWindowSeconds = 90 });
+
+        Assert.Empty(reading.Refusals);
+        Assert.Equal(90, reading.EnrolmentWindowSeconds);
+
+        var window = reading.NewEnrolmentWindow(new NobodyIsPaired());
+        var opened = new DateTimeOffset(2026, 8, 27, 12, 0, 0, TimeSpan.Zero);
+
+        Assert.Equal(WindowOpening.Opened, window.Open(Address("https://peer.example"), opened));
+        Assert.True(window.IsOpen(Address("https://peer.example"), opened.AddSeconds(89)));
+        Assert.False(window.IsOpen(Address("https://peer.example"), opened.AddSeconds(90)));
+    }
+
+    /// <summary>
+    /// The default lifetime is the one the constant argues, so a fresh installation and the
+    /// type cannot drift apart.
+    /// </summary>
+    [Fact]
+    public void TheDefaultLifetimeIsTheOneTheConstantArgues()
+    {
+        Assert.Equal(EnrolmentWindow.LifetimeSeconds, new PluginConfiguration().EnrolmentWindowSeconds);
+        Assert.Equal(
+            EnrolmentWindow.LifetimeSeconds,
+            Deserialised("<PluginConfiguration />").EnrolmentWindowSeconds);
+    }
+
+    /// <summary>
     /// An allowance outside its bounds is refused with the setting named, and the plane runs
     /// on the allowance a server nobody configured runs on rather than on the boundary the
     /// value crossed. A plane whose limit was refused is not a plane with no limit.
@@ -528,6 +587,18 @@ public class ConfigurationReadingTests
             .ToArray();
 
     /// <summary>
+    /// An address, for the cases that need one and are not about parsing it.
+    /// </summary>
+    /// <param name="value">The address.</param>
+    /// <returns>The parsed address.</returns>
+    private static PeerAddress Address(string value)
+    {
+        Assert.Equal(PeerAddressOutcome.Accepted, PeerAddress.Parse(value, out var address));
+
+        return address!;
+    }
+
+    /// <summary>
     /// The configuration as the host produces it from a file, rather than as the constructor
     /// produces it. The host serves this type through its own configuration endpoint and
     /// writes it back with the XML serialiser, so this is the shape a running server has.
@@ -544,6 +615,15 @@ public class ConfigurationReadingTests
         using var reader = XmlReader.Create(text, new XmlReaderSettings { DtdProcessing = DtdProcessing.Prohibit, XmlResolver = null });
 
         return (PluginConfiguration)new XmlSerializer(typeof(PluginConfiguration)).Deserialize(reader)!;
+    }
+
+    /// <summary>
+    /// A server that is paired with nobody, which is what a window is opened against.
+    /// </summary>
+    private sealed class NobodyIsPaired : IPairedPeers
+    {
+        /// <inheritdoc />
+        public bool HasPairingWith(PeerAddress address) => false;
     }
 
     /// <summary>
