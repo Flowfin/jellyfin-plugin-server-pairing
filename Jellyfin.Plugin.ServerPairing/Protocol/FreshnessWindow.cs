@@ -14,9 +14,18 @@ namespace Jellyfin.Plugin.ServerPairing.Protocol;
 /// stays useful and the nonce store makes it usable once inside that window. Either alone
 /// leaves the other's gap open.
 /// <para>
-/// Both numbers are <c>docs/protocol.md</c> and both are constants of the specification rather
-/// than secrets, so a caller learns nothing by discovering them that reading the document
+/// Neither number is a secret. <c>docs/protocol.md</c> gives the default and the bound, so a
+/// caller learns nothing by discovering what this server accepts that reading the document
 /// would not have told them.
+/// <para>
+/// The span is the operator's, because two home servers disagree by seconds without anything
+/// being wrong and by minutes when one of them has no time source, and no single number is
+/// right for both a server on a time service and a server on a box that lost its clock.
+/// <c>TimestampWindowSeconds</c> on the plugin configuration is where one is chosen. How long
+/// a nonce is remembered follows it rather than being chosen beside it: it is the span taken
+/// in both directions, so the two cannot be set into a state where a nonce ages out while a
+/// request carrying it would still be accepted.
+/// </para>
 /// </para>
 /// <para>
 /// Nothing here reads a clock. The instant to judge against is an argument, so a skew is
@@ -31,17 +40,23 @@ namespace Jellyfin.Plugin.ServerPairing.Protocol;
 public sealed class FreshnessWindow
 {
     /// <summary>
-    /// How far a timestamp may be from this server's clock, in seconds, in either direction.
+    /// How far a timestamp may be from this server's clock, in seconds, in either direction,
+    /// where an operator has not chosen otherwise.
     /// </summary>
     public const int WindowSeconds = 300;
 
     /// <summary>
-    /// How long a nonce is remembered, in seconds. It is the window taken in both directions,
-    /// which is the widest gap there can be between the first arrival of a request and the
-    /// last instant a copy of it would still be inside the window, so a nonce cannot age out
-    /// while a request carrying it would still be accepted.
+    /// The widest span this type accepts, in seconds.
     /// </summary>
-    public const int RememberedSeconds = 600;
+    /// <remarks>
+    /// A quarter of an hour, which is far past what two clocks drift to and inside what a
+    /// server whose clock was never set can be off by. It is a bound rather than a preference:
+    /// the span is exactly how long a captured request stays useful to whoever captured it, so
+    /// every second added to it is a second of replay window bought, and an operator who
+    /// cannot pair inside a quarter of an hour of skew has a clock problem rather than a
+    /// pairing problem.
+    /// </remarks>
+    public const int MaximumWindowSeconds = 900;
 
     /// <summary>
     /// The most nonces remembered for one pairing at once.
@@ -59,6 +74,57 @@ public sealed class FreshnessWindow
         new Dictionary<string, Dictionary<string, long>>(StringComparer.Ordinal);
 
     private readonly Lock _gate = new Lock();
+
+    private readonly int _windowSeconds;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="FreshnessWindow"/> class with the span an
+    /// operator who has chosen nothing gets.
+    /// </summary>
+    public FreshnessWindow()
+        : this(WindowSeconds)
+    {
+    }
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="FreshnessWindow"/> class.
+    /// </summary>
+    /// <param name="windowSeconds">How far a timestamp may be from this server's clock, in
+    /// either direction.</param>
+    /// <exception cref="ArgumentOutOfRangeException">
+    /// The span is not positive, or is wider than <see cref="MaximumWindowSeconds"/>.
+    /// </exception>
+    public FreshnessWindow(int windowSeconds)
+    {
+        if (windowSeconds < 1 || windowSeconds > MaximumWindowSeconds)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(windowSeconds),
+                windowSeconds,
+                "A freshness window is between one second and " + MaximumWindowSeconds + " seconds.");
+        }
+
+        _windowSeconds = windowSeconds;
+    }
+
+    /// <summary>
+    /// Gets how far a timestamp may be from this server's clock, in seconds, in either
+    /// direction.
+    /// </summary>
+    public int AcceptedSkewSeconds => _windowSeconds;
+
+    /// <summary>
+    /// Gets how long a nonce is remembered, in seconds.
+    /// </summary>
+    /// <remarks>
+    /// The window taken in both directions, which is the widest gap there can be between the
+    /// first arrival of a request and the last instant a copy of it would still be inside the
+    /// window, so a nonce cannot age out while a request carrying it would still be accepted.
+    /// It is derived rather than configured for exactly that reason: the two set apart are two
+    /// numbers an operator can put into a state where the store forgets a replay it is there
+    /// to refuse.
+    /// </remarks>
+    public int RememberedSeconds => _windowSeconds * 2;
 
     /// <summary>
     /// How many nonces are remembered for a pairing.
@@ -140,7 +206,7 @@ public sealed class FreshnessWindow
 
         var here = now.ToUnixTimeSeconds();
 
-        if (Math.Abs(here - claimed) > WindowSeconds)
+        if (Math.Abs(here - claimed) > _windowSeconds)
         {
             return FreshnessOutcome.OutsideTheWindow;
         }
@@ -191,7 +257,7 @@ public sealed class FreshnessWindow
     /// </remarks>
     /// <param name="nonces">The pairing's nonces.</param>
     /// <param name="here">This server's clock, in seconds since the epoch.</param>
-    private static void DropAged(Dictionary<string, long> nonces, long here)
+    private void DropAged(Dictionary<string, long> nonces, long here)
     {
         if (nonces.Count == 0)
         {

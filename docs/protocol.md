@@ -410,34 +410,45 @@ the comparison the two operators perform is what turns a key into an identity.
 
 ## Freshness
 
-A request is fresh when its timestamp is within 300 seconds of this server's
-clock in either direction, and its nonce has not been seen for this pairing
-inside that window.
+A request is fresh when its timestamp is within the tolerated skew of this
+server's clock in either direction, and its nonce has not been seen for this
+pairing inside that window.
+
+The skew is the operator's, because two home servers disagree by seconds without
+anything being wrong and by minutes when one of them has no time source. It is 300
+seconds where nobody has chosen, at most 900, and it is
+`TimestampWindowSeconds` in [`docs/configuration.md`](configuration.md). Neither
+number is a secret: a caller learns nothing by discovering what a server accepts
+that this paragraph has not already told them. What a second added to it buys is a
+second in which a captured request is still worth sending.
 
 The nonce is 16 random bytes from `RandomNumberGenerator`, written as 32
 lowercase hex characters. It is not a counter and carries no meaning; two
 requests that differ in nothing else must differ here.
 
-A nonce is remembered for 600 seconds, which is the window taken in both
-directions, and is the widest gap there can be between the first arrival of a
-request and the last instant a copy of it would still be inside the window. A
-nonce older than that is dropped, so the store is
-bounded by the request rate rather than by uptime. The store is per pairing and
-is not persisted: a restart forgets it, and a request replayed across a restart
-inside 300 seconds is accepted. That is a real gap, it is named rather than left
-out, and issue #21 is where it is either closed or accepted with a reason.
+A nonce is remembered for the window taken in both directions, which is the widest
+gap there can be between the first arrival of a request and the last instant a
+copy of it would still be inside the window. It is derived from the skew rather
+than set beside it, so the two cannot be put into a state where a nonce ages out
+while a request carrying it would still be accepted. A nonce older than that is
+dropped, so the store is bounded by the request rate rather than by uptime. The
+store is per pairing and is not persisted: a restart forgets it, and a request
+replayed across a restart inside the skew is accepted. That is a real gap, it is
+named rather than left out, and issue #21 is where it is either closed or
+accepted with a reason.
 
 The store is bounded by count as well as by age, and this document said only the
-second until now. A pairing may hold 4096 remembered nonces at once, and a fresh
-request arriving with no room left is refused rather than remembered, because
-dropping a nonce that is still inside the window is the replay the store exists
-to refuse. All three numbers are constants of the landed type, and the two this
-paragraph adds are read out of it rather than asserted beside it:
+second until the count was added to it. A pairing may hold 4096 remembered nonces
+at once, and a fresh request arriving with no room left is refused rather than
+remembered, because dropping a nonce that is still inside the window is the replay
+the store exists to refuse. The count is a constant of the landed type and the two
+spans are not, so what is read out of the type is the count and the bound on the
+skew:
 
 ```
-git grep -n "const int RememberedSeconds\|const int NoncesPerPairing" origin/master -- Jellyfin.Plugin.ServerPairing/Protocol/FreshnessWindow.cs
-origin/master:Jellyfin.Plugin.ServerPairing/Protocol/FreshnessWindow.cs:44:    public const int RememberedSeconds = 600;
-origin/master:Jellyfin.Plugin.ServerPairing/Protocol/FreshnessWindow.cs:56:    public const int NoncesPerPairing = 4096;
+git grep -n "const int NoncesPerPairing\|const int MaximumWindowSeconds" origin/master -- Jellyfin.Plugin.ServerPairing/Protocol/FreshnessWindow.cs
+origin/master:Jellyfin.Plugin.ServerPairing/Protocol/FreshnessWindow.cs:59:    public const int MaximumWindowSeconds = 900;
+origin/master:Jellyfin.Plugin.ServerPairing/Protocol/FreshnessWindow.cs:71:    public const int NoncesPerPairing = 4096;
 ```
 
 What that refusal says on the wire is the taxonomy below. What the count should

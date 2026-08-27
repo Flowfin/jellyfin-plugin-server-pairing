@@ -27,6 +27,47 @@ public class FreshnessWindowTests
     /// A request inside the window carrying a nonce nobody has seen is fresh, and the store
     /// remembers exactly the one nonce.
     /// </summary>
+    /// <summary>
+    /// A skew outside its bounds is refused where the window is built rather than clamped, so
+    /// the bound holds for every caller and not only for the one that read a configuration
+    /// file.
+    /// </summary>
+    [Theory]
+    [InlineData(0)]
+    [InlineData(-1)]
+    [InlineData(FreshnessWindow.MaximumWindowSeconds + 1)]
+    public void ASkewOutsideItsBoundsIsRefusedAtConstruction(int seconds)
+    {
+        Assert.Throws<ArgumentOutOfRangeException>(() => new FreshnessWindow(seconds));
+    }
+
+    /// <summary>
+    /// How long a nonce is remembered follows the skew rather than being chosen beside it. Two
+    /// numbers set apart are two numbers an operator can put into a state where the store
+    /// forgets a replay it exists to refuse, so this is the one relation the type does not let
+    /// anybody break.
+    /// </summary>
+    [Theory]
+    [InlineData(1)]
+    [InlineData(30)]
+    [InlineData(FreshnessWindow.WindowSeconds)]
+    [InlineData(FreshnessWindow.MaximumWindowSeconds)]
+    public void WhatIsRememberedIsTheSkewTakenInBothDirections(int seconds)
+    {
+        Assert.Equal(seconds * 2, new FreshnessWindow(seconds).RememberedSeconds);
+    }
+
+    /// <summary>
+    /// The window a caller who chooses nothing gets is the one the constant argues.
+    /// </summary>
+    [Fact]
+    public void TheWindowBuiltWithNoArgumentsCarriesTheDefault()
+    {
+        Assert.Equal(FreshnessWindow.WindowSeconds, new FreshnessWindow().AcceptedSkewSeconds);
+        Assert.Equal(300, FreshnessWindow.WindowSeconds);
+        Assert.Equal(900, FreshnessWindow.MaximumWindowSeconds);
+    }
+
     [Fact]
     public void ARequestNobodyHasSeenIsFresh()
     {
@@ -159,8 +200,8 @@ public class FreshnessWindowTests
 
         Assert.Equal(FreshnessOutcome.Fresh, window.Judge(PairingId, Nonce, Stamp(Now), Now));
 
-        var justInside = Now.AddSeconds(FreshnessWindow.RememberedSeconds);
-        var justOutside = Now.AddSeconds(FreshnessWindow.RememberedSeconds + 1);
+        var justInside = Now.AddSeconds(window.RememberedSeconds);
+        var justOutside = Now.AddSeconds(window.RememberedSeconds + 1);
 
         // The replay's own timestamp has to be inside the window at the later instant, or the
         // timestamp reason would answer before the nonce reason is reached.
@@ -187,7 +228,7 @@ public class FreshnessWindowTests
             window.Judge(PairingId, NonceNumber(i), Stamp(Now), Now);
         }
 
-        var later = Now.AddSeconds(FreshnessWindow.RememberedSeconds + 1);
+        var later = Now.AddSeconds(window.RememberedSeconds + 1);
 
         Assert.Equal(FreshnessOutcome.Fresh, window.Judge(PairingId, Nonce, Stamp(later), later));
         Assert.Equal(1, window.Remembered(PairingId));
