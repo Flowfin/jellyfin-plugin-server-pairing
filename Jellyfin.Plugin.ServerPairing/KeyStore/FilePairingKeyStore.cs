@@ -5,6 +5,7 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
 using System.Threading;
+using Microsoft.Extensions.Logging;
 
 namespace Jellyfin.Plugin.ServerPairing.KeyStore;
 
@@ -72,6 +73,7 @@ public sealed class FilePairingKeyStore : IPairingKeyStore
     private readonly Lock _gate = new Lock();
     private readonly string _file;
     private readonly Action<string, string>? _moveIntoPlace;
+    private readonly ILogger<FilePairingKeyStore>? _logger;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="FilePairingKeyStore"/> class.
@@ -79,7 +81,7 @@ public sealed class FilePairingKeyStore : IPairingKeyStore
     /// <param name="file">The file the keys are held in.</param>
     /// <exception cref="ArgumentNullException">The file is null.</exception>
     public FilePairingKeyStore(string file)
-        : this(file, null)
+        : this(file, null, null)
     {
     }
 
@@ -99,9 +101,37 @@ public sealed class FilePairingKeyStore : IPairingKeyStore
     /// uses the constructor above.
     /// </remarks>
     public FilePairingKeyStore(string file, Action<string, string>? moveIntoPlace)
+        : this(file, moveIntoPlace, null)
+    {
+    }
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="FilePairingKeyStore"/> class, with somewhere
+    /// to say that a migration happened.
+    /// </summary>
+    /// <param name="file">The file the keys are held in.</param>
+    /// <param name="moveIntoPlace">
+    /// How a temporary file becomes the store's file, or null for the platform's own move.
+    /// </param>
+    /// <param name="logger">Where a migration is reported, or null to report it nowhere.</param>
+    /// <exception cref="ArgumentNullException">The file is null.</exception>
+    /// <remarks>
+    /// The logger is optional because most of what this class does is answering a caller, which
+    /// reports itself through its return value. The one thing it does that nobody asked for is
+    /// rewriting the file it was only asked to read, and an operator who is not told about that
+    /// finds a second file holding key material beside their store with nothing saying where it
+    /// came from.
+    /// <para>
+    /// Nothing else here writes a line. A read that throws is reported by throwing, and the row
+    /// in <c>docs/logging.md</c> for a store that could not be read or written belongs to
+    /// whoever catches it.
+    /// </para>
+    /// </remarks>
+    public FilePairingKeyStore(string file, Action<string, string>? moveIntoPlace, ILogger<FilePairingKeyStore>? logger)
     {
         _file = file ?? throw new ArgumentNullException(nameof(file));
         _moveIntoPlace = moveIntoPlace;
+        _logger = logger;
     }
 
     /// <summary>
@@ -257,9 +287,26 @@ public sealed class FilePairingKeyStore : IPairingKeyStore
     {
         var migrated = StoreFormat.Migrate(document, _file);
 
-        AtomicWrite.Replace(_file + StoreFormat.BackupSuffix(from), json);
+        var copy = _file + StoreFormat.BackupSuffix(from);
+
+        AtomicWrite.Replace(copy, json);
 
         AtomicWrite.Replace(_file, migrated.ToJsonString(_format), _moveIntoPlace);
+
+        // After both writes rather than before either. A line saying the store was migrated,
+        // written by a run that then failed to migrate it, is worse than no line: the file it
+        // names is the one still to be migrated and the operator reads it as done.
+        // The guard is around the writing only, and it is here because the analyzers refuse a
+        // call at a level that can be switched off without one. The migration above happens
+        // whatever the level is.
+        if (_logger is not null && _logger.IsEnabled(LogLevel.Information))
+        {
+            _logger.LogInformation(
+                "The key store was written by an older build and has been carried up to the format this one reads. What was there is kept beside it and nothing removes it, so delete it once the pairings work. Was format: {WasFormat}. Is format: {IsFormat}. Copy: {Copy}",
+                from,
+                StoreFormat.Current,
+                copy);
+        }
 
         return migrated;
     }

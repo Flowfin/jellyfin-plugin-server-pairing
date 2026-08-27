@@ -52,8 +52,9 @@ paragraph in the same words.
   installed again or the file is moved aside, and the message says which format
   was found and which this build understands. A file written before this version
   is carried up to the new shape the first time it is read, with a copy of what
-  was there left beside it named for the format it is in; nothing removes that
-  copy and nothing is written to the log when it appears. A migration that fails
+  was there left beside it named for the format it is in. One line is written to
+  the log when that happens, naming both formats and the copy, and nothing removes
+  the copy afterwards. A migration that fails
   part way leaves the original file exactly as it was and the plugin refusing to
   pair, rather than running on half of one.
 - [protocol] A pairing request is now refused when too many have already arrived

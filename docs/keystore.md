@@ -103,14 +103,21 @@ on: it is the one file the last migration replaced, and a second migration away
 from a different format writes a different name rather than rotating this one.
 Nothing removes it, and nothing reads it.
 
+**A migration is the one thing the store does that nobody asked it for, so it
+says so.** One line at Information, naming the format the file was in, the format
+it is now, and the copy left beside it. It is written after both writes rather
+than before either: a line saying the store was carried up, written by a run that
+then failed to carry it, names a file still to be migrated and reads as done. A
+store needing no migration writes nothing, because this file is read on every call
+and a line on every read is a line an operator learns to skip. The row is in
+[what this plugin logs](logging.md).
+
 **What this does not do**, stated so the section is not read as more than it is.
-Nothing writes a log line when a migration happens, so an operator learns of it
-from the file appearing rather than from the log. The migration preserves a
-member it does not recognise on the way up, and the next write does not: a write
-serialises this build's own type and holds only what that type holds. And the
-plugin configuration carries no format number, which is the other half of issue
-#55 and waits on the settings in issue #50, because what is on that type today is
-still the plugin template's example fields.
+The migration preserves a member it does not recognise on the way up, and the next
+write does not: a write serialises this build's own type and holds only what that
+type holds. And the plugin configuration carries no format number, which is the
+other half of issue #55 and waits on the settings in issue #50, because what is on
+that type today is still the plugin template's example fields.
 
 ## The type key material travels in
 
@@ -347,10 +354,6 @@ mistaken for reading a finished design.
   number above does not reach any of them: it separates a file this build is too
   old to read from one it can, and says nothing about a file that is damaged or
   about one that is an older copy of this same store.
-- **What an operator is told when a migration happens.** The copy appears beside
-  the store and nothing is written to the log, so the event is visible in the
-  directory rather than in the place an operator looks. Issue #55 asks for the
-  line and it is not built.
 - **A format number on the plugin configuration.** Only the key store carries
   one. What is on the configuration type is still the plugin template's example
   settings, so a number stamped on it today would version fields no operator will

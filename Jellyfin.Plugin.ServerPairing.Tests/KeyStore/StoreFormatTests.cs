@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Text.Json.Nodes;
 using Jellyfin.Plugin.ServerPairing.KeyStore;
+using Microsoft.Extensions.Logging;
 using Xunit;
 
 namespace Jellyfin.Plugin.ServerPairing.Tests.KeyStore;
@@ -332,6 +333,90 @@ public sealed class StoreFormatTests : IDisposable
             System.IO.File.ReadAllBytes(file + StoreFormat.BackupSuffix(StoreFormat.Unversioned)));
     }
 
+    /// <summary>
+    /// A migration is the one thing this store does that nobody asked it for, so it says so.
+    /// An operator who is not told finds a second file holding key material beside their store
+    /// with nothing saying where it came from.
+    /// </summary>
+    [Fact]
+    public void MigratingSaysSoAndNamesBothFormatsAndTheCopy()
+    {
+        var file = WithFixture();
+        var written = new CapturingLogger();
+
+        new FilePairingKeyStore(file, null, written).Pairings();
+
+        var line = Assert.Single(written.Written);
+
+        Assert.Equal(LogLevel.Information, line.Level);
+        Assert.Contains(StoreFormat.Unversioned.ToString(System.Globalization.CultureInfo.InvariantCulture), line.Text, StringComparison.Ordinal);
+        Assert.Contains(StoreFormat.Current.ToString(System.Globalization.CultureInfo.InvariantCulture), line.Text, StringComparison.Ordinal);
+        Assert.Contains(file + StoreFormat.BackupSuffix(StoreFormat.Unversioned), line.Text, StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// The line carries no key material, in any of the three encodings a key can reach a log
+    /// through. The store's file is full of them at the moment this is written, so a line naming
+    /// the file's contents rather than its name would carry every key the store holds.
+    /// </summary>
+    [Fact]
+    public void TheLineAboutAMigrationCarriesNoKeyMaterial()
+    {
+        var file = WithFixture();
+        var written = new CapturingLogger();
+
+        new FilePairingKeyStore(file, null, written).Pairings();
+
+        var line = Assert.Single(written.Written).Text;
+
+        foreach (var hex in new[] { NeverRotatedKey, RotatedCurrentKey, RotatedSupersededKey })
+        {
+            Assert.DoesNotContain(hex, line, StringComparison.OrdinalIgnoreCase);
+            Assert.DoesNotContain(Convert.ToBase64String(Convert.FromHexString(hex)), line, StringComparison.Ordinal);
+        }
+
+        Assert.DoesNotContain(System.IO.File.ReadAllText(Fixture()), line, StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// A store that needs no migration says nothing. A line written every time the file is read
+    /// is a line an operator learns to skip, and this file is read on every call.
+    /// </summary>
+    [Fact]
+    public void AStoreThatNeedsNoMigrationSaysNothing()
+    {
+        var file = Path.Combine(TemporaryDirectory(), KeyStorePath.FileName);
+        var written = new CapturingLogger();
+        var store = new FilePairingKeyStore(file, null, written);
+
+        store.Pairings();
+        store.Add(NeverRotated, KeyMaterial.Fresh());
+        store.Pairings();
+
+        Assert.Empty(written.Written);
+    }
+
+    /// <summary>
+    /// A migration that fails says nothing either. A line saying the store was carried up,
+    /// written by a run that then failed to carry it, names a file that is still to be migrated
+    /// and an operator reads it as done.
+    /// </summary>
+    [Fact]
+    public void AFailedMigrationSaysNothing()
+    {
+        var file = WithFixture();
+        var written = new CapturingLogger();
+
+        var store = new FilePairingKeyStore(
+            file,
+            (temporary, destination) => throw new IOException("the disk is full"),
+            written);
+
+        Assert.Throws<IOException>(() => store.Pairings());
+
+        Assert.Empty(written.Written);
+    }
+
     private static KeyMaterial Key(string hex) => KeyMaterial.From(Convert.FromHexString(hex));
 
     private static JsonObject Document(string file) =>
@@ -402,5 +487,28 @@ public sealed class StoreFormatTests : IDisposable
                 + StoreFormat.PairingsMember + "\":{}}");
 
         return file;
+    }
+
+    private sealed class CapturingLogger : ILogger<FilePairingKeyStore>
+    {
+        public List<(LogLevel Level, string Text, Exception? Fault)> Written { get; } = new();
+
+        public IDisposable? BeginScope<TState>(TState state)
+            where TState : notnull
+            => null;
+
+        public bool IsEnabled(LogLevel logLevel) => true;
+
+        public void Log<TState>(
+            LogLevel logLevel,
+            EventId eventId,
+            TState state,
+            Exception? exception,
+            Func<TState, Exception?, string> formatter)
+        {
+            ArgumentNullException.ThrowIfNull(formatter);
+
+            Written.Add((logLevel, formatter(state, exception), exception));
+        }
     }
 }
