@@ -119,7 +119,7 @@ no revocation to drive. That is no longer the reason. A rotation and a revocatio
 are both in the tree:
 
     git grep -n "public RotationOutcome Rotate" origin/master -- Jellyfin.Plugin.ServerPairing/Protocol/KeyOverlap.cs
-    origin/master:Jellyfin.Plugin.ServerPairing/Protocol/KeyOverlap.cs:150:    public RotationOutcome Rotate(ReadOnlySpan<byte> replacement, DateTimeOffset at, DateTimeOffset supersededStopsAt)
+    origin/master:Jellyfin.Plugin.ServerPairing/Protocol/KeyOverlap.cs:152:    public RotationOutcome Rotate(ReadOnlySpan<byte> replacement, DateTimeOffset at, DateTimeOffset supersededStopsAt)
 
     git grep -n "AdministratorRevoked = " origin/master -- Jellyfin.Plugin.ServerPairing/Protocol/LocalEvent.cs
     origin/master:Jellyfin.Plugin.ServerPairing/Protocol/LocalEvent.cs:31:    AdministratorRevoked = 3,
