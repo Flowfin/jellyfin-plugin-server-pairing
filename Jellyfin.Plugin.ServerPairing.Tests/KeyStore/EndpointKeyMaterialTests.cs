@@ -9,7 +9,11 @@ using Jellyfin.Plugin.ServerPairing.KeyStore;
 using Jellyfin.Plugin.ServerPairing.Protocol;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.ApplicationParts;
+using Microsoft.AspNetCore.Mvc.Controllers;
+using Microsoft.AspNetCore.Mvc.Infrastructure;
 using Microsoft.AspNetCore.Mvc.Routing;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Xunit;
 
@@ -65,8 +69,17 @@ public class EndpointKeyMaterialTests
     /// The floor under the assertion above. A walk that found no endpoints prints the same
     /// empty result as a plugin whose endpoints are all clean, and the difference is the whole
     /// value of the guard. The count is not written down here; what is asserted is that the
-    /// walk found every path the plane serves.
+    /// walk found every path this plugin serves, on both planes.
     /// </summary>
+    /// <remarks>
+    /// Two derived sets rather than one written down. The specification's five paths are what
+    /// the peer plane owes and are read out of <see cref="PeerPlane.PathFor"/>; everything the
+    /// host would route is read out of its own action discovery, which is what widens with a
+    /// second plane without anybody editing a list here. The two together say that the walk
+    /// covers the specification and covers whatever else is served, and the second half is the
+    /// one that catches an action reaching the server with no HTTP attribute for this walk to
+    /// find it by.
+    /// </remarks>
     [Fact]
     public void TheWalkReachesEveryEndpointThisPluginServes()
     {
@@ -75,13 +88,44 @@ public class EndpointKeyMaterialTests
             .OrderBy(template => template, StringComparer.Ordinal)
             .ToArray();
 
-        var served = Enum.GetValues<Jellyfin.Plugin.ServerPairing.Protocol.PairingMessage>()
+        var specified = Enum.GetValues<Jellyfin.Plugin.ServerPairing.Protocol.PairingMessage>()
             .Select(message => PeerPlane.PathFor(message).Split('/')[^1])
             .OrderBy(template => template, StringComparer.Ordinal)
             .ToArray();
 
         Assert.NotEmpty(routed);
-        Assert.Equal(served, routed);
+
+        foreach (var template in specified)
+        {
+            Assert.Contains(template, routed, StringComparer.Ordinal);
+        }
+
+        Assert.Equal(LastSegmentOfEveryRoutedTemplate(), routed);
+    }
+
+    /// <summary>
+    /// The last path segment of every template the host would route out of this assembly,
+    /// asked of the host's own action discovery rather than of the attributes.
+    /// </summary>
+    /// <returns>The segments, ordered.</returns>
+    private static string[] LastSegmentOfEveryRoutedTemplate()
+    {
+        var services = new ServiceCollection();
+        services.AddLogging();
+
+        var mvc = services.AddControllers();
+        mvc.PartManager.ApplicationParts.Clear();
+        mvc.PartManager.ApplicationParts.Add(new AssemblyPart(typeof(PeerPlane).Assembly));
+
+        using var provider = services.BuildServiceProvider();
+
+        return provider.GetRequiredService<IActionDescriptorCollectionProvider>()
+            .ActionDescriptors
+            .Items
+            .OfType<ControllerActionDescriptor>()
+            .Select(descriptor => (descriptor.AttributeRouteInfo?.Template ?? string.Empty).Split('/')[^1])
+            .OrderBy(segment => segment, StringComparer.Ordinal)
+            .ToArray();
     }
 
     /// <summary>

@@ -96,6 +96,7 @@ dashboard page. Two of those four have arrived. There is an endpoint:
 
 ```
 git grep -l "ControllerBase" origin/master -- Jellyfin.Plugin.ServerPairing ; echo "exit=$?"
+origin/master:Jellyfin.Plugin.ServerPairing/Api/AdministrativePlaneController.cs
 origin/master:Jellyfin.Plugin.ServerPairing/Api/PeerPlaneController.cs
 exit=0
 ```
@@ -787,6 +788,7 @@ true:
 
 ```
 git grep -l "ControllerBase" origin/master -- Jellyfin.Plugin.ServerPairing ; echo "exit=$?"
+origin/master:Jellyfin.Plugin.ServerPairing/Api/AdministrativePlaneController.cs
 origin/master:Jellyfin.Plugin.ServerPairing/Api/PeerPlaneController.cs
 exit=0
 ```
