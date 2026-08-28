@@ -29,19 +29,30 @@ and there is a key store:
 
 ```
 git ls-tree -r --name-only origin/master -- Jellyfin.Plugin.ServerPairing/KeyStore | wc -l
-12
+13
 ```
 
-What has not changed is the thing that made the old sentence right. No request
-has ever been verified by this plugin against a key it holds, because the key
-source the plane is given is the one that holds none:
+**A fourth has stopped being true since, and the sentence still stands.** This
+paragraph said no request has ever been verified against a key this plugin holds
+because the key source the plane is given holds none. The source reads the store
+now, which is issue #287:
 
 ```
-git grep -n 'IPairingKeySource, ' origin/master -- Jellyfin.Plugin.ServerPairing/PluginServiceRegistrator.cs
-origin/master:Jellyfin.Plugin.ServerPairing/PluginServiceRegistrator.cs:64:        serviceCollection.AddSingleton<IPairingKeySource, NoPairingKeys>();
+git grep -n 'new StoreBackedKeys' origin/master -- Jellyfin.Plugin.ServerPairing/PluginServiceRegistrator.cs
+origin/master:Jellyfin.Plugin.ServerPairing/PluginServiceRegistrator.cs:66:            new StoreBackedKeys(services.GetRequiredService<IPairingKeyStore>()));
 ```
 
-So the five paths are served and every one of them refuses, and nothing has ever
+What makes the sentence still right is one step further back. No route puts a key
+into that store, because there is no enrolment and nothing generates the long-term
+key pair one would need:
+
+```
+git grep -lni 'ECDiffieHellman' origin/master -- Jellyfin.Plugin.ServerPairing ; echo "exit=$?"
+exit=1
+```
+
+which is issue #18. So the five paths are served and every one of them refuses, for
+want of a key rather than for want of a lookup, and nothing has ever
 been signed by this plugin against a key it holds or accepted from a peer.
 Everything below about what happens after a signature verifies is therefore still
 a design position rather than a measured property of something that runs, and the
@@ -651,7 +662,7 @@ to hold it under. The wire already says as much about the request that arrives i
 that state:
 
     git grep -n "^them. Its .X-Pairing-Id. is 32" origin/master -- docs/protocol.md
-    origin/master:docs/protocol.md:401:them. Its `X-Pairing-Id` is 32 `0` characters, which is what line 5 of its
+    origin/master:docs/protocol.md:412:them. Its `X-Pairing-Id` is 32 `0` characters, which is what line 5 of its
 
 and nothing carries that over to the record.
 

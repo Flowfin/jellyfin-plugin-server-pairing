@@ -104,21 +104,32 @@ and there is a key store:
 
 ```
 git ls-tree -r --name-only origin/master -- Jellyfin.Plugin.ServerPairing/KeyStore | wc -l
-12
+13
 ```
 
 There is still no pairing and no dashboard page, and the reason the rest of this
 section stands is narrower than the sentence it replaces. What the endpoint hands
-an adversary is one refusal, whatever arrives, because the key source the plane
-is given holds no keys:
+an adversary is one refusal, whatever arrives. THIS PARAGRAPH SAID THAT WAS BECAUSE
+THE KEY SOURCE THE PLANE IS GIVEN HOLDS NO KEYS, AND THE SOURCE READS THE STORE NOW,
+which is issue #287:
 
 ```
-git grep -n 'IPairingKeySource, ' origin/master -- Jellyfin.Plugin.ServerPairing/PluginServiceRegistrator.cs
-origin/master:Jellyfin.Plugin.ServerPairing/PluginServiceRegistrator.cs:64:        serviceCollection.AddSingleton<IPairingKeySource, NoPairingKeys>();
+git grep -n 'new StoreBackedKeys' origin/master -- Jellyfin.Plugin.ServerPairing/PluginServiceRegistrator.cs
+origin/master:Jellyfin.Plugin.ServerPairing/PluginServiceRegistrator.cs:66:            new StoreBackedKeys(services.GetRequiredService<IPairingKeyStore>()));
 ```
 
-So no adversary described below is currently refused by anything that reads what
-they sent: nothing an adversary sends reaches a decision beyond that refusal.
+What holds instead is that the store an adversary would have to be in is empty on
+every server, because no route puts a key there and nothing generates the key pair
+an enrolment would need:
+
+```
+git grep -lni 'ECDiffieHellman' origin/master -- Jellyfin.Plugin.ServerPairing ; echo "exit=$?"
+exit=1
+```
+
+which is issue #18. So no adversary described below is currently refused by anything
+that reads what they sent: nothing an adversary sends reaches a decision beyond that
+refusal.
 What landed is the
 specification expressed in code and proved against itself, which is a different
 statement from a mechanism standing between an attacker and this server.
@@ -222,7 +233,7 @@ THIS PARAGRAPH SAID THERE WAS NOWHERE TO HOLD ONE AND PASTED AN EMPTY READING
 FOR IT. There is a store, and a document about it:
 
     git ls-tree -r --name-only origin/master -- Jellyfin.Plugin.ServerPairing/KeyStore docs/keystore.md | wc -l
-    13
+    14
 
 The three issues named here as owing the store, the path it lives at and what
 protects it at rest are closed:
@@ -351,7 +362,7 @@ the second is an ordering inside one method rather than a rule somebody has to
 remember at each call site:
 
     git grep -n "public VerificationOutcome VerifyThenRead" origin/master -- Jellyfin.Plugin.ServerPairing/Protocol/RequestAuthenticator.cs
-    origin/master:Jellyfin.Plugin.ServerPairing/Protocol/RequestAuthenticator.cs:129:    public VerificationOutcome VerifyThenRead<T>(
+    origin/master:Jellyfin.Plugin.ServerPairing/Protocol/RequestAuthenticator.cs:159:    public VerificationOutcome VerifyThenRead<T>(
 
 Two tests hold it, and the pair is what makes either worth anything. One counts
 the reader's calls at zero on a request that fails, the other counts them at one
@@ -359,8 +370,8 @@ on a request that verifies, so a reader nobody ever calls fails the second
 instead of passing the first:
 
     git grep -n "public void TheBodyIsNeverReadOnARequestThatFailsVerification\|public void TheBodyIsReadOnceOnARequestThatVerifies" origin/master -- Jellyfin.Plugin.ServerPairing.Tests/Protocol/RequestAuthenticationTests.cs
-    origin/master:Jellyfin.Plugin.ServerPairing.Tests/Protocol/RequestAuthenticationTests.cs:138:    public void TheBodyIsNeverReadOnARequestThatFailsVerification()
-    origin/master:Jellyfin.Plugin.ServerPairing.Tests/Protocol/RequestAuthenticationTests.cs:157:    public void TheBodyIsReadOnceOnARequestThatVerifies()
+    origin/master:Jellyfin.Plugin.ServerPairing.Tests/Protocol/RequestAuthenticationTests.cs:145:    public void TheBodyIsNeverReadOnARequestThatFailsVerification()
+    origin/master:Jellyfin.Plugin.ServerPairing.Tests/Protocol/RequestAuthenticationTests.cs:169:    public void TheBodyIsReadOnceOnARequestThatVerifies()
 
 Nothing hands this type a request from the network, for the reason under A1, so
 what it bounds today is a caller the test project stands in for.
@@ -714,9 +725,9 @@ the ones holding the second and the fifth:
 
 ```
 git grep -n "public void AHostCredentialUsedAsTheSigningKeyIsRefused\|public void AKeyIsAcceptedOnlyForThePairingItBelongsTo\|public void AKeyThatStopsBeingLiveStopsVerifyingOnTheNextRequest" origin/master -- Jellyfin.Plugin.ServerPairing.Tests/Protocol/PairingCredentialTests.cs
-origin/master:Jellyfin.Plugin.ServerPairing.Tests/Protocol/PairingCredentialTests.cs:121:    public void AHostCredentialUsedAsTheSigningKeyIsRefused(string encoding)
-origin/master:Jellyfin.Plugin.ServerPairing.Tests/Protocol/PairingCredentialTests.cs:145:    public void AKeyIsAcceptedOnlyForThePairingItBelongsTo()
-origin/master:Jellyfin.Plugin.ServerPairing.Tests/Protocol/PairingCredentialTests.cs:176:    public void AKeyThatStopsBeingLiveStopsVerifyingOnTheNextRequest()
+origin/master:Jellyfin.Plugin.ServerPairing.Tests/Protocol/PairingCredentialTests.cs:128:    public void AHostCredentialUsedAsTheSigningKeyIsRefused(string encoding)
+origin/master:Jellyfin.Plugin.ServerPairing.Tests/Protocol/PairingCredentialTests.cs:152:    public void AKeyIsAcceptedOnlyForThePairingItBelongsTo()
+origin/master:Jellyfin.Plugin.ServerPairing.Tests/Protocol/PairingCredentialTests.cs:183:    public void AKeyThatStopsBeingLiveStopsVerifyingOnTheNextRequest()
 ```
 
 The sixth is a landed type as well, which separates a timestamp outside the
@@ -781,16 +792,30 @@ exit=0
 ```
 
 Something routes now, and it reaches one decision and stops. The plane compares
-the target, the method and the body limit, hands the request to the
-authenticator, and the authenticator is given the key source that holds nothing:
+the target, the method and the body limit and hands the request to the
+authenticator. THIS PARAGRAPH SAID THE AUTHENTICATOR IS GIVEN THE KEY SOURCE THAT
+HOLDS NOTHING, AND THAT SOURCE IS GONE. It is given the one that reads this
+server's key store, which is issue #287:
 
 ```
-git grep -n 'IPairingKeySource, ' origin/master -- Jellyfin.Plugin.ServerPairing/PluginServiceRegistrator.cs
-origin/master:Jellyfin.Plugin.ServerPairing/PluginServiceRegistrator.cs:64:        serviceCollection.AddSingleton<IPairingKeySource, NoPairingKeys>();
+git grep -n 'new StoreBackedKeys' origin/master -- Jellyfin.Plugin.ServerPairing/PluginServiceRegistrator.cs
+origin/master:Jellyfin.Plugin.ServerPairing/PluginServiceRegistrator.cs:66:            new StoreBackedKeys(services.GetRequiredService<IPairingKeyStore>()));
 ```
 
-So nothing an outside caller sends reaches the state machine, the freshness
-window, the key overlap or the key store, and what stands behind every one of the
+**THE REACH THAT BUYS AN ADVERSARY IS A LOOKUP AND NOT A KEY**, and the two are
+worth separating here rather than in a later reading. What an arriving request now
+reaches is the key store, asked about the identifier it named at the instant it
+arrived. What it does not reach is a key, because nothing puts one there: there is
+no enrolment and no long-term key pair for one to install.
+
+```
+git grep -lni 'ECDiffieHellman' origin/master -- Jellyfin.Plugin.ServerPairing ; echo "exit=$?"
+exit=1
+```
+
+That is issue #18. So nothing an outside caller sends reaches the state machine, the
+freshness window or the key overlap, what it reaches in the key store is an empty
+answer, and what stands behind every one of the
 six today is still a caller the test project stands in for. The model is written
 this way so that each sentence has somewhere to be proved when the code arrives.
 
