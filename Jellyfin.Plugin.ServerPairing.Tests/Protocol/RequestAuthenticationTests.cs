@@ -23,6 +23,13 @@ public class RequestAuthenticationTests
     private const string Timestamp = "1786000000";
 
     /// <summary>
+    /// The instant these cases judge at. Nothing here is about an overlap running out, so one
+    /// value is handed to every verification: what the instant decides is which of a pairing's
+    /// keys the source answers with, and the sources in this file hold one key each.
+    /// </summary>
+    private static readonly DateTimeOffset At = DateTimeOffset.FromUnixTimeSeconds(1786000000);
+
+    /// <summary>
     /// One side signs and the other verifies, over a request carrying every covered field
     /// and a body.
     /// </summary>
@@ -35,7 +42,7 @@ public class RequestAuthenticationTests
         var signature = RequestAuthenticator.Sign(request, key);
         var receiver = new RequestAuthenticator(new KnownKeys(PairingId, key));
 
-        Assert.Equal(VerificationOutcome.Verified, receiver.Verify(request, signature));
+        Assert.Equal(VerificationOutcome.Verified, receiver.Verify(request, signature, At));
     }
 
     /// <summary>
@@ -51,7 +58,7 @@ public class RequestAuthenticationTests
         var signature = RequestAuthenticator.Sign(request, key);
         var receiver = new RequestAuthenticator(new KnownKeys(PairingId, key));
 
-        Assert.Equal(VerificationOutcome.Verified, receiver.Verify(request, signature));
+        Assert.Equal(VerificationOutcome.Verified, receiver.Verify(request, signature, At));
     }
 
     /// <summary>
@@ -88,7 +95,7 @@ public class RequestAuthenticationTests
 
         var receiver = new RequestAuthenticator(new KnownKeys(PairingId, key));
 
-        Assert.Equal(VerificationOutcome.Refused, receiver.Verify(arrived, signature));
+        Assert.Equal(VerificationOutcome.Refused, receiver.Verify(arrived, signature, At));
     }
 
     /// <summary>
@@ -103,7 +110,7 @@ public class RequestAuthenticationTests
 
         var receiver = new RequestAuthenticator(new KnownKeys(PairingId, key));
 
-        Assert.Equal(VerificationOutcome.Verified, receiver.Verify(signed, RequestAuthenticator.Sign(signed, key)));
+        Assert.Equal(VerificationOutcome.Verified, receiver.Verify(signed, RequestAuthenticator.Sign(signed, key), At));
     }
 
     /// <summary>
@@ -127,7 +134,7 @@ public class RequestAuthenticationTests
 
         var receiver = new RequestAuthenticator(new KnownKeys(PairingId, key));
 
-        Assert.Equal(VerificationOutcome.Verified, receiver.Verify(rewritten, signature));
+        Assert.Equal(VerificationOutcome.Verified, receiver.Verify(rewritten, signature, At));
     }
 
     /// <summary>
@@ -142,7 +149,12 @@ public class RequestAuthenticationTests
         var reader = new CountingReader();
 
         var receiver = new RequestAuthenticator(new KnownKeys(PairingId, key));
-        var outcome = receiver.VerifyThenRead(request, Convert.ToBase64String(new byte[32]), reader.Read, out var value);
+        var outcome = receiver.VerifyThenRead(
+            request,
+            Convert.ToBase64String(new byte[32]),
+            At,
+            reader.Read,
+            out var value);
 
         Assert.Equal(VerificationOutcome.Refused, outcome);
         Assert.Equal(0, reader.Calls);
@@ -164,6 +176,7 @@ public class RequestAuthenticationTests
         var outcome = receiver.VerifyThenRead(
             request,
             RequestAuthenticator.Sign(request, key),
+            At,
             reader.Read,
             out var value);
 
@@ -187,8 +200,8 @@ public class RequestAuthenticationTests
         var knowsNothing = new RequestAuthenticator(new KnownKeys("00000000000000000000000000000000", key));
         var knowsThePairing = new RequestAuthenticator(new KnownKeys(PairingId, key));
 
-        Assert.Equal(VerificationOutcome.Refused, knowsNothing.Verify(request, somebodyElsesSignature));
-        Assert.Equal(VerificationOutcome.Refused, knowsThePairing.Verify(request, somebodyElsesSignature));
+        Assert.Equal(VerificationOutcome.Refused, knowsNothing.Verify(request, somebodyElsesSignature, At));
+        Assert.Equal(VerificationOutcome.Refused, knowsThePairing.Verify(request, somebodyElsesSignature, At));
     }
 
     /// <summary>
@@ -211,7 +224,7 @@ public class RequestAuthenticationTests
         var knowsAnotherPairing = new RequestAuthenticator(
             new KnownKeys("00000000000000000000000000000000", RandomNumberGenerator.GetBytes(32)));
 
-        Assert.Equal(VerificationOutcome.Refused, knowsAnotherPairing.Verify(request, signedUnderNothing));
+        Assert.Equal(VerificationOutcome.Refused, knowsAnotherPairing.Verify(request, signedUnderNothing, At));
     }
 
     /// <summary>
@@ -281,7 +294,7 @@ public class RequestAuthenticationTests
         var keys = new KnownKeys(PairingId, RandomNumberGenerator.GetBytes(32));
         var receiver = new RequestAuthenticator(keys);
 
-        Assert.Equal(VerificationOutcome.Refused, receiver.Verify(malformed, Convert.ToBase64String(new byte[32])));
+        Assert.Equal(VerificationOutcome.Refused, receiver.Verify(malformed, Convert.ToBase64String(new byte[32]), At));
         Assert.Equal(0, keys.Lookups);
     }
 
@@ -322,7 +335,7 @@ public class RequestAuthenticationTests
     {
         var receiver = new RequestAuthenticator(new KnownKeys(PairingId, RandomNumberGenerator.GetBytes(32)));
 
-        Assert.Equal(VerificationOutcome.Refused, receiver.Verify(Exchange(), presented));
+        Assert.Equal(VerificationOutcome.Refused, receiver.Verify(Exchange(), presented, At));
     }
 
     /// <summary>
@@ -400,13 +413,13 @@ public class RequestAuthenticationTests
 
         public int Lookups { get; private set; }
 
-        public ReadOnlyMemory<byte> ArrivingKey(string pairingId)
+        public AcceptedKeys ArrivingKeys(string pairingId, DateTimeOffset at)
         {
             Lookups++;
 
             return string.Equals(pairingId, _known, StringComparison.Ordinal)
-                ? _material
-                : ReadOnlyMemory<byte>.Empty;
+                ? new AcceptedKeys(_material, default)
+                : AcceptedKeys.None;
         }
     }
 

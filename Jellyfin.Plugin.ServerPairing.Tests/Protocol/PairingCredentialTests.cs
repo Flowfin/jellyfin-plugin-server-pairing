@@ -32,6 +32,13 @@ namespace Jellyfin.Plugin.ServerPairing.Tests.Protocol;
 public class PairingCredentialTests
 {
     /// <summary>
+    /// The instant these cases judge at. Nothing here is about an overlap running out, so one
+    /// value is handed to every verification: what the instant decides is which of a pairing's
+    /// keys the source answers with, and the sources in this file hold one key each.
+    /// </summary>
+    private static readonly DateTimeOffset At = DateTimeOffset.FromUnixTimeSeconds(1786000000);
+
+    /// <summary>
     /// The tag length a signature carries, from <c>docs/crypto.md</c>. Written here rather
     /// than read from the implementation so that a case expecting it is not a case expecting
     /// whatever the code does.
@@ -86,7 +93,7 @@ public class PairingCredentialTests
 
         Assert.Equal(
             VerificationOutcome.Refused,
-            receiver.Verify(request, Convert.ToBase64String(presented)));
+            receiver.Verify(request, Convert.ToBase64String(presented), At));
     }
 
     /// <summary>
@@ -104,7 +111,7 @@ public class PairingCredentialTests
 
         Assert.Equal(
             VerificationOutcome.Verified,
-            receiver.Verify(request, RequestAuthenticator.Sign(request, key)));
+            receiver.Verify(request, RequestAuthenticator.Sign(request, key), At));
     }
 
     /// <summary>
@@ -133,7 +140,7 @@ public class PairingCredentialTests
         var receiver = new RequestAuthenticator(
             new OneLiveKey(PairingId, RandomNumberGenerator.GetBytes(TagBytes)));
 
-        Assert.Equal(VerificationOutcome.Refused, receiver.Verify(request, wellFormedSignature));
+        Assert.Equal(VerificationOutcome.Refused, receiver.Verify(request, wellFormedSignature, At));
     }
 
     /// <summary>
@@ -152,10 +159,10 @@ public class PairingCredentialTests
 
         var knowsBoth = new RequestAuthenticator(new TwoLiveKeys(PairingId, mine, OtherPairingId, theirs));
 
-        Assert.Equal(VerificationOutcome.Refused, knowsBoth.Verify(request, signedWithTheWrongPairingsKey));
+        Assert.Equal(VerificationOutcome.Refused, knowsBoth.Verify(request, signedWithTheWrongPairingsKey, At));
         Assert.Equal(
             VerificationOutcome.Verified,
-            knowsBoth.Verify(request, RequestAuthenticator.Sign(request, theirs)));
+            knowsBoth.Verify(request, RequestAuthenticator.Sign(request, theirs), At));
     }
 
     /// <summary>
@@ -182,11 +189,11 @@ public class PairingCredentialTests
         var source = new OneLiveKey(PairingId, key);
         var receiver = new RequestAuthenticator(source);
 
-        Assert.Equal(VerificationOutcome.Verified, receiver.Verify(request, signature));
+        Assert.Equal(VerificationOutcome.Verified, receiver.Verify(request, signature, At));
 
         source.TheKeyIsNoLongerLive();
 
-        Assert.Equal(VerificationOutcome.Refused, receiver.Verify(request, signature));
+        Assert.Equal(VerificationOutcome.Refused, receiver.Verify(request, signature, At));
         Assert.Equal(2, source.Lookups);
     }
 
@@ -237,13 +244,13 @@ public class PairingCredentialTests
 
         public void TheKeyIsNoLongerLive() => _live = false;
 
-        public ReadOnlyMemory<byte> ArrivingKey(string pairingId)
+        public AcceptedKeys ArrivingKeys(string pairingId, DateTimeOffset at)
         {
             Lookups++;
 
             return _live && string.Equals(pairingId, _pairingId, StringComparison.Ordinal)
-                ? _material
-                : ReadOnlyMemory<byte>.Empty;
+                ? new AcceptedKeys(_material, default)
+                : AcceptedKeys.None;
         }
     }
 
@@ -266,16 +273,16 @@ public class PairingCredentialTests
             _secondMaterial = secondMaterial;
         }
 
-        public ReadOnlyMemory<byte> ArrivingKey(string pairingId)
+        public AcceptedKeys ArrivingKeys(string pairingId, DateTimeOffset at)
         {
             if (string.Equals(pairingId, _first, StringComparison.Ordinal))
             {
-                return _firstMaterial;
+                return new AcceptedKeys(_firstMaterial, default);
             }
 
             return string.Equals(pairingId, _second, StringComparison.Ordinal)
-                ? _secondMaterial
-                : ReadOnlyMemory<byte>.Empty;
+                ? new AcceptedKeys(_secondMaterial, default)
+                : AcceptedKeys.None;
         }
     }
 }

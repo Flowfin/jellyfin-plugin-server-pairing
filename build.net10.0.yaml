@@ -28,7 +28,7 @@ artifacts:
 changelog: >
   The first release. A server that installs it answers on the five pairing paths
   the specification fixes and refuses every request that reaches them. Nothing
-  verifies yet, because the check that reads an arriving request is given the key
-  source of a server that holds no keys, and there is no page and no endpoint an
-  administrator can open an enrolment from. Two servers cannot be paired with this
-  version.
+  verifies yet, because a server has no key to verify against: the check that reads
+  an arriving request looks the pairing up in this server's key store, and nothing
+  puts a key there, since there is no page and no endpoint an administrator can open
+  an enrolment from. Two servers cannot be paired with this version.

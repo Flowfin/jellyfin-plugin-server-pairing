@@ -181,7 +181,7 @@ That was issue #11, what a Jellyfin API key would otherwise reach is measured in
 signing key is refused by a test rather than by intention:
 
     git grep -n "public void AHostCredentialUsedAsTheSigningKeyIsRefused" origin/master -- Jellyfin.Plugin.ServerPairing.Tests
-    origin/master:Jellyfin.Plugin.ServerPairing.Tests/Protocol/PairingCredentialTests.cs:121:    public void AHostCredentialUsedAsTheSigningKeyIsRefused(string encoding)
+    origin/master:Jellyfin.Plugin.ServerPairing.Tests/Protocol/PairingCredentialTests.cs:128:    public void AHostCredentialUsedAsTheSigningKeyIsRefused(string encoding)
 
 A pairing that both administrators built can be ended by either of them alone.
 Revocation is unilateral, immediate and terminal, which is issue #24 and is the
@@ -209,15 +209,24 @@ being true:
     origin/master:Jellyfin.Plugin.ServerPairing/Api/PeerPlaneController.cs
     exit=0
 
-What has not changed is what the sentence was for. The five paths are answered
-and every answer is the same refusal, because the key source the plane is given
-holds no keys:
+What has not changed is what the sentence was for, and the reason it holds is
+narrower than it was. THIS PARAGRAPH SAID EVERY ANSWER IS THE SAME REFUSAL BECAUSE
+THE KEY SOURCE THE PLANE IS GIVEN HOLDS NO KEYS. The source reads the key store
+now, which is issue #287:
 
-    git grep -n 'IPairingKeySource, ' origin/master -- Jellyfin.Plugin.ServerPairing/PluginServiceRegistrator.cs
-    origin/master:Jellyfin.Plugin.ServerPairing/PluginServiceRegistrator.cs:64:        serviceCollection.AddSingleton<IPairingKeySource, NoPairingKeys>();
+    git grep -n 'new StoreBackedKeys' origin/master -- Jellyfin.Plugin.ServerPairing/PluginServiceRegistrator.cs
+    origin/master:Jellyfin.Plugin.ServerPairing/PluginServiceRegistrator.cs:66:            new StoreBackedKeys(services.GetRequiredService<IPairingKeyStore>()));
 
-So no window is consulted, no credential is checked and no revocation is applied
-on any path a request takes. The reading of the transition table above them is a
+What no route does is put a key in that store. There is no enrolment, so nothing
+generates a long-term key pair for one:
+
+    git grep -lni 'ECDiffieHellman' origin/master -- Jellyfin.Plugin.ServerPairing ; echo "exit=$?"
+    exit=1
+
+which is issue #18. A server's store is therefore empty, and every arriving request
+is refused for want of a key rather than for want of a lookup. So no window is
+consulted, no credential is checked and no revocation is applied on any path a
+request takes. The reading of the transition table above them is a
 reading of a specification for the same reason, and the types named here are
 exercised by the suite rather than by a server.
 

@@ -58,10 +58,12 @@ public class PluginServiceRegistrator : IPluginServiceRegistrator
         // and is constructed from the container, so what it needs is registered here or the
         // five paths answer with a server error instead of a refusal.
         //
-        // The key source is the one this tree can honestly supply: there is no key store, so
-        // nothing arriving verifies. Issue #30 is where that changes, and this line is what
-        // it replaces.
-        serviceCollection.AddSingleton<IPairingKeySource, NoPairingKeys>();
+        // The key source reads the store registered below, so a pairing that has a key can be
+        // verified. What has never put a key into that store is the enrolment, which is issue
+        // #18: a server's store is empty until one runs, and an empty store refuses everything
+        // for want of a key rather than for want of a lookup.
+        serviceCollection.AddSingleton<IPairingKeySource>(services =>
+            new StoreBackedKeys(services.GetRequiredService<IPairingKeyStore>()));
         serviceCollection.AddSingleton(services => new RequestAuthenticator(services.GetRequiredService<IPairingKeySource>()));
 
         // Once, because a limit held per caller is no limit. What it counts lives in this
@@ -87,10 +89,10 @@ public class PluginServiceRegistrator : IPluginServiceRegistrator
         // somewhere unusual is served without a setting, and the file is nowhere near the
         // directory the host writes plugin configurations into.
         //
-        // Nothing on the request path resolves this yet. What would is the request
-        // authenticator, and reaching a store whose every read takes an instant needs the
-        // injected clock, which is issue #26. It is registered here rather than when that
-        // arrives so that a server carries one store rather than one per caller.
+        // The request path resolves this, through the key source above. Every read takes the
+        // instant it is judged at, and the instant is the one the controller reads from the
+        // clock registered above and hands down, so the store and the arrival limit are judged
+        // against one reading of the time rather than two.
         //
         // The logger is handed in for one line only, which is the one saying a store written by
         // an older build has been carried up to the format this one reads. That is the single

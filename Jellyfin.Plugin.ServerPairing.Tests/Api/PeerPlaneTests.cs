@@ -510,13 +510,13 @@ public class PeerPlaneTests
         /// </summary>
         public int Asked { get; private set; }
 
-        public ReadOnlyMemory<byte> ArrivingKey(string pairingId)
+        public AcceptedKeys ArrivingKeys(string pairingId, DateTimeOffset at)
         {
             Asked++;
 
             return string.Equals(pairingId, _known, StringComparison.Ordinal)
-                ? _material
-                : ReadOnlyMemory<byte>.Empty;
+                ? new AcceptedKeys(_material, default)
+                : AcceptedKeys.None;
         }
     }
 }

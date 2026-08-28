@@ -40,11 +40,22 @@ installed today does rather than what an operator has to act on.
 
 What an operator gets by installing this version is a plugin that answers on the
 five pairing paths and refuses every request that reaches them. Nothing
-verifies: the check that reads an arriving request is given the key source of a
-server that holds no keys, and there is no page and no endpoint an administrator
-can open an enrolment from. Two servers cannot be paired with this version. The
-`changelog` field in `build.yaml` and `build.net10.0.yaml` carries that
-paragraph in the same words.
+verifies, and the reason is that a server has no key to verify against rather
+than that nothing looks: the check that reads an arriving request looks the
+pairing up in this server's key store, and nothing puts a key there, because
+there is no page and no endpoint an administrator can open an enrolment from.
+Two servers cannot be paired with this version. The `changelog` field in
+`build.yaml` and `build.net10.0.yaml` carries that paragraph in the same words.
+
+- [protocol] A request arriving from a peer is now verified against the key this
+  server holds for the pairing it names, and against the key a rotation has just
+  replaced while the overlap for it is open. Nothing an operator can reach puts a
+  key in that store yet, so every request is still refused; what this removes is
+  the case where a peer signing correctly under a key both servers hold would have
+  been refused anyway, and the case where a peer that had not yet caught up with a
+  rotation would have been refused for the length of the overlap. A pairing this
+  server does not hold and a signature that does not verify stay one answer, so
+  nothing here tells a stranger whether a pairing exists.
 
 - [protocol] How far an arriving request's timestamp may be from this server's
   clock is now an operator's setting rather than a fixed five minutes, with a
