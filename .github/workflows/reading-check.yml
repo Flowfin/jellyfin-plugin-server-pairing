@@ -1,0 +1,57 @@
+# Re-runs the readings the documents paste and refuses one that no longer
+# reproduces.
+#
+# It judges the commit this workflow is running on rather than `origin/master`,
+# which is what makes it a check on the change rather than a report about the
+# past: on a pull request the checkout is the merge result, so the question the
+# run answers is whether the readings still reproduce once this change is the
+# mainline. The argument for that, and the bounds on what the walk sees, are at
+# the top of the script.
+#
+# First-party and deterministic. Nothing is fetched, the only action used is the
+# checkout, and everything judged comes from git objects.
+#
+# The judgement lives in .github/reading-check.sh so the command a person runs
+# and the command this job runs are the same bytes, and
+# .github/reading-check-test.sh is where each rule is watched refusing
+# something.
+name: reading-check
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+    branches: ["**"]
+
+# Read-only. The check reads the checkout and writes nothing.
+permissions: {}
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  readings:
+    name: Reproduce every pasted reading
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read # checkout the tree the readings are judged against
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # One commit is enough: every command is re-run at the head being
+          # judged and nothing walks a range. No step pushes, so do not persist
+          # the token.
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Re-run every pasted reading
+        run: sh .github/reading-check.sh
+
+      - name: Prove the check still refuses what it claims to refuse
+        # The guard's own suite, run here rather than only on somebody's
+        # machine, so a change that quietly stops the check refusing anything
+        # reds this job instead of passing it.
+        run: sh .github/reading-check-test.sh

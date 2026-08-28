@@ -746,6 +746,7 @@ because that is a narrower claim rather than a weaker one.
 The third needs an unmapped user to be unreachable, and the table that decides it
 now exists and answers nothing for such a user:
 
+<!-- reading-check: no-output -->
 ```
 git grep -n 'public void AnUnmappedUserHasNoMappingRatherThanAGuessedOne' origin/master -- Jellyfin.Plugin.ServerPairing.Tests/Mapping/
 ```
