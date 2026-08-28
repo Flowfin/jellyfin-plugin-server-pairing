@@ -10,11 +10,14 @@ namespace Jellyfin.Plugin.ServerPairing.Protocol;
 /// Nothing here reads a clock, so freshness is not judged by this type. A signature that
 /// verifies says the request was made by whoever holds the key and that none of the covered
 /// fields moved on the way; whether it is fresh is the timestamp window and the nonce store,
-/// which are issues #21 and #26.
+/// which are issues #21 and #26. The instant this type does take is not a freshness judgement:
+/// it is what the key source needs in order to say whether a superseded key is still one.
 /// <para>
-/// This type is not registered with the container. It needs a key source, the key source
-/// needs the key store, and the key store is M4. The registration arrives with the store
-/// rather than ahead of it.
+/// It is registered in <see cref="PluginServiceRegistrator"/> against the source that reads
+/// this server's key store, so a pairing that has a key can be verified. What has never put a
+/// key into that store is the enrolment, which is issue #18, so on a server today the store is
+/// empty and every arriving request is refused for want of a key rather than for want of a
+/// route.
 /// </para>
 /// </remarks>
 public sealed class RequestAuthenticator
@@ -26,11 +29,12 @@ public sealed class RequestAuthenticator
 
     private readonly IPairingKeySource _keys;
     private readonly byte[] _keyForAnAbsentPairing;
+    private readonly byte[] _keyForAnAbsentOverlap;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="RequestAuthenticator"/> class.
     /// </summary>
-    /// <param name="keys">Where the key for a pairing comes from.</param>
+    /// <param name="keys">Where the keys for a pairing come from.</param>
     public RequestAuthenticator(IPairingKeySource keys)
     {
         _keys = keys ?? throw new ArgumentNullException(nameof(keys));
@@ -41,6 +45,13 @@ public sealed class RequestAuthenticator
         // early return is a timing oracle for whether a pairing exists, which is the
         // question the refusal path exists to refuse.
         _keyForAnAbsentPairing = RandomNumberGenerator.GetBytes(SignatureLength);
+
+        // The same argument one slot over. A pairing that is not mid-rotation has no
+        // superseded key, and judging one candidate where a rotating pairing judges two would
+        // say which of the two a pairing is to a caller who holds neither key. So the second
+        // candidate is always computed, against this where there is nothing to compute it
+        // against, and discarded.
+        _keyForAnAbsentOverlap = RandomNumberGenerator.GetBytes(SignatureLength);
     }
 
     /// <summary>
@@ -67,8 +78,20 @@ public sealed class RequestAuthenticator
     /// </summary>
     /// <param name="request">The request as it arrived.</param>
     /// <param name="presentedSignature">The value of the signature header, as base64.</param>
+    /// <param name="at">
+    /// The instant the key source is asked about, which decides whether a superseded key is
+    /// still one.
+    /// </param>
     /// <returns>The outcome.</returns>
-    public VerificationOutcome Verify(PairingRequest request, string? presentedSignature)
+    /// <remarks>
+    /// Both candidates are always computed, and where a slot is empty the candidate is computed
+    /// against a key drawn once by this receiver and thrown away. A caller holding neither key
+    /// learns nothing from how long the answer took, including whether the pairing exists and
+    /// whether it is mid-rotation. That is the same shape <see cref="KeyOverlap.Verify"/> holds
+    /// for a pairing kept in memory, and both reach <see cref="Matches"/> rather than computing
+    /// their own tag, so there is one construction of the canonical bytes and one comparison.
+    /// </remarks>
+    public VerificationOutcome Verify(PairingRequest request, string? presentedSignature, DateTimeOffset at)
     {
         // Shape first, and before any key is fetched or any digest is taken. A request
         // missing a covered field cannot be signed over, and computing something over what
@@ -83,10 +106,16 @@ public sealed class RequestAuthenticator
             return VerificationOutcome.Refused;
         }
 
-        var arriving = _keys.ArrivingKey(request.PairingId);
-        var key = arriving.IsEmpty ? _keyForAnAbsentPairing.AsSpan() : arriving.Span;
+        var arriving = _keys.ArrivingKeys(request.PairingId, at);
 
-        return Matches(request, presented, key)
+        var overlapIsOpen = !arriving.Superseded.IsEmpty;
+        var current = arriving.Current.IsEmpty ? _keyForAnAbsentPairing.AsSpan() : arriving.Current.Span;
+        var superseded = overlapIsOpen ? arriving.Superseded.Span : _keyForAnAbsentOverlap.AsSpan();
+
+        var onCurrent = Matches(request, presented, current);
+        var onSuperseded = Matches(request, presented, superseded);
+
+        return onCurrent || (overlapIsOpen && onSuperseded)
             ? VerificationOutcome.Verified
             : VerificationOutcome.Refused;
     }
@@ -118,6 +147,7 @@ public sealed class RequestAuthenticator
     /// <typeparam name="T">What the reader produces.</typeparam>
     /// <param name="request">The request as it arrived.</param>
     /// <param name="presentedSignature">The value of the signature header.</param>
+    /// <param name="at">The instant the key source is asked about.</param>
     /// <param name="readBody">The reader that turns the body into something richer than bytes.</param>
     /// <param name="value">What the reader produced, or the default where it was not called.</param>
     /// <returns>The outcome.</returns>
@@ -129,12 +159,13 @@ public sealed class RequestAuthenticator
     public VerificationOutcome VerifyThenRead<T>(
         PairingRequest request,
         string? presentedSignature,
+        DateTimeOffset at,
         Func<ReadOnlyMemory<byte>, T> readBody,
         out T? value)
     {
         ArgumentNullException.ThrowIfNull(readBody);
 
-        var outcome = Verify(request, presentedSignature);
+        var outcome = Verify(request, presentedSignature, at);
 
         value = outcome == VerificationOutcome.Verified ? readBody(request.Body) : default;
 

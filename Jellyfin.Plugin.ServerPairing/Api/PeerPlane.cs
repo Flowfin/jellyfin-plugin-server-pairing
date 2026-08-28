@@ -106,11 +106,19 @@ public sealed class PeerPlane
     /// </para>
     /// <para>
     /// Every answer today is <see cref="RefusalCode.Refused"/>, and that is the transition
-    /// table rather than a placeholder. No key store and no record store exist, so every
-    /// pairing is <see cref="PairingState.Absent"/>, and the <c>Absent</c> row of that table
-    /// is the undistinguished refusal for all five messages.
+    /// table rather than a placeholder. No record store exists, so every pairing is
+    /// <see cref="PairingState.Absent"/>, and the <c>Absent</c> row of that table is the
+    /// undistinguished refusal for all five messages.
     /// <c>PeerPlaneTests.TheAbsentRowRefusesEveryMessage</c> is the assertion that ties this
     /// answer to the table instead of to this sentence.
+    /// <para>
+    /// THAT IS NOW TRUE OF THE ANSWER AND NOT OF THE VERIFICATION, which is a distinction a
+    /// reader of this paragraph could previously not make. The key store is read on this path,
+    /// so a request signed under a pairing's key reaches the second field of
+    /// <see cref="PeerPlaneOutcome"/> as verified and is still refused by the row above. What
+    /// no route puts a key into that store is the enrolment, which is issue #18, so on a server
+    /// today nothing verifies for want of a key rather than for want of a lookup.
+    /// </para>
     /// </para>
     /// </remarks>
     public PeerPlaneOutcome Serve(PairingMessage message, ArrivingRequest arrived, DateTimeOffset at)
@@ -142,7 +150,7 @@ public sealed class PeerPlane
             arrived.Nonce ?? string.Empty,
             arrived.Body);
 
-        var outcome = _authenticator.VerifyThenRead(request, arrived.Signature, body => body, out var verified);
+        var outcome = _authenticator.VerifyThenRead(request, arrived.Signature, at, body => body, out var verified);
 
         if (outcome != VerificationOutcome.Verified)
         {

@@ -7,6 +7,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Jellyfin.Plugin.ServerPairing.Api;
+using Jellyfin.Plugin.ServerPairing.KeyStore;
 using Jellyfin.Plugin.ServerPairing.Protocol;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Features;
@@ -14,6 +15,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using MediaBrowser.Common.Configuration;
 using MediaBrowser.Controller;
 using NSubstitute;
 using Xunit;
@@ -309,6 +311,15 @@ public class PeerPlaneControllerTests
         // comes from the registrator, and a dependency it forgets still fails here.
         services.AddLogging();
 
+        // The second thing the host supplies, and it is here because this controller's
+        // dependencies reach further than they did. The plane asks the key source, the key
+        // source reads the key store, and the store derives its file from the host's own
+        // paths, so a container with no paths in it cannot build the controller at all. That
+        // is the join in issue #287 arriving as a dependency rather than as a claim.
+        var paths = Substitute.For<IApplicationPaths>();
+        paths.DataPath.Returns(Path.GetTempPath());
+        services.AddSingleton(paths);
+
         new PluginServiceRegistrator().RegisterServices(services, Substitute.For<IServerApplicationHost>());
 
         using var provider = services.BuildServiceProvider(new ServiceProviderOptions { ValidateScopes = true });
@@ -355,7 +366,7 @@ public class PeerPlaneControllerTests
     public async Task TheInstantAnArrivalIsJudgedAtIsReadFromTheClockPerRequest()
     {
         var limit = new ArrivalLimit();
-        var plane = new PeerPlane(new RequestAuthenticator(new NoPairingKeys()), limit);
+        var plane = new PeerPlane(new RequestAuthenticator(new StoreBackedKeys(new InMemoryPairingKeyStore())), limit);
         var clock = new MovableClock(DateTimeOffset.FromUnixTimeSeconds(1786000000));
 
         await Over(plane, clock).Hello().ConfigureAwait(true);
@@ -426,7 +437,7 @@ public class PeerPlaneControllerTests
             feature.RawTarget = rawTarget!;
         }
 
-        return new PeerPlaneController(new PeerPlane(new RequestAuthenticator(new NoPairingKeys()), new ArrivalLimit()), TimeProvider.System, logger)
+        return new PeerPlaneController(new PeerPlane(new RequestAuthenticator(new StoreBackedKeys(new InMemoryPairingKeyStore())), new ArrivalLimit()), TimeProvider.System, logger)
         {
             ControllerContext = new ControllerContext { HttpContext = context },
         };
