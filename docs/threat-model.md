@@ -204,9 +204,21 @@ and that policy is the administrator role:
     v10.11.9:Jellyfin.Server/Extensions/ApiServiceCollectionExtensions.cs:90:                    Policies.RequiresElevation,
     v10.11.9:Jellyfin.Server/Extensions/ApiServiceCollectionExtensions.cs-91-                    policy => policy.AddAuthenticationSchemes(AuthenticationSchemes.CustomAuthentication)
     v10.11.9:Jellyfin.Server/Extensions/ApiServiceCollectionExtensions.cs-92-                        .RequireClaim(ClaimTypes.Role, UserRoles.Administrator));
+    v10.11.9:Jellyfin.Server/Extensions/ApiServiceCollectionExtensions.cs-93-            });
+    --
     v12.0-rc3:Jellyfin.Server/Extensions/ApiServiceCollectionExtensions.cs:87:                    Policies.RequiresElevation,
     v12.0-rc3:Jellyfin.Server/Extensions/ApiServiceCollectionExtensions.cs-88-                    policy => policy.AddAuthenticationSchemes(AuthenticationSchemes.CustomAuthentication)
     v12.0-rc3:Jellyfin.Server/Extensions/ApiServiceCollectionExtensions.cs-89-                        .RequireClaim(ClaimTypes.Role, UserRoles.Administrator));
+    v12.0-rc3:Jellyfin.Server/Extensions/ApiServiceCollectionExtensions.cs-90-            });
+
+CORRECTED. The four lines above were three, and the separator between the two
+tags was absent: `-A3` prints three lines after each match and this block pasted
+two, so the output did not reproduce. Nothing about the claim moved - the policy
+is still the administrator role at both tags - and what was wrong was the paste
+rather than the reading. It was found by running every reading in these documents
+that is pointed at a Jellyfin tag in a checkout of `jellyfin/jellyfin`, which is
+the population `.github/reading-check.sh` declares out of its own walk, on issue
+#80.
 
 So a key on the configuration object would be plaintext XML on the filesystem
 and would be readable by any administrator through an endpoint this plugin does

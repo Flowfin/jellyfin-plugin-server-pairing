@@ -109,6 +109,15 @@ written on, so the reading was done through the GitHub API rather than with
 a reader with a checkout runs and it was not run here; the `gh api` form is
 what produced the output that is pasted.
 
+THE `git grep` FORMS HAVE SINCE BEEN RUN AND THE PARAGRAPH ABOVE IS UNCHANGED,
+because it says how the pasted output was produced and that is still how it was
+produced. Every reading in this file that names a tag was run again in a checkout
+of `jellyfin/jellyfin` holding both of them, and each agrees with the `gh api`
+form beside it. That population is the one `.github/reading-check.sh` declares
+out of its own walk, so nothing runs these on a pull request and this paragraph
+is a reading somebody took rather than a guard. It was taken on issue #80, where
+what it found in a neighbouring document is written down.
+
 The two tags resolve to these commits, so a reader can tell which blobs the
 quotations are correct about:
 
@@ -159,7 +168,16 @@ gh api -H "Accept: application/vnd.github.raw" \
 41:    public const string LocalAccessOrRequiresElevation = "LocalAccessOrRequiresElevation";
 ```
 
-Identical at `v12.0-rc3`.
+Identical at `v12.0-rc3`, which the `git grep` form above answers for both tags
+rather than leaving to a sentence:
+
+```
+git grep -n "RequiresElevation = " v10.11.9 v12.0-rc3 -- MediaBrowser.Common/Api/Policies.cs
+v10.11.9:MediaBrowser.Common/Api/Policies.cs:16:    public const string RequiresElevation = "RequiresElevation";
+v10.11.9:MediaBrowser.Common/Api/Policies.cs:41:    public const string LocalAccessOrRequiresElevation = "LocalAccessOrRequiresElevation";
+v12.0-rc3:MediaBrowser.Common/Api/Policies.cs:16:    public const string RequiresElevation = "RequiresElevation";
+v12.0-rc3:MediaBrowser.Common/Api/Policies.cs:41:    public const string LocalAccessOrRequiresElevation = "LocalAccessOrRequiresElevation";
+```
 
 ## Where the token may come from, and where the two lines differ
 
