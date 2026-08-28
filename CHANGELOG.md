@@ -47,6 +47,13 @@ there is no page and no endpoint an administrator can open an enrolment from.
 Two servers cannot be paired with this version. The `changelog` field in
 `build.yaml` and `build.net10.0.yaml` carries that paragraph in the same words.
 
+- An administrator can ask this server which pairings it holds a key for, at
+  `GET /ServerPairing/Administration/pairings`, which answers the identifiers and
+  nothing else. Until now that question was answered only by a line written once
+  at startup, so a server that had been running for a week answered it only in a
+  log file nobody kept. The endpoint requires the same elevation as the rest of
+  the dashboard. It changes nothing and there is still no way to make a pairing,
+  so on a server today it answers an empty list.
 - [protocol] A request arriving from a peer is now verified against the key this
   server holds for the pairing it names, and against the key a rotation has just
   replaced while the overlap for it is open. Nothing an operator can reach puts a

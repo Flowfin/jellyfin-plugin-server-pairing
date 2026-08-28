@@ -172,6 +172,7 @@ pasted a reading with no controller in it. There is one:
 
 ```
 git grep -l "ControllerBase" origin/master -- Jellyfin.Plugin.ServerPairing ; echo "exit=$?"
+origin/master:Jellyfin.Plugin.ServerPairing/Api/AdministrativePlaneController.cs
 origin/master:Jellyfin.Plugin.ServerPairing/Api/PeerPlaneController.cs
 exit=0
 ```
@@ -179,11 +180,17 @@ exit=0
 That command also read a working tree rather than the mainline, which is what
 this document tells everybody else not to do, and it names `origin/master` now.
 
-The half that has not changed is the half the sentence was about. The controller
-that exists serves the peer plane, which a peer reaches and the dashboard page
-does not, and there is no controller for the administrative endpoints behind
-that page. `PeerPlaneControllerTests` is the controller-level suite for the plane
-and there is nothing of that shape for the page, because the endpoints it would
-call do not exist.
+THIS PARAGRAPH SAID THERE IS NO CONTROLLER FOR THE ADMINISTRATIVE ENDPOINTS
+BEHIND THAT PAGE, and there is one: the second file in the reading above is the
+administrative plane, which is issue #289. `AdministrativePlaneControllerTests`
+is the controller-level suite for it, beside `PeerPlaneControllerTests` for the
+other plane.
+
+What that does not do is make this replacement carried out. The plane holds one
+action and it is a read; the endpoints the page is built around - opening a
+window, confirming a ceremony, revoking, editing a mapping, rendering the states
+- do not exist, so there is still no controller-level suite for what the page
+would call, because the page would call almost nothing that is there. The page
+itself is unchanged and is still the plugin template's.
 
 Each of the rest arrives with the issue that builds the thing it replaces.

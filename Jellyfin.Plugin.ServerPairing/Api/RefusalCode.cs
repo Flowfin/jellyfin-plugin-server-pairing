@@ -11,9 +11,11 @@ namespace Jellyfin.Plugin.ServerPairing.Api;
 /// <para>
 /// Which members this tree can currently produce is a smaller set than this enumeration, and
 /// deliberately so. <see cref="PeerPlane"/> produces <see cref="Refused"/> and nothing else,
-/// because every pairing is <see cref="Protocol.PairingState.Absent"/> while no key store and
-/// no record store exist, and the <c>Absent</c> row of the transition table is the
-/// undistinguished refusal for all five messages. The rest are named here so the taxonomy has
+/// because every pairing is <see cref="Protocol.PairingState.Absent"/> while no record store
+/// exists, and the <c>Absent</c> row of the transition table is the undistinguished refusal
+/// for all five messages. THIS SENTENCE SAID NO KEY STORE EXISTS EITHER, and one does and is
+/// read on that path, which is issue #287: a request signed under a pairing's key verifies
+/// there and is still answered with the row above. The rest are named here so the taxonomy has
 /// one expression in code rather than a partial one that grows a second.
 /// </para>
 /// </remarks>

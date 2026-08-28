@@ -21,6 +21,7 @@ being true and the sentence they supported has not.** Something reaches them:
 
 ```
 git grep -l "ControllerBase" origin/master -- Jellyfin.Plugin.ServerPairing ; echo "exit=$?"
+origin/master:Jellyfin.Plugin.ServerPairing/Api/AdministrativePlaneController.cs
 origin/master:Jellyfin.Plugin.ServerPairing/Api/PeerPlaneController.cs
 exit=0
 ```
@@ -662,7 +663,7 @@ to hold it under. The wire already says as much about the request that arrives i
 that state:
 
     git grep -n "^them. Its .X-Pairing-Id. is 32" origin/master -- docs/protocol.md
-    origin/master:docs/protocol.md:412:them. Its `X-Pairing-Id` is 32 `0` characters, which is what line 5 of its
+    origin/master:docs/protocol.md:413:them. Its `X-Pairing-Id` is 32 `0` characters, which is what line 5 of its
 
 and nothing carries that over to the record.
 

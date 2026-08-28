@@ -206,6 +206,7 @@ not. This paragraph said nothing in this plugin answered a peer, and that has st
 being true:
 
     git grep -l "ControllerBase" origin/master -- Jellyfin.Plugin.ServerPairing ; echo "exit=$?"
+    origin/master:Jellyfin.Plugin.ServerPairing/Api/AdministrativePlaneController.cs
     origin/master:Jellyfin.Plugin.ServerPairing/Api/PeerPlaneController.cs
     exit=0
 

@@ -17,12 +17,20 @@ describing them once they exist.
 | `PeerPlaneController.Rotate` | `POST` | `/ServerPairing/rotate` | peer | `anonymous` | the pairing signature |
 | `PeerPlaneController.Revoke` | `POST` | `/ServerPairing/revoke` | peer | `anonymous` | the pairing signature |
 | `PeerPlaneController.Exchange` | `POST` | `/ServerPairing/exchange` | peer | `anonymous` | the pairing signature |
+| `AdministrativePlaneController.Pairings` | `GET` | `/ServerPairing/Administration/pairings` | administrative | `elevation` | the host's elevation policy |
 
-Five rows, all on the peer plane. The administrative plane has no endpoint yet,
-so it has no row: opening an enrolment window, confirming a ceremony, listing
-pairings, rotating, revoking and editing mappings are all still issues rather
-than actions, and a row for one of them would describe something no request can
-reach.
+Six rows. Five are the peer plane, which is the paths the specification fixes.
+THIS PARAGRAPH SAID THE ADMINISTRATIVE PLANE HAS NO ENDPOINT AND THEREFORE NO
+ROW; it has one, which is issue #289, and the plane is what that issue is about
+rather than the action on it. What the action answers is the identifiers of the
+pairings this server holds a key for, and nothing else.
+
+The rest of the administrative actions are still issues rather than actions, and
+a row for one of them would describe something no request can reach: opening an
+enrolment window and confirming a ceremony are #18 and #19, revoking is #24,
+editing mappings is #40, the pairing states the page renders are #49 and the
+diagnostics payload is #51. Each of them lands on the plane above rather than
+bringing a controller of its own.
 
 ### What the two authorization words mean
 
@@ -37,10 +45,25 @@ else.
 
 `elevation` is the action carrying `Authorize` naming the host's
 `RequiresElevation` policy, which is the constant read out of the server source
-in the section below. No row carries it today. When an administrative endpoint
-lands it takes that word, and what decides the request is the host's elevation
-policy together with the endpoint's own repeat of the check, which is the
-third bullet under `What this plugin does about it`.
+in the section below. ONE ROW CARRIES IT AND THIS SENTENCE SAID NONE DID. What
+decides such a request is the host's elevation policy together with the
+endpoint's own repeat of the check, which is the third bullet under `What this
+plugin does about it`.
+
+The policy is declared on the controller rather than per action, so an action
+added to that class without an attribute inherits it. That is the direction that
+fails safe, and it is not what makes the row true: what the suite compares
+against is the host's own action discovery, so an action that ended up with the
+server's default rather than with this policy fails whatever the class says.
+
+WHETHER THE HOST THEN ENFORCES THE POLICY IS NOT MEASURED BY ANYTHING HERE. The
+refusal is the server's authorization middleware rather than this plugin's code,
+so reaching it means standing that pipeline up, and a case that did would be
+judging the framework. `docs/testing.md` refuses the neighbouring apparatus, two
+real servers and a browser, and does not name this case, so this paragraph is
+the argument rather than a citation of one. The declaration is asserted and the
+enforcement is the reading of the server's source below, which is somebody
+else's tree read at two tags and not a measurement of this one.
 
 The pairing between the columns is fixed rather than chosen per row: `peer` goes
 with `anonymous` and with the pairing signature, `administrative` goes with
@@ -365,7 +388,9 @@ GitHub API and not on a running server, and no test drives any of it. That half
 is prose and stays prose.
 
 Issue #53's third condition asks that a test assert every state-changing
-endpoint refuses a request lacking whatever this document names. It is not met.
+endpoint refuses a request lacking whatever this document names. It is not met,
+and the administrative row above does not meet it: that action is a read and
+changes nothing, so the set the condition quantifies over is still empty.
 `PeerPlaneTests` does assert that a request without a verifying signature is
 refused and that its body is not handed on, but every answer this plane gives
 today is the same refusal whatever arrives, so that assertion cannot be
