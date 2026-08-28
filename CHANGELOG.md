@@ -102,7 +102,10 @@ paragraph in the same words.
   starts, and the file is left exactly as it was rather than being written back
   with whatever this build could not read dropped out of it. That is the case the
   number exists for, and it is an operator who installed a newer plugin, configured
-  it, and then rolled the plugin back.
+  it, and then rolled the plugin back. A number below zero, which no build of this
+  plugin writes and which can only have been typed into the file by hand, is refused
+  too and with a different sentence, because the way out of that one is to set it back
+  rather than to install anything.
 - The key store's file now carries the number of the format it is in, and a
   plugin that meets one written by a newer plugin refuses it instead of reading
   the parts it recognises. Every pairing stops working until the newer plugin is

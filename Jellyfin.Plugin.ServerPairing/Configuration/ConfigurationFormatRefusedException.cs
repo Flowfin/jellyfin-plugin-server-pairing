@@ -35,11 +35,7 @@ public sealed class ConfigurationFormatRefusedException : Exception
     /// <param name="found">The format the configuration declares.</param>
     /// <param name="understood">The highest format this build understands.</param>
     public ConfigurationFormatRefusedException(int found, int understood)
-        : base(string.Format(
-            CultureInfo.InvariantCulture,
-            "The plugin configuration is in format {0} and this build understands format {1} at the highest. It was written by a newer plugin than this one, so it is not written back: doing so would drop whatever that format added. Install the newer plugin again, or move the configuration file aside and set this plugin up afresh.",
-            found,
-            understood))
+        : base(Sentence(found, understood))
     {
         Found = found;
         Understood = understood;
@@ -80,4 +76,29 @@ public sealed class ConfigurationFormatRefusedException : Exception
     /// Gets the highest format this build understands.
     /// </summary>
     public int Understood { get; }
+
+    /// <summary>
+    /// The sentence for one end or the other.
+    /// </summary>
+    /// <param name="found">The format the configuration declares.</param>
+    /// <param name="understood">The highest format this build understands.</param>
+    /// <returns>The message.</returns>
+    /// <remarks>
+    /// Two ends, two causes, two sentences. A format above the highest understood is a newer
+    /// plugin's file and the operator's way out is to install that plugin again. A format below
+    /// the lowest is a value no build of this plugin has ever written, so it was edited by hand,
+    /// and telling that operator to reinstall something would send them after a plugin that does
+    /// not exist.
+    /// </remarks>
+    private static string Sentence(int found, int understood) => found > understood
+        ? string.Format(
+            CultureInfo.InvariantCulture,
+            "The plugin configuration is in format {0} and this build understands format {1} at the highest. It was written by a newer plugin than this one, so it is not written back: doing so would drop whatever that format added. Install the newer plugin again, or move the configuration file aside and set this plugin up afresh.",
+            found,
+            understood)
+        : string.Format(
+            CultureInfo.InvariantCulture,
+            "The plugin configuration declares format {0}, and no build of this plugin has ever written a format below 0, so that number was put there by hand. It is not written back and nothing was corrected. Set it to 0 in the configuration file, or remove the element, and this build will carry the file up to format {1} on the next save.",
+            found,
+            understood);
 }

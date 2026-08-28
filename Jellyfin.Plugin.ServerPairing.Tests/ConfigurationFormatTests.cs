@@ -209,6 +209,54 @@ public class ConfigurationFormatTests
     }
 
     /// <summary>
+    /// The other end, and it is a different failure with a different way out. Nothing this
+    /// plugin has ever written declares a format below the unversioned one, so a file that does
+    /// was edited by hand. Left unrefused it reaches the ladder, which has no rung away from it,
+    /// and the operator meets a save that did not work instead of a sentence naming the member
+    /// they changed.
+    /// </summary>
+    /// <param name="declared">A format no build of this plugin wrote.</param>
+    [Theory]
+    [InlineData(ConfigurationFormat.Unversioned - 1)]
+    [InlineData(int.MinValue)]
+    public void AFormatNoBuildEverWroteIsRefusedInBothDirections(int declared)
+    {
+        var reading = ConfigurationReading.Of(new PluginConfiguration { FormatVersion = declared });
+        var refusal = Assert.Single(reading.Refusals);
+
+        Assert.Equal(nameof(PluginConfiguration.FormatVersion), refusal.Setting);
+        Assert.False(reading.MayPair);
+
+        using var host = new HostWritingToATemporaryDirectory();
+        var written = new PluginConfiguration { FormatVersion = declared };
+
+        Assert.Throws<ConfigurationFormatRefusedException>(() => host.Plugin.SaveConfiguration(written));
+        Assert.Empty(host.Writes);
+    }
+
+    /// <summary>
+    /// The two ends read differently, because the way out of each is different. An operator whose
+    /// file came from a newer plugin installs that plugin again; an operator who typed a number
+    /// nothing wrote would be sent after a plugin that does not exist by the same sentence.
+    /// </summary>
+    [Fact]
+    public void TheTwoEndsAreRefusedWithDifferentSentences()
+    {
+        var newer = ConfigurationReading
+            .Of(new PluginConfiguration { FormatVersion = ConfigurationFormat.Current + 1 })
+            .Refusals[0].Reason;
+
+        var older = ConfigurationReading
+            .Of(new PluginConfiguration { FormatVersion = ConfigurationFormat.Unversioned - 1 })
+            .Refusals[0].Reason;
+
+        Assert.NotEqual(newer, older);
+        Assert.Contains("newer plugin", newer, StringComparison.Ordinal);
+        Assert.DoesNotContain("newer plugin", older, StringComparison.Ordinal);
+        Assert.Contains("by hand", older, StringComparison.Ordinal);
+    }
+
+    /// <summary>
     /// The read path refuses the same configuration and does not throw doing it. A reading that
     /// threw would be one the host's load path throws out of, which takes the plugin off the
     /// server, and the repair for that is a text editor on the server's filesystem. So the

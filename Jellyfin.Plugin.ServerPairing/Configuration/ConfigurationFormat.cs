@@ -68,13 +68,29 @@ public static class ConfigurationFormat
     public static bool IsFromANewerBuild(int declared) => declared > Current;
 
     /// <summary>
+    /// Whether a declared format is one this build can do anything with at all.
+    /// </summary>
+    /// <param name="declared">The format the configuration declares.</param>
+    /// <returns><c>true</c> where it is between <see cref="Unversioned"/> and <see cref="Current"/>.</returns>
+    /// <remarks>
+    /// The lower end is not the same failure as the upper one and is refused for its own reason.
+    /// Nothing this plugin has ever written declares a format below <see cref="Unversioned"/>,
+    /// so a file that does was edited by hand into a state no build produces. Left unrefused it
+    /// reaches the ladder, which has no rung away from it and fails there - a fault an operator
+    /// meets as a save that did not work rather than as a sentence naming the member they
+    /// changed.
+    /// </remarks>
+    public static bool IsUnderstood(int declared) => declared >= Unversioned && declared <= Current;
+
+    /// <summary>
     /// Walks a configuration up the ladder to <see cref="Current"/>, one rung at a time, and
     /// stamps the number it now carries.
     /// </summary>
     /// <param name="configuration">The configuration, in whatever format it declares.</param>
     /// <exception cref="ArgumentNullException">The configuration is null.</exception>
     /// <exception cref="ConfigurationFormatRefusedException">
-    /// The configuration declares a format newer than this build understands.
+    /// The configuration declares a format this build does not understand, which is one newer
+    /// than <see cref="Current"/> or one below <see cref="Unversioned"/>.
     /// </exception>
     /// <remarks>
     /// One rung at a time in order rather than jumped. Two rungs written as one jump have to
@@ -87,7 +103,7 @@ public static class ConfigurationFormat
 
         var declared = configuration.FormatVersion;
 
-        if (IsFromANewerBuild(declared))
+        if (!IsUnderstood(declared))
         {
             throw new ConfigurationFormatRefusedException(declared, Current);
         }

@@ -67,14 +67,23 @@ configuration carrying no number is in - and one value cannot go on meaning both
 current format moves past `1`. So the constructor sets the older of the two and the write
 sets the newer one.
 
-A configuration declaring a format higher than this build understands is refused in both
-directions, and they are different refusals for different reasons. The read names the
+A configuration declaring a format this build does not understand is refused on the read
+and on the write, and those are different refusals for different reasons. The read names the
 member the way any other refused setting is named, and the server does not pair; nothing
 on that path throws, for the reason the whole of this document gives. The write throws
 instead, because the alternative is putting this build's truncated reading of a newer
 file back over that file:
 
     git grep -n 'class ConfigurationFormatRefusedException' -- Jellyfin.Plugin.ServerPairing/Configuration/
+
+THERE ARE TWO ENDS AND THEY READ DIFFERENTLY. A number above the highest this build
+understands is a file a newer plugin wrote, and the way out is to install that plugin
+again. A number below `0` is one no build of this plugin has ever written, so it was
+typed into the file by hand, and the way out is to set it back to `0` or to delete the
+element. Refusing both with one sentence would send the second operator after a plugin
+that does not exist, and leaving the lower end unrefused would let it reach the ladder,
+which has no rung away from it: what that operator would meet is a save that did not
+work rather than a sentence naming the member they changed.
 
 What that leaves is stated rather than tidied away. The host sets its in-memory
 configuration before it calls the save, so a dashboard save against a newer file leaves
