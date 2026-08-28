@@ -122,8 +122,8 @@ an operator sets now, and issue #50 is closed:
 
 ```
 git grep -n 'public int EnrolmentWindowSeconds\|public string PeerAddress' origin/master -- Jellyfin.Plugin.ServerPairing/Configuration/PluginConfiguration.cs
-origin/master:Jellyfin.Plugin.ServerPairing/Configuration/PluginConfiguration.cs:106:    public string PeerAddress { get; set; }
-origin/master:Jellyfin.Plugin.ServerPairing/Configuration/PluginConfiguration.cs:134:    public int EnrolmentWindowSeconds { get; set; }
+origin/master:Jellyfin.Plugin.ServerPairing/Configuration/PluginConfiguration.cs:130:    public string PeerAddress { get; set; }
+origin/master:Jellyfin.Plugin.ServerPairing/Configuration/PluginConfiguration.cs:158:    public int EnrolmentWindowSeconds { get; set; }
 ```
 
 So what that half waits on is a decision about which number to stamp and when,

@@ -58,6 +58,12 @@ public class PluginConfiguration : BasePluginConfiguration
     /// </summary>
     public PluginConfiguration()
     {
+        // Not the current format. A missing element leaves the value this constructor set, so
+        // this value is what a configuration file written before the number existed reads as,
+        // and it has to keep meaning that after the current format has moved past it. What
+        // stamps the current number is the write rather than the construction.
+        FormatVersion = ConfigurationFormat.Unversioned;
+
         // set default options here
         Options = SomeOptions.AnotherOption;
         TrueFalseSetting = true;
@@ -73,6 +79,24 @@ public class PluginConfiguration : BasePluginConfiguration
         PeerPlaneArrivalsPerPairing = ArrivalLimit.ArrivalsPerPairing;
         PeerPlaneArrivalsPerEnrolment = ArrivalLimit.ArrivalsPerEnrolment;
     }
+
+    /// <summary>
+    /// Gets or sets the format this configuration is in.
+    /// </summary>
+    /// <remarks>
+    /// Not a setting an operator chooses, and the one member here that the plugin writes rather
+    /// than reads. It says which shape the rest of this file is in, so that a later build can
+    /// carry an older file up to its own shape instead of guessing, and so that this build can
+    /// refuse a file a newer one wrote rather than truncating it.
+    /// <para>
+    /// It is on the configuration rather than beside it because the host's serialiser writes
+    /// this type and nothing else, so a number held anywhere else would be a number the file
+    /// does not carry. <see cref="ConfigurationFormat"/> is where the value's meaning, the
+    /// ladder and the refusal live; issue #55 is why it exists before there is anything to
+    /// migrate.
+    /// </para>
+    /// </remarks>
+    public int FormatVersion { get; set; }
 
     /// <summary>
     /// Gets or sets a value indicating whether some true or false setting is enabled..

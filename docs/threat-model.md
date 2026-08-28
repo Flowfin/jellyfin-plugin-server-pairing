@@ -532,7 +532,7 @@ a value above it refused as the configuration is read rather than shortened to i
 
 ```
 git grep -n '`EnrolmentWindowSeconds` | ' origin/master -- docs/configuration.md
-origin/master:docs/configuration.md:24:| `EnrolmentWindowSeconds` | `int` | `600` | 1 to 1800 |
+origin/master:docs/configuration.md:25:| `EnrolmentWindowSeconds` | `int` | `600` | 1 to 1800 |
 ```
 
 What is left is the second, the operator being told while a window is open, which

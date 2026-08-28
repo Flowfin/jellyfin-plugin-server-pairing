@@ -20,6 +20,7 @@ why it lives there instead:
 
 | Setting | Type | Default | Range |
 | --- | --- | --- | --- |
+| `FormatVersion` | `int` | `0` | `0` where the file carries no number, `1` for what this build writes, and anything higher is refused; the plugin writes this member and an operator does not set it |
 | `AcknowledgeCleartextTransport` | `bool` | `false` | `true` or `false`; `true` also permits an `http` peer address |
 | `EnrolmentWindowSeconds` | `int` | `600` | 1 to 1800 |
 | `PeerPlaneArrivalsPerEnrolment` | `int` | `6` | 1 to 3600, and never larger than `PeerPlaneArrivalsPerPairing` |
@@ -40,6 +41,71 @@ place and not the other is a red suite rather than a document nobody re-read.
 `(empty)` is how an empty string is written in the default column, because a blank
 cell documents nothing while looking like documentation. The guard renders a
 default the same way before it compares.
+
+## The format number
+
+`FormatVersion` is the one member of this file the plugin writes and an operator does
+not. It says which shape the rest of the file is in, so that a later build can carry an
+older file up to its own shape instead of guessing, and so that this build can refuse a
+file a newer one wrote instead of truncating it. Issue #55 is why it exists before there
+is anything to migrate: the first version to ship is the only one that gets to define a
+format without migrating one.
+
+It is stamped by the write rather than by the constructor:
+
+    git grep -n 'public override void SaveConfiguration' -- Jellyfin.Plugin.ServerPairing/Plugin.cs
+
+That method is the one place every write of this file goes through. The host calls it
+from the dashboard save, from a save the plugin asks for itself, and from its own load
+path when no file exists yet, so the first file a fresh installation leaves on disk
+carries the number rather than acquiring one later.
+
+WHY THE CONSTRUCTOR SETS `0` AND NOT THE CURRENT FORMAT. A missing element leaves the
+value the constructor set, so that value is also what a file written before this number
+existed reads as. Those are two different facts - what this build writes, and what a
+configuration carrying no number is in - and one value cannot go on meaning both once the
+current format moves past `1`. So the constructor sets the older of the two and the write
+sets the newer one.
+
+A configuration declaring a format higher than this build understands is refused in both
+directions, and they are different refusals for different reasons. The read names the
+member the way any other refused setting is named, and the server does not pair; nothing
+on that path throws, for the reason the whole of this document gives. The write throws
+instead, because the alternative is putting this build's truncated reading of a newer
+file back over that file:
+
+    git grep -n 'class ConfigurationFormatRefusedException' -- Jellyfin.Plugin.ServerPairing/Configuration/
+
+What that leaves is stated rather than tidied away. The host sets its in-memory
+configuration before it calls the save, so a dashboard save against a newer file leaves
+this build running on what the dashboard sent and leaves the file on disk untouched. The
+file is what the newer build reads when it is installed again, and it is the one that had
+to survive.
+
+THE LADDER HAS ONE RUNG AND IT MOVES NO SETTING. Format 1 holds exactly the settings
+format 0 held, so the rung away from 0 exists to be walked rather than to change
+anything. It is written out rather than skipped so that the walk starts at the format a
+file already on a disk declares. What the key store does with the same number, and how
+the two differ, is [`docs/keystore.md`](keystore.md).
+
+THE LADDER IS WALKED AGAINST A COMMITTED FILE rather than against an object built
+out of the current types, which is the rule issue #55 makes about migrations and
+the reason it is worth making:
+
+    git ls-tree --name-only HEAD Jellyfin.Plugin.ServerPairing.Tests/Configuration/Fixtures/
+
+That file was produced by serialising this plugin's configuration at `7ae0f19`, the
+commit before the number existed, with values an operator would have set rather
+than the defaults. A case built from the current types is a case about the current
+types, and one built from this build's defaults would pass without anything having
+been carried across.
+
+A RULE FOR EVERY RUNG WRITTEN FROM HERE ON, because it is cheap now and expensive later:
+a fresh installation constructs the object at `0` and walks the same ladder an old file
+walks, so a rung that derives a new setting from an old one has to leave this build's own
+defaults where they are. That is refused rather than remembered:
+
+    git grep -n 'CarryingAFreshConfigurationUpMovesNoSetting' -- Jellyfin.Plugin.ServerPairing.Tests/
 
 ## The settings that configure something
 
@@ -207,7 +273,7 @@ default the type produces. `ConfigurationDocumentTests` reads this file and walk
 the configuration type by reflection, in both directions: a setting with no row
 fails, and a row naming no setting fails.
 
-    git grep -n 'public void' -- Jellyfin.Plugin.ServerPairing.Tests/Configuration/ConfigurationDocumentTests.cs
+    git grep -n 'public void' -- Jellyfin.Plugin.ServerPairing.Tests/ConfigurationDocumentTests.cs
 
 It judges the table and nothing else. Whether a documented range is the right
 range, and whether a default is the safe one, are judgements no reading of this
