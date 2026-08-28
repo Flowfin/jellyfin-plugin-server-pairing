@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<PluginConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+  <TrueFalseSetting>true</TrueFalseSetting>
+  <AnInteger>2</AnInteger>
+  <AString>string</AString>
+  <Options>AnotherOption</Options>
+  <PeerAddress>https://peer.example:8920</PeerAddress>
+  <AcknowledgeCleartextTransport>false</AcknowledgeCleartextTransport>
+  <EnrolmentWindowSeconds>900</EnrolmentWindowSeconds>
+  <TimestampWindowSeconds>120</TimestampWindowSeconds>
+  <PeerPlaneWindowSeconds>90</PeerPlaneWindowSeconds>
+  <PeerPlaneArrivalsPerPairing>40</PeerPlaneArrivalsPerPairing>
+  <PeerPlaneArrivalsPerEnrolment>4</PeerPlaneArrivalsPerEnrolment>
+</PluginConfiguration>

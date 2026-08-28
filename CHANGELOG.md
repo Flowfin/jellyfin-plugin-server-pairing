@@ -93,6 +93,19 @@ paragraph in the same words.
   them, are readable by anything on the path between the two servers. Neither
   setting is on the settings page yet, so both are edited in the configuration
   file for now.
+- The plugin's configuration file now carries the number of the format it is in,
+  the way the key store's file already does. It is written by the plugin rather
+  than set by an operator, and a file that mentions no number is read as the shape
+  every build up to this one wrote, so an existing configuration keeps working and
+  gains the number the next time it is saved. A configuration written by a newer
+  plugin is refused: the server does not pair and names the member at Error when it
+  starts, and the file is left exactly as it was rather than being written back
+  with whatever this build could not read dropped out of it. That is the case the
+  number exists for, and it is an operator who installed a newer plugin, configured
+  it, and then rolled the plugin back. A number below zero, which no build of this
+  plugin writes and which can only have been typed into the file by hand, is refused
+  too and with a different sentence, because the way out of that one is to set it back
+  rather than to install anything.
 - The key store's file now carries the number of the format it is in, and a
   plugin that meets one written by a newer plugin refuses it instead of reading
   the parts it recognises. Every pairing stops working until the newer plugin is

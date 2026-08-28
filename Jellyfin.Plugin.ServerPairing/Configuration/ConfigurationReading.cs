@@ -33,6 +33,7 @@ public sealed class ConfigurationReading
 {
     private ConfigurationReading(
         IReadOnlyList<SettingRefusal> refusals,
+        int formatVersion,
         PeerAddress? peer,
         bool cleartextAcknowledged,
         int enrolmentWindowSeconds,
@@ -42,6 +43,7 @@ public sealed class ConfigurationReading
         int peerPlaneArrivalsPerEnrolment)
     {
         Refusals = refusals;
+        FormatVersion = formatVersion;
         Peer = peer;
         CleartextAcknowledged = cleartextAcknowledged;
         EnrolmentWindowSeconds = enrolmentWindowSeconds;
@@ -56,6 +58,17 @@ public sealed class ConfigurationReading
     /// where every setting was accepted.
     /// </summary>
     public IReadOnlyList<SettingRefusal> Refusals { get; }
+
+    /// <summary>
+    /// Gets the format the configuration declared, which is
+    /// <see cref="ConfigurationFormat.Unversioned"/> where it declared none.
+    /// </summary>
+    /// <remarks>
+    /// The value as it was read, not the value it would be carried up to. Carrying up happens
+    /// on the way to the file rather than on the way out of it, so this answers what was on
+    /// disk, which is the question a refusal here is about.
+    /// </remarks>
+    public int FormatVersion { get; }
 
     /// <summary>
     /// Gets the peer this server may pair with, or null where none was entered or the one
@@ -120,6 +133,21 @@ public sealed class ConfigurationReading
         var refusals = new List<SettingRefusal>();
         var cleartextAcknowledged = configuration.AcknowledgeCleartextTransport;
         PeerAddress? peer = null;
+
+        // A format this build cannot do anything with, at either end. Above the highest is a
+        // configuration a newer build wrote: the host has already deserialised it into this
+        // build's type, so every member that format added is gone by the time anything here sees
+        // it, and what did survive is being read under rules the build that wrote it did not
+        // have. Below the lowest is a number no build of this plugin has ever written, so it was
+        // edited by hand. Both are refused rather than read, and both are refused here rather
+        // than thrown, because nothing on this path may throw: what stops either reaching the
+        // file is the write.
+        if (!ConfigurationFormat.IsUnderstood(configuration.FormatVersion))
+        {
+            refusals.Add(new SettingRefusal(
+                nameof(PluginConfiguration.FormatVersion),
+                WhyTheFormatWasRefused(configuration.FormatVersion)));
+        }
 
         // An address nobody has entered is the state a fresh installation is in, so it is
         // accepted and pairs with nobody. Anything else goes through the same parse a peer's
@@ -216,6 +244,7 @@ public sealed class ConfigurationReading
 
         return new ConfigurationReading(
             refusals,
+            configuration.FormatVersion,
             peer,
             cleartextAcknowledged,
             enrolmentWindowSeconds,
@@ -303,6 +332,20 @@ public sealed class ConfigurationReading
 
         return fallback;
     }
+
+    /// <summary>
+    /// The sentence an operator reads for a format this build does not understand.
+    /// </summary>
+    /// <param name="declared">The format the configuration declares.</param>
+    /// <returns>The reason, naming which end it fell off rather than reporting one
+    /// wrong-format answer for both.</returns>
+    private static string WhyTheFormatWasRefused(int declared) => ConfigurationFormat.IsFromANewerBuild(declared)
+        ? "The configuration is in format " + declared + " and this build understands format " + ConfigurationFormat.Current
+            + " at the highest, so it was written by a newer plugin than this one. Nothing was read out of it and nothing was corrected. Install the newer plugin again, or move the configuration file aside and set this plugin up afresh."
+        : "The configuration declares format " + declared + ", and no build of this plugin has ever written a format below "
+            + ConfigurationFormat.Unversioned
+            + ", so that number was put there by hand. Nothing was read out of it and nothing was corrected. Set it to "
+            + ConfigurationFormat.Unversioned + ", or remove the element, and this build will carry the file up on the next save.";
 
     /// <summary>
     /// The sentence an operator reads for one refused address.
