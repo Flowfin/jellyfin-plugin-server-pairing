@@ -42,7 +42,21 @@ jobs:
 
   external:
     name: Reach every external link
-    # Never on a pull request, so it cannot become a merge gate by accident.
+    # Not on a pull request. What that sentence used to promise it cannot
+    # promise any more: the line here said this job could not become a merge
+    # gate by accident, which is a claim about a setting no file in this tree
+    # can read, and the setting moved on 2026-08-29 when this job's context
+    # became a required one on the default branch:
+    #
+    #   gh api repos/Flowfin/jellyfin-plugin-server-pairing/rulesets/20464076 --jq '[.rules[] | select(.type=="required_status_checks") | .parameters.required_status_checks[].context]'
+    #   ["call / build","call / test","Reject Trojan Source Unicode","Audit workflows (zizmor)","ABI floor build","Pull request hygiene","DCO sign-off","dependency-review","Code scanning (csharp)","Read the package","Resolve every relative link","Reach every external link"]
+    #
+    # The condition below still stops the job RUNNING on a pull request, and
+    # that half is unchanged. What is no longer this file's to state is what a
+    # required context does when the job reporting it was skipped. NOT
+    # MEASURED HERE: no reading in this repository says whether the forge
+    # treats such a context as satisfied or as pending, and the sentence that
+    # stood here asserted the answer without one.
     if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     timeout-minutes: 15
