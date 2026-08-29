@@ -28,15 +28,18 @@ says why underneath the table.
 | A request on the pairing plane faulted | Error | which of the five messages it arrived on, and the fault the runtime raised, with no pairing identifier |
 | The plugin started against a store that already holds a pairing | Information | pairing id, one entry per pairing found |
 | The key store was carried up from an older format | Information | the format it was in, the format it is now, and the name of the copy left beside it |
+| A setting was refused at startup | Error | the setting, the rule it broke, and that nothing was corrected |
+| A cleartext peer address was acknowledged | Warning | the setting that acknowledges it |
 
 Debug adds timing and state machine transitions for the same events. It adds no
 field that is not in the table above.
 
-Three rows carry no pairing identifier and each has its own reason. **This
-paragraph said the fault row was the only one**, and the two store rows above it
-have never carried one either, so the sentence was wrong about the table it sits
-under from the day the store rows landed. It is corrected here rather than by
-adding an identifier those rows have no way to know.
+Five rows carry no pairing identifier and each has its own reason. **This
+paragraph said three**, and it was written before the two configuration rows
+existed; before that it said the fault row was the only one, which was wrong
+about the table it sits under from the day the store rows landed. Both counts are
+corrected here rather than by adding an identifier those rows have no way to
+know.
 
 The fault row leaves it out deliberately. A fault is reachable before the request
 has been read, so at that moment the only identifier available is the one the
@@ -51,6 +54,13 @@ from an older format is one event about one file however many pairings are in it
 The migration row names the file rather than its contents on purpose: what is
 inside is key material, and a row naming contents would put every key the store
 holds into the log.
+
+The two configuration rows leave it out because the configuration is read once,
+at startup, before any pairing has been looked at. A refused setting is a fact
+about this server rather than about a relationship, and an acknowledged cleartext
+address weakens every pairing this server will ever have rather than one of them.
+Both name the setting instead, which is what an operator has to open to change
+it.
 
 The fault text is the runtime's and not this plugin's, which is where the list
 below meets its one soft edge. Nothing on this plane parses a body today, so no
@@ -126,62 +136,87 @@ are both in the tree:
 
 What is missing is the logging itself, and it is less missing than it was. This
 paragraph said nothing in the plugin took a logger and that a capturing logger
-would be handed a run that writes nothing, and then it said two types take one.
-Four do. Which rows of the table each of them writes, and which row two of them
-write nothing for, is under the reading rather than counted here.
+would be handed a run that writes nothing, then that two types take one, then
+that four do. Five do. Which rows of the table each of them writes is under the
+reading rather than counted here.
 
-    git grep -nE "ILogger|_logger" -- Jellyfin.Plugin.ServerPairing
-    Jellyfin.Plugin.ServerPairing/Api/PeerPlaneController.cs:39:    private readonly ILogger<PeerPlaneController> _logger;
-    Jellyfin.Plugin.ServerPairing/Api/PeerPlaneController.cs:69:    public PeerPlaneController(PeerPlane plane, TimeProvider time, ILogger<PeerPlaneController> logger)
-    Jellyfin.Plugin.ServerPairing/Api/PeerPlaneController.cs:73:        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-    Jellyfin.Plugin.ServerPairing/Api/PeerPlaneController.cs:253:            _logger.LogError(fault, "A request on the pairing plane faulted and was answered with the refusal every caller gets. Message: {PairingMessage}", message);
-    Jellyfin.Plugin.ServerPairing/Configuration/ConfigurationAtStartup.cs:34:    private readonly ILogger<ConfigurationAtStartup> _logger;
-    Jellyfin.Plugin.ServerPairing/Configuration/ConfigurationAtStartup.cs:42:    public ConfigurationAtStartup(ConfigurationReading reading, ILogger<ConfigurationAtStartup> logger)
-    Jellyfin.Plugin.ServerPairing/Configuration/ConfigurationAtStartup.cs:45:        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-    Jellyfin.Plugin.ServerPairing/Configuration/ConfigurationAtStartup.cs:58:            _logger.LogError(
-    Jellyfin.Plugin.ServerPairing/Configuration/ConfigurationAtStartup.cs:65:            _logger.LogWarning(
-    Jellyfin.Plugin.ServerPairing/KeyStore/FilePairingKeyStore.cs:76:    private readonly ILogger<FilePairingKeyStore>? _logger;
-    Jellyfin.Plugin.ServerPairing/KeyStore/FilePairingKeyStore.cs:130:    public FilePairingKeyStore(string file, Action<string, string>? moveIntoPlace, ILogger<FilePairingKeyStore>? logger)
-    Jellyfin.Plugin.ServerPairing/KeyStore/FilePairingKeyStore.cs:134:        _logger = logger;
-    Jellyfin.Plugin.ServerPairing/KeyStore/FilePairingKeyStore.cs:302:        if (_logger is not null && _logger.IsEnabled(LogLevel.Information))
-    Jellyfin.Plugin.ServerPairing/KeyStore/FilePairingKeyStore.cs:304:            _logger.LogInformation(
-    Jellyfin.Plugin.ServerPairing/KeyStore/StoreAtStartup.cs:45:    private readonly ILogger<StoreAtStartup> _logger;
-    Jellyfin.Plugin.ServerPairing/KeyStore/StoreAtStartup.cs:52:    public StoreAtStartup(IPairingKeyStore store, ILogger<StoreAtStartup> logger)
-    Jellyfin.Plugin.ServerPairing/KeyStore/StoreAtStartup.cs:55:        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-    Jellyfin.Plugin.ServerPairing/KeyStore/StoreAtStartup.cs:81:            if (_logger.IsEnabled(LogLevel.Information))
-    Jellyfin.Plugin.ServerPairing/KeyStore/StoreAtStartup.cs:85:                    _logger.LogInformation(
-    Jellyfin.Plugin.ServerPairing/KeyStore/StoreAtStartup.cs:95:            _logger.LogError(fault, "The key store could not be read at startup, so what it holds is unknown and no pairing will work. The server is left running.");
-    Jellyfin.Plugin.ServerPairing/PluginServiceRegistrator.cs:103:                services.GetRequiredService<ILogger<FilePairingKeyStore>>()));
+    git grep -nE "ILogger|_logger" origin/master -- Jellyfin.Plugin.ServerPairing
+    origin/master:Jellyfin.Plugin.ServerPairing/Api/AdministrativePlaneController.cs:60:    private readonly ILogger<AdministrativePlaneController> _logger;
+    origin/master:Jellyfin.Plugin.ServerPairing/Api/AdministrativePlaneController.cs:73:        ILogger<AdministrativePlaneController> logger)
+    origin/master:Jellyfin.Plugin.ServerPairing/Api/AdministrativePlaneController.cs:78:        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+    origin/master:Jellyfin.Plugin.ServerPairing/Api/AdministrativePlaneController.cs:118:            _logger.LogError(fault, "The key store could not be read for an administrator, so what this server holds is unknown. The answer names the problem and carries nothing of the fault.");
+    origin/master:Jellyfin.Plugin.ServerPairing/Api/PeerPlaneController.cs:39:    private readonly ILogger<PeerPlaneController> _logger;
+    origin/master:Jellyfin.Plugin.ServerPairing/Api/PeerPlaneController.cs:69:    public PeerPlaneController(PeerPlane plane, TimeProvider time, ILogger<PeerPlaneController> logger)
+    origin/master:Jellyfin.Plugin.ServerPairing/Api/PeerPlaneController.cs:73:        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+    origin/master:Jellyfin.Plugin.ServerPairing/Api/PeerPlaneController.cs:253:            _logger.LogError(fault, "A request on the pairing plane faulted and was answered with the refusal every caller gets. Message: {PairingMessage}", message);
+    origin/master:Jellyfin.Plugin.ServerPairing/Configuration/ConfigurationAtStartup.cs:34:    private readonly ILogger<ConfigurationAtStartup> _logger;
+    origin/master:Jellyfin.Plugin.ServerPairing/Configuration/ConfigurationAtStartup.cs:42:    public ConfigurationAtStartup(ConfigurationReading reading, ILogger<ConfigurationAtStartup> logger)
+    origin/master:Jellyfin.Plugin.ServerPairing/Configuration/ConfigurationAtStartup.cs:45:        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+    origin/master:Jellyfin.Plugin.ServerPairing/Configuration/ConfigurationAtStartup.cs:58:            _logger.LogError(
+    origin/master:Jellyfin.Plugin.ServerPairing/Configuration/ConfigurationAtStartup.cs:65:            _logger.LogWarning(
+    origin/master:Jellyfin.Plugin.ServerPairing/KeyStore/FilePairingKeyStore.cs:76:    private readonly ILogger<FilePairingKeyStore>? _logger;
+    origin/master:Jellyfin.Plugin.ServerPairing/KeyStore/FilePairingKeyStore.cs:130:    public FilePairingKeyStore(string file, Action<string, string>? moveIntoPlace, ILogger<FilePairingKeyStore>? logger)
+    origin/master:Jellyfin.Plugin.ServerPairing/KeyStore/FilePairingKeyStore.cs:134:        _logger = logger;
+    origin/master:Jellyfin.Plugin.ServerPairing/KeyStore/FilePairingKeyStore.cs:302:        if (_logger is not null && _logger.IsEnabled(LogLevel.Information))
+    origin/master:Jellyfin.Plugin.ServerPairing/KeyStore/FilePairingKeyStore.cs:304:            _logger.LogInformation(
+    origin/master:Jellyfin.Plugin.ServerPairing/KeyStore/StoreAtStartup.cs:45:    private readonly ILogger<StoreAtStartup> _logger;
+    origin/master:Jellyfin.Plugin.ServerPairing/KeyStore/StoreAtStartup.cs:52:    public StoreAtStartup(IPairingKeyStore store, ILogger<StoreAtStartup> logger)
+    origin/master:Jellyfin.Plugin.ServerPairing/KeyStore/StoreAtStartup.cs:55:        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+    origin/master:Jellyfin.Plugin.ServerPairing/KeyStore/StoreAtStartup.cs:81:            if (_logger.IsEnabled(LogLevel.Information))
+    origin/master:Jellyfin.Plugin.ServerPairing/KeyStore/StoreAtStartup.cs:85:                    _logger.LogInformation(
+    origin/master:Jellyfin.Plugin.ServerPairing/KeyStore/StoreAtStartup.cs:95:            _logger.LogError(fault, "The key store could not be read at startup, so what it holds is unknown and no pairing will work. The server is left running.");
+    origin/master:Jellyfin.Plugin.ServerPairing/PluginServiceRegistrator.cs:113:                services.GetRequiredService<ILogger<FilePairingKeyStore>>()));
 
-THIS BLOCK PASTED TWO TYPES AND THE COMMAND NOW RETURNS FOUR, and the sentence
-under it counted the rows against the two. What is written above this reading
-still holds - two rows of the table have a logger under them in the suite - but
-the reading no longer says only that, and the difference is where a row is
-missing rather than where one is unchecked.
+THIS BLOCK WENT STALE TWICE AND NO RUN ON THIS REPOSITORY SAW EITHER TIME. It
+pasted two types, then four, and the command returns five; the registration line
+moved from 103 to 113 underneath it as well. What let that happen is the reading
+rather than the check. `sh .github/reading-check.sh` walks a command naming
+`origin/master`, and this one named a working tree, so it sat outside the walk on
+every run that reported the tree clean - which is the class that file's own
+header names, three of which were repaired by hand in `9c8dedd`. It is pinned at
+`origin/master` above for that reason rather than for tidiness. It is inside the
+walk now, so the next arrival that stales it reddens a run instead of waiting for
+somebody to re-read the paragraph under it.
 
 `PeerPlaneController` writes the fault row and `StoreAtStartup` writes the
 startup row, and a capturing logger sits under each of them in the suite: under
 the fault row it asserts what the entry holds and that none of it reaches the
 caller, and under the startup row it asserts one entry per pairing found, each
 naming its identifier, and that none of the key material the case generated
-appears in any of them. So two rows are checked and every other row in the table
-is not.
+appears in any of them. So two rows have their contents checked and every other
+row in the table does not.
 
-`FilePairingKeyStore` writes the migration row, which the table above carries and
-this sentence did not name.
+`FilePairingKeyStore` writes the migration row. `AdministrativePlaneController`
+writes the unreadable-store row from the other side, where what meets an
+administrator's request is a store that will not open.
 
-`ConfigurationAtStartup` writes two entries that the table above carries no row
-for at all: a refused setting at Error, and an acknowledged cleartext peer
-address at Warning. That is a defect in the table rather than in this paragraph -
-what this plugin writes and what this document says it writes have to be the same
-list - and the table is issue #13's rather than this pass's, so it is named here
-and not repaired here.
+`ConfigurationAtStartup` writes the two entries the table above carried no row
+for at all, a refused setting at Error and an acknowledged cleartext peer address
+at Warning. **That was a defect in the table** - what this plugin writes and what
+this document says it writes have to be the same list, and for those two they had
+not been since the call sites landed. The rows are in the table above now. Both
+were found by reading the call sites in the tree against the table by hand, which
+is the whole argument for the guard below.
+
+`LoggedEventTableTests` walks this plugin's own source for every `ILogger` call
+site, holds each one against the row it writes, and fails where a call site has
+no row, where a row a call site names is absent from the table, and where a row
+is claimed for a call site the source no longer has. A call site added without a
+row now reddens the suite rather than waiting to be found the way these two were.
+
+**What that guard does not judge is larger than what it does.** It compares a
+call site against the NAME of a row and never against the row's level or its
+fields, so an entry written at the wrong level, or carrying a field the row does
+not name, passes it. It reads the message a call site opens with in the source
+rather than what reaches a log on a running server. And it says nothing whatever
+about the second list below: no check in this tree refuses a call site that
+writes key material, a signature, or a peer's user identity.
 
 The test this section asks for is a different and larger thing, and it does not
 exist. It drives a full enrolment, a rotation and a revocation at Debug against a
 capturing logger and looks for the secrets the run generated, and there is still
-no enrolment to drive and nothing that writes any of the other rows. Until it
-exists, both lists above are a design statement for every entry but those two,
-and nothing refuses a call site that violates them. This paragraph is the whole
-of that disclosure and no later edit of this file turns it into a statement that
-the logging has been checked.
+no enrolment to drive and nothing that writes any row the call sites above do not
+already cover. Until it exists, the second list is a design statement and nothing
+refuses a call site that violates it. This paragraph is the whole of that
+disclosure and no later edit of this file turns it into a statement that the
+logging has been checked.
