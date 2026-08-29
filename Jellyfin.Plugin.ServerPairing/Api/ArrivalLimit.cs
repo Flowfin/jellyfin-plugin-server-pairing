@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using Jellyfin.Plugin.ServerPairing.Protocol;
 
@@ -370,13 +371,10 @@ public sealed class ArrivalLimit
     {
         List<string>? gone = null;
 
-        foreach (var entry in _windows)
+        foreach (var entry in _windows.Where(entry => Elapsed(entry.Value, here)))
         {
-            if (Elapsed(entry.Value, here))
-            {
-                gone ??= new List<string>();
-                gone.Add(entry.Key);
-            }
+            gone ??= new List<string>();
+            gone.Add(entry.Key);
         }
 
         if (gone is null)
