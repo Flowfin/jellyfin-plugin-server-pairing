@@ -47,6 +47,17 @@ there is no page and no endpoint an administrator can open an enrolment from.
 Two servers cannot be paired with this version. The `changelog` field in
 `build.yaml` and `build.net10.0.yaml` carries that paragraph in the same words.
 
+- An administrator can ask this server what it has refused on the pairing plane
+  and why, at `GET /ServerPairing/Administration/diagnostics`. It answers one
+  number per refusal code the protocol defines and one per cause this server can
+  tell apart, which is what separates a peer sending too fast from a scanner on
+  the wrong path from a peer whose signature does not verify. Nothing a peer is
+  told changes: every one of those causes is still answered with the same
+  refusal, so the split is visible to an operator and to nobody else. The answer
+  names no pairing, no address and no person, and it requires the same elevation
+  as the rest of the dashboard. What it does not carry is a state per pairing,
+  the version each side speaks or a last error, because nothing in this version
+  produces any of the three.
 - An administrator can ask this server which pairings it holds a key for, at
   `GET /ServerPairing/Administration/pairings`, which answers the identifiers and
   nothing else. Until now that question was answered only by a line written once

@@ -73,9 +73,17 @@ public class PluginServiceRegistrator : IPluginServiceRegistrator
         // the one a server nobody configured runs on rather than on no limit at all.
         serviceCollection.AddSingleton(services =>
             services.GetRequiredService<ConfigurationReading>().NewArrivalLimit());
+
+        // Once, for the same reason the limit above is once: what it holds is a count over the
+        // whole server, and a second instance would hand the diagnostics action a number taken
+        // from a plane nobody is talking to. The peer plane writes into it and the
+        // administrative plane reads it, which is the only path between the two planes and
+        // carries numbers rather than anything a caller supplied.
+        serviceCollection.AddSingleton<RefusalCounters>();
         serviceCollection.AddSingleton(services => new PeerPlane(
             services.GetRequiredService<RequestAuthenticator>(),
-            services.GetRequiredService<ArrivalLimit>()));
+            services.GetRequiredService<ArrivalLimit>(),
+            services.GetRequiredService<RefusalCounters>()));
 
         // The one place in this plugin that reads a real clock. Everything downstream judges
         // at an instant handed in, so a test moves time by handing in a different one, and

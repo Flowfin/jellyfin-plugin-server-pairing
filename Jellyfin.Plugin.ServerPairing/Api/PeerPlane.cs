@@ -42,16 +42,34 @@ public sealed class PeerPlane
 
     private readonly ArrivalLimit _arrivals;
 
+    private readonly RefusalCounters _refusals;
+
     /// <summary>
     /// Initializes a new instance of the <see cref="PeerPlane"/> class.
     /// </summary>
     /// <param name="authenticator">What decides whether an arriving request is authentic.</param>
     /// <param name="arrivals">How much of this plane one claimed identifier may use.</param>
-    public PeerPlane(RequestAuthenticator authenticator, ArrivalLimit arrivals)
+    /// <param name="refusals">
+    /// Where a refusal is counted for this server's own administrator. A plane built without one
+    /// gets a counter of its own that nothing reads, so counting can never change what a caller
+    /// is told; the composition root hands in the one the diagnostics action renders.
+    /// </param>
+    public PeerPlane(RequestAuthenticator authenticator, ArrivalLimit arrivals, RefusalCounters? refusals = null)
     {
         _authenticator = authenticator ?? throw new ArgumentNullException(nameof(authenticator));
         _arrivals = arrivals ?? throw new ArgumentNullException(nameof(arrivals));
+        _refusals = refusals ?? new RefusalCounters();
     }
+
+    /// <summary>
+    /// Gets what this plane has refused and why, since this instance was made.
+    /// </summary>
+    /// <remarks>
+    /// A read of what is counted rather than a way to count: nothing outside this type records
+    /// into it. What it is for is issue #51, and the numbers reach an administrator through the
+    /// diagnostics action on the other plane and reach no caller here.
+    /// </remarks>
+    public RefusalCounters Refusals => _refusals;
 
     /// <summary>
     /// The exact path a message arrives on.
@@ -105,6 +123,14 @@ public sealed class PeerPlane
     /// guessed is one this server holds.
     /// </para>
     /// <para>
+    /// EVERY REFUSAL IS COUNTED AND NOTHING ABOUT THE ANSWER MOVES FOR IT. The cause goes into
+    /// <see cref="Refusals"/>, which no caller reaches: it is read behind the host's elevation
+    /// policy by the diagnostics action on the administrative plane, which is issue #51.
+    /// <see cref="RefusalCause"/> carries why a cause and a code are separate things. The count
+    /// is taken at the site that refuses rather than from the code that comes back, because
+    /// every site answers the same code and a count taken from the answer would be one number.
+    /// </para>
+    /// <para>
     /// Every answer today is <see cref="RefusalCode.Refused"/>, and that is the transition
     /// table rather than a placeholder. No record store exists, so every pairing is
     /// <see cref="PairingState.Absent"/>, and the <c>Absent</c> row of that table is the
@@ -127,15 +153,29 @@ public sealed class PeerPlane
 
         if (arrived is null
             || !string.Equals(arrived.RawTarget, path, StringComparison.Ordinal)
-            || !string.Equals(arrived.Method, Method, StringComparison.Ordinal)
-            || arrived.BodyExceededItsLimit)
+            || !string.Equals(arrived.Method, Method, StringComparison.Ordinal))
         {
-            return new PeerPlaneOutcome(RefusalCode.Refused, false, ReadOnlyMemory<byte>.Empty);
+            return Refuse(RefusalCause.NotOnThisPlane);
         }
 
-        if (_arrivals.Admit(arrived.PairingId, at) != ArrivalOutcome.Admitted)
+        // Split out of the comparison above rather than answered with it. The two are one
+        // answer to the caller and two different things to an operator: a request on the wrong
+        // path is somebody who is not talking to this plane at all, and an oversized body is a
+        // peer that is, sending more than the specification allows. Nothing about what is
+        // refused moves with this, and the order does not either: a body over its limit is
+        // still refused before a signature is computed.
+        if (arrived.BodyExceededItsLimit)
         {
-            return new PeerPlaneOutcome(RefusalCode.Refused, false, ReadOnlyMemory<byte>.Empty);
+            return Refuse(RefusalCause.BodyOverItsLimit);
+        }
+
+        var admitted = _arrivals.Admit(arrived.PairingId, at);
+
+        if (admitted != ArrivalOutcome.Admitted)
+        {
+            return Refuse(admitted == ArrivalOutcome.NoRoomToCount
+                ? RefusalCause.NoRoomToCountTheArrival
+                : RefusalCause.ArrivalAllowanceSpent);
         }
 
         // The method and the path are the constants rather than what arrived, and the two are
@@ -154,9 +194,28 @@ public sealed class PeerPlane
 
         if (outcome != VerificationOutcome.Verified)
         {
-            return new PeerPlaneOutcome(RefusalCode.Refused, false, ReadOnlyMemory<byte>.Empty);
+            return Refuse(RefusalCause.DidNotVerify);
         }
 
+        _refusals.Record(RefusalCause.NotAcceptedInThisState);
+
         return new PeerPlaneOutcome(RefusalCode.Refused, true, verified);
+    }
+
+    /// <summary>
+    /// Counts a refusal and answers it.
+    /// </summary>
+    /// <param name="cause">Why the request is refused.</param>
+    /// <returns>The undistinguished refusal, with no body handed on.</returns>
+    /// <remarks>
+    /// One place builds the answer so that counting cannot drift from refusing. What the caller
+    /// receives does not depend on the cause and this method is where that is visible: the code
+    /// is the same constant whatever is passed in.
+    /// </remarks>
+    private PeerPlaneOutcome Refuse(RefusalCause cause)
+    {
+        _refusals.Record(cause);
+
+        return new PeerPlaneOutcome(RefusalCode.Refused, false, ReadOnlyMemory<byte>.Empty);
     }
 }

@@ -18,19 +18,30 @@ describing them once they exist.
 | `PeerPlaneController.Revoke` | `POST` | `/ServerPairing/revoke` | peer | `anonymous` | the pairing signature |
 | `PeerPlaneController.Exchange` | `POST` | `/ServerPairing/exchange` | peer | `anonymous` | the pairing signature |
 | `AdministrativePlaneController.Pairings` | `GET` | `/ServerPairing/Administration/pairings` | administrative | `elevation` | the host's elevation policy |
+| `AdministrativePlaneController.Diagnostics` | `GET` | `/ServerPairing/Administration/diagnostics` | administrative | `elevation` | the host's elevation policy |
 
-Six rows. Five are the peer plane, which is the paths the specification fixes.
+Seven rows. Five are the peer plane, which is the paths the specification fixes.
 THIS PARAGRAPH SAID THE ADMINISTRATIVE PLANE HAS NO ENDPOINT AND THEREFORE NO
-ROW; it has one, which is issue #289, and the plane is what that issue is about
-rather than the action on it. What the action answers is the identifiers of the
-pairings this server holds a key for, and nothing else.
+ROW; it has two. The first is issue #289, and the plane is what that issue is
+about rather than the action on it: what it answers is the identifiers of the
+pairings this server holds a key for, and nothing else. The second is the
+diagnostics read, which is issue #51, and what it answers is how many requests
+the peer plane has refused since this server started and why, as numbers over two
+enumerations. It names no pairing, no address and no person, and the payload has
+the same shape on a server that has never been paired as on one that has.
+
+That second row is narrower than the issue it comes from. A state per pairing,
+the protocol version each side speaks and a last error per pairing are all things
+#51 asks the payload to carry, and none of them has anything in this tree that
+produces one. `DiagnosticsAnswer` names each of them with what has to exist
+first, so the payload's silence is written down where somebody reading the
+payload will find it rather than being inferred from what is missing.
 
 The rest of the administrative actions are still issues rather than actions, and
 a row for one of them would describe something no request can reach: opening an
 enrolment window and confirming a ceremony are #18 and #19, revoking is #24,
-editing mappings is #40, the pairing states the page renders are #49 and the
-diagnostics payload is #51. Each of them lands on the plane above rather than
-bringing a controller of its own.
+editing mappings is #40 and the pairing states the page renders are #49. Each of
+them lands on the plane above rather than bringing a controller of its own.
 
 ### What the two authorization words mean
 
@@ -45,7 +56,7 @@ else.
 
 `elevation` is the action carrying `Authorize` naming the host's
 `RequiresElevation` policy, which is the constant read out of the server source
-in the section below. ONE ROW CARRIES IT AND THIS SENTENCE SAID NONE DID. What
+in the section below. TWO ROWS CARRY IT AND THIS SENTENCE SAID ONE DID. What
 decides such a request is the host's elevation policy together with the
 endpoint's own repeat of the check, which is the third bullet under `What this
 plugin does about it`.

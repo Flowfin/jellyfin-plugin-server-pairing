@@ -352,10 +352,16 @@ authenticator, through the plane; it reaches neither the freshness window nor th
 peer address, because the plane is given neither of them to consult:
 
     git grep -n 'public PeerPlane(' origin/master -- Jellyfin.Plugin.ServerPairing/Api/PeerPlane.cs
-    origin/master:Jellyfin.Plugin.ServerPairing/Api/PeerPlane.cs:50:    public PeerPlane(RequestAuthenticator authenticator, ArrivalLimit arrivals)
+    origin/master:Jellyfin.Plugin.ServerPairing/Api/PeerPlane.cs:57:    public PeerPlane(RequestAuthenticator authenticator, ArrivalLimit arrivals, RefusalCounters? refusals = null)
 
-The authenticator and the bound on arrivals, and nothing else. And what the one
-it does reach
+THE PASTE ABOVE CARRIED TWO PARAMETERS AND CARRIES THREE. The third is where a
+refusal is counted for this server's own administrator, which is issue #51, and
+it moves nothing in this section: it holds one number per member of two
+enumerations, it is written to and never read on this path, and no caller
+reaches it. The sentence it corrects said the authenticator and the bound on
+arrivals and nothing else, and what that sentence is about is unchanged - the
+plane is still given neither the freshness window nor the peer address, so it
+still consults neither. And what the one it does reach
 answers with is a refusal for every caller, because the key source it is given
 holds no keys, which is the reading pasted above under what exists today. So the
 first paragraph above still describes a design position rather than a measured
