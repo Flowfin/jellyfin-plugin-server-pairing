@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 
 namespace Jellyfin.Plugin.ServerPairing.Api;
@@ -148,12 +149,9 @@ public sealed class RefusalCounters
     {
         long total = 0;
 
-        foreach (var cause in Causes())
+        foreach (var cause in Causes().Where(cause => CodeFor(cause) == code))
         {
-            if (CodeFor(cause) == code)
-            {
-                total += Counted(cause);
-            }
+            total += Counted(cause);
         }
 
         return total;
