@@ -37,9 +37,16 @@ namespace Jellyfin.Plugin.ServerPairing.Api;
 /// <para>
 /// The actions of this plan land here rather than each bringing a controller: opening an
 /// enrolment window and confirming a ceremony are issues #18 and #19, revoking is #24, editing
-/// mappings is #40, the pairing states the page renders are #49 and the diagnostics payload is
-/// #51. What this type owns is the plane, which is the elevation policy, the answer shape and
-/// the rows in the endpoint table.
+/// mappings is #40 and the pairing states the page renders are #49. What this type owns is the
+/// plane, which is the elevation policy, the answer shape and the rows in the endpoint table.
+/// </para>
+/// <para>
+/// THE DIAGNOSTICS PAYLOAD WAS IN THAT LIST AND IS AN ACTION NOW, WHICH IS SMALLER THAN ISSUE
+/// #51. What it carries is what the peer plane has refused and why, and the members that issue
+/// asks for besides - a state per pairing, the two protocol versions, a last error - have no
+/// producer in this tree and no member here. <see cref="DiagnosticsAnswer"/> names each of them
+/// with what has to exist first, so the absence is read there rather than inferred from this
+/// list.
 /// </para>
 /// </remarks>
 [ApiController]
@@ -48,18 +55,26 @@ namespace Jellyfin.Plugin.ServerPairing.Api;
 public sealed class AdministrativePlaneController : ControllerBase
 {
     private readonly IPairingKeyStore _keys;
+    private readonly RefusalCounters _refusals;
+    private readonly ArrivalLimit _arrivals;
     private readonly ILogger<AdministrativePlaneController> _logger;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="AdministrativePlaneController"/> class.
     /// </summary>
     /// <param name="keys">Where this server keeps the keys it holds.</param>
+    /// <param name="refusals">What the peer plane has refused, and why.</param>
+    /// <param name="arrivals">How much of the peer plane each claimed identifier has used.</param>
     /// <param name="logger">Where the detail of an unreadable store goes.</param>
     public AdministrativePlaneController(
         IPairingKeyStore keys,
+        RefusalCounters refusals,
+        ArrivalLimit arrivals,
         ILogger<AdministrativePlaneController> logger)
     {
         _keys = keys ?? throw new ArgumentNullException(nameof(keys));
+        _refusals = refusals ?? throw new ArgumentNullException(nameof(refusals));
+        _arrivals = arrivals ?? throw new ArgumentNullException(nameof(arrivals));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -109,5 +124,41 @@ public sealed class AdministrativePlaneController : ControllerBase
                 Content = AdministrativeAnswer.Body(AdministrativeProblem.KeyStoreUnreadable),
             };
         }
+    }
+
+    /// <summary>
+    /// What this server has refused on the pairing plane, and why.
+    /// </summary>
+    /// <returns>The diagnostics payload.</returns>
+    /// <remarks>
+    /// This is the surface issue #51 is about, and it is the thing an operator pastes into a
+    /// support thread, so what it may hold is decided by what it must never hold.
+    /// <see cref="DiagnosticsAnswer"/> is where that argument lives and is also where the members
+    /// this payload does not have yet are named, each with what has to exist before it can.
+    /// <para>
+    /// It is a read and changes nothing, so it is not the state-changing endpoint issue #53's
+    /// third condition asks for. It has no catch of its own, and that is the difference from
+    /// the action above rather than an omission: what it reads is two objects this process
+    /// holds in memory, not a file that may not parse, so there is no fault a catch here could
+    /// turn into a sentence an administrator can act on.
+    /// </para>
+    /// <para>
+    /// WHETHER THE PAYLOAD IS FREE OF WHAT A LIFECYCLE CREATES IS NOT ASSERTED BY ANYTHING.
+    /// That is issue #51's second condition, it needs a full enrolment, rotation and revocation
+    /// driven through the harness in issue #29, and neither exists. A case written today would
+    /// assert an absence over a payload that no secret had ever been near, pass, and go on
+    /// passing after the first one was. What the suite holds instead is that every member of
+    /// this payload is a number over an enumeration, which is a narrower statement.
+    /// </para>
+    /// </remarks>
+    [HttpGet("diagnostics")]
+    public IActionResult Diagnostics()
+    {
+        return new ContentResult
+        {
+            StatusCode = 200,
+            ContentType = "application/json",
+            Content = JsonSerializer.Serialize(DiagnosticsAnswer.Of(_refusals, _arrivals)),
+        };
     }
 }

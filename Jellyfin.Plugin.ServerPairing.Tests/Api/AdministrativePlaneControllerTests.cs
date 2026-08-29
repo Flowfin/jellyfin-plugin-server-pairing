@@ -266,12 +266,18 @@ public class AdministrativePlaneControllerTests
     }
 
     /// <summary>
-    /// A controller over a given store, with the logger going nowhere.
+    /// A controller over a given store, with the logger going nowhere. The counters and the
+    /// arrival limit are fresh ones nothing has written into, because no case in this file is
+    /// about the diagnostics action; that one is `RefusalCountersTests`.
     /// </summary>
     /// <param name="keys">The store.</param>
     /// <returns>The controller.</returns>
     private static AdministrativePlaneController Controller(IPairingKeyStore keys)
-        => new AdministrativePlaneController(keys, NullLogger<AdministrativePlaneController>.Instance);
+        => new AdministrativePlaneController(
+            keys,
+            new RefusalCounters(),
+            new ArrivalLimit(),
+            NullLogger<AdministrativePlaneController>.Instance);
 
     /// <summary>
     /// A key store whose read throws, which is what a file that does not parse does today.
