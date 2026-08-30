@@ -1,7 +1,7 @@
 # The build and test job this repository owns, rather than a call into a shared
 # workflow it does not control.
 #
-# What it does that the shared calls do not:
+# What it does that the two shared calls it replaced did not:
 #
 #   - restores with --locked-mode on the command line, so a drifted lock file
 #     fails the restore rather than resolving quietly. Both projects also set
@@ -23,23 +23,25 @@
 #   - runs the tests once per target framework the plugin ships rather than once
 #     for whichever the SDK picks.
 #
-# What it does NOT do, and what has to happen elsewhere. This job is not in the
-# required set on the default branch, so it reports and blocks nothing. Read
-# that set rather than a copy of it. It is a repository setting, it moves
-# without any commit here, and the copy this comment used to carry named three
-# contexts while the setting had grown a fourth:
+# What gates on this job is the required set on the default branch, which is a
+# repository setting no file in this tree reaches. It moves without any commit
+# here, so read it rather than a copy of it, and rather than this comment:
 #
 #     gh api repos/Flowfin/jellyfin-plugin-server-pairing/rulesets/20464076 \
 #       --jq '[.rules[] | select(.type=="required_status_checks") | .parameters.required_status_checks[].context]'
 #
-# The required set is a repository setting and no file in this tree reaches it,
-# which is issue #62's own last done condition. This job is the first step of the
-# order that issue records as the safe one: add the context and get it green,
-# require it, remove the shared calls, then unrequire their contexts. Removing
-# .github/workflows/build.yaml and .github/workflows/test.yaml before their two
-# contexts leave the required set would leave the default branch waiting for two
-# statuses nothing reports, which blocks every merge. So the shared calls stay
-# here and this job runs beside them.
+# The comment this replaces said the job was not in that set, and that the two
+# shared calls stayed beside it for that reason. The setting has since been
+# edited: this job's context is required and the two shared contexts are not,
+# read at the command above on the branch that removes those two files.
+#
+# The order the edit and this removal were taken in is the part worth keeping.
+# Issue #62 records it: add the context and get it green, require it, drop the
+# two shared contexts from the required set, then remove the two files. Removing
+# .github/workflows/build.yaml and .github/workflows/test.yaml while their
+# contexts were still required would have left the default branch waiting for two
+# statuses nothing reports, which blocks every merge. That is why the files go
+# last rather than first.
 name: gate
 
 on:
