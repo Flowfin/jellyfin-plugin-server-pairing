@@ -316,10 +316,10 @@ public sealed class PairingKeyStoreTests : IDisposable
 
     private string FileInAFreshDirectory()
     {
-        var directory = Path.Combine(Path.GetTempPath(), "server-pairing-tests-" + Guid.NewGuid().ToString("n"));
+        var directory = Path.Join(Path.GetTempPath(), "server-pairing-tests-" + Guid.NewGuid().ToString("n"));
 
         _directories.Add(directory);
 
-        return Path.Combine(directory, KeyStorePath.FileName);
+        return Path.Join(directory, KeyStorePath.FileName);
     }
 }

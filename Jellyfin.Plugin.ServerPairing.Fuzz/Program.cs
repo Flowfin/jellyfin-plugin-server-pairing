@@ -98,7 +98,7 @@ internal static class Program
     {
         var corpus = args.Length > 0
             ? args[0]
-            : Path.Combine("corpus", target);
+            : Path.Join("corpus", target);
 
         if (!Directory.Exists(corpus))
         {

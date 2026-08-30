@@ -33,7 +33,7 @@ public class KeyStorePathTests
         Assert.StartsWith(paths.DataPath, file, StringComparison.Ordinal);
         Assert.DoesNotContain(paths.PluginConfigurationsPath, file, StringComparison.Ordinal);
         Assert.EndsWith(KeyStorePath.FileName, file, StringComparison.Ordinal);
-        Assert.Equal(Path.Combine(paths.DataPath, KeyStorePath.DirectoryName), KeyStorePath.DirectoryFor(paths));
+        Assert.Equal(Path.Join(paths.DataPath, KeyStorePath.DirectoryName), KeyStorePath.DirectoryFor(paths));
     }
 
     /// <summary>
@@ -66,14 +66,14 @@ public class KeyStorePathTests
     [Fact]
     public void TheConfigurationTheHostWritesCarriesNoneOfTheKey()
     {
-        var directory = Path.Combine(Path.GetTempPath(), "server-pairing-tests-" + Guid.NewGuid().ToString("n"));
+        var directory = Path.Join(Path.GetTempPath(), "server-pairing-tests-" + Guid.NewGuid().ToString("n"));
 
         try
         {
             var key = KeyMaterial.Fresh();
             var bytes = key.Span.ToArray();
 
-            var store = new FilePairingKeyStore(Path.Combine(directory, KeyStorePath.FileName));
+            var store = new FilePairingKeyStore(Path.Join(directory, KeyStorePath.FileName));
             store.Add("9f8c1d2b3a4e5f60718293a4b5c6d7e8", key);
 
             using var written = new StringWriter(System.Globalization.CultureInfo.InvariantCulture);
@@ -129,8 +129,8 @@ public class KeyStorePathTests
     {
         var paths = Substitute.For<IApplicationPaths>();
 
-        paths.DataPath.Returns(Path.Combine(Path.GetTempPath(), "jellyfin-data"));
-        paths.PluginConfigurationsPath.Returns(Path.Combine(Path.GetTempPath(), "jellyfin-config", "plugins", "configurations"));
+        paths.DataPath.Returns(Path.Join(Path.GetTempPath(), "jellyfin-data"));
+        paths.PluginConfigurationsPath.Returns(Path.Join(Path.GetTempPath(), "jellyfin-config", "plugins", "configurations"));
 
         return paths;
     }

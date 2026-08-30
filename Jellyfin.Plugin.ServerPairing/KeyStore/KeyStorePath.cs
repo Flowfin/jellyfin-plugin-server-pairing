@@ -44,7 +44,7 @@ public static class KeyStorePath
     {
         ArgumentNullException.ThrowIfNull(paths);
 
-        return Path.Combine(paths.DataPath, DirectoryName);
+        return Path.Join(paths.DataPath, DirectoryName);
     }
 
     /// <summary>
@@ -53,5 +53,5 @@ public static class KeyStorePath
     /// <param name="paths">The host's paths.</param>
     /// <returns>The file.</returns>
     /// <exception cref="ArgumentNullException">The paths are null.</exception>
-    public static string FileFor(IApplicationPaths paths) => Path.Combine(DirectoryFor(paths), FileName);
+    public static string FileFor(IApplicationPaths paths) => Path.Join(DirectoryFor(paths), FileName);
 }

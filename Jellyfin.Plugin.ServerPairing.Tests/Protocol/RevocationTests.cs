@@ -315,11 +315,11 @@ public sealed class RevocationTests : IDisposable
     /// <returns>The path.</returns>
     private string FreshFile()
     {
-        var directory = Path.Combine(Path.GetTempPath(), "server-pairing-tests-" + Guid.NewGuid().ToString("n"));
+        var directory = Path.Join(Path.GetTempPath(), "server-pairing-tests-" + Guid.NewGuid().ToString("n"));
 
         _directories.Add(directory);
 
-        return Path.Combine(directory, KeyStorePath.FileName);
+        return Path.Join(directory, KeyStorePath.FileName);
     }
 
     /// <summary>

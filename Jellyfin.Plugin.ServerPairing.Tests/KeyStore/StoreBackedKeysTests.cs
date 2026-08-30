@@ -267,10 +267,10 @@ public sealed class StoreBackedKeysTests : IDisposable
     /// <returns>The store.</returns>
     private FilePairingKeyStore FreshStore()
     {
-        var directory = Path.Combine(Path.GetTempPath(), "server-pairing-tests-" + Guid.NewGuid().ToString("n"));
+        var directory = Path.Join(Path.GetTempPath(), "server-pairing-tests-" + Guid.NewGuid().ToString("n"));
 
         _directories.Add(directory);
 
-        return new FilePairingKeyStore(Path.Combine(directory, KeyStorePath.FileName));
+        return new FilePairingKeyStore(Path.Join(directory, KeyStorePath.FileName));
     }
 }

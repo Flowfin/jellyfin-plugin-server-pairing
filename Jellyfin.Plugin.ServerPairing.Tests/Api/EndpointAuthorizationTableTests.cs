@@ -358,7 +358,7 @@ public class EndpointAuthorizationTableTests
     /// <exception cref="InvalidOperationException">The section or the table is not where this expects it.</exception>
     private static string[][] Rows()
     {
-        var document = File.ReadAllText(Path.Combine(RepositoryRoot(), "docs", "endpoints.md"))
+        var document = File.ReadAllText(Path.Join(RepositoryRoot(), "docs", "endpoints.md"))
             .Replace("\r", string.Empty, StringComparison.Ordinal);
 
         var start = document.IndexOf(TableHeading + "\n", StringComparison.Ordinal);
@@ -408,7 +408,7 @@ public class EndpointAuthorizationTableTests
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);
 
-        while (directory is not null && !File.Exists(Path.Combine(directory.FullName, SolutionFileName)))
+        while (directory is not null && !File.Exists(Path.Join(directory.FullName, SolutionFileName)))
         {
             directory = directory.Parent;
         }
