@@ -373,7 +373,7 @@ public class EnrolmentWindowTests
     /// <returns>The paths of the files found.</returns>
     private static string[] PluginSourceFiles()
     {
-        var plugin = Path.Combine(RepositoryRoot(), "Jellyfin.Plugin.ServerPairing");
+        var plugin = Path.Join(RepositoryRoot(), "Jellyfin.Plugin.ServerPairing");
 
         return Directory.EnumerateFiles(plugin, "*.cs", SearchOption.AllDirectories)
             .Where(f => !f.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}", StringComparison.Ordinal))
@@ -393,7 +393,7 @@ public class EnrolmentWindowTests
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);
 
-        while (directory is not null && !File.Exists(Path.Combine(directory.FullName, SolutionFileName)))
+        while (directory is not null && !File.Exists(Path.Join(directory.FullName, SolutionFileName)))
         {
             directory = directory.Parent;
         }

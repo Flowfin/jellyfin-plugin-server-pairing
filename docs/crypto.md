@@ -318,7 +318,7 @@ this file:
 
 ```
 git grep -E 'File\.ReadAllText\(.*"crypto' origin/master -- Jellyfin.Plugin.ServerPairing.Tests
-origin/master:Jellyfin.Plugin.ServerPairing.Tests/SecretComparisonTests.cs:        var document = File.ReadAllText(Path.Combine(RepositoryRoot(), "docs", "crypto.md"));
+origin/master:Jellyfin.Plugin.ServerPairing.Tests/SecretComparisonTests.cs:        var document = File.ReadAllText(Path.Join(RepositoryRoot(), "docs", "crypto.md"));
 ```
 
 Four name it, and a grep for the name cannot tell a citation from a reading,

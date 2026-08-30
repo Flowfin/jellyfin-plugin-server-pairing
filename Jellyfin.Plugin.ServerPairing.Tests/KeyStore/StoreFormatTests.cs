@@ -66,7 +66,7 @@ public sealed class StoreFormatTests : IDisposable
     [Fact]
     public void AStoreThisBuildWritesCarriesTheFormatNumberFromItsFirstWrite()
     {
-        var file = Path.Combine(TemporaryDirectory(), KeyStorePath.FileName);
+        var file = Path.Join(TemporaryDirectory(), KeyStorePath.FileName);
 
         new FilePairingKeyStore(file).Add(NeverRotated, KeyMaterial.Fresh());
 
@@ -385,7 +385,7 @@ public sealed class StoreFormatTests : IDisposable
     [Fact]
     public void AStoreThatNeedsNoMigrationSaysNothing()
     {
-        var file = Path.Combine(TemporaryDirectory(), KeyStorePath.FileName);
+        var file = Path.Join(TemporaryDirectory(), KeyStorePath.FileName);
         var written = new CapturingLogger();
         var store = new FilePairingKeyStore(file, null, written);
 
@@ -422,7 +422,7 @@ public sealed class StoreFormatTests : IDisposable
     private static JsonObject Document(string file) =>
         (JsonObject)JsonNode.Parse(System.IO.File.ReadAllText(file))!;
 
-    private static string Fixture() => Path.Combine(
+    private static string Fixture() => Path.Join(
         RepositoryRoot(),
         "Jellyfin.Plugin.ServerPairing.Tests",
         "KeyStore",
@@ -433,7 +433,7 @@ public sealed class StoreFormatTests : IDisposable
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);
 
-        while (directory is not null && !System.IO.File.Exists(Path.Combine(directory.FullName, SolutionFileName)))
+        while (directory is not null && !System.IO.File.Exists(Path.Join(directory.FullName, SolutionFileName)))
         {
             directory = directory.Parent;
         }
@@ -457,7 +457,7 @@ public sealed class StoreFormatTests : IDisposable
     /// </remarks>
     private string TemporaryDirectory()
     {
-        var directory = Path.Combine(
+        var directory = Path.Join(
             Path.GetTempPath(),
             "server-pairing-format-" + Guid.NewGuid().ToString("N", System.Globalization.CultureInfo.InvariantCulture));
 
@@ -470,7 +470,7 @@ public sealed class StoreFormatTests : IDisposable
 
     private string WithFixture()
     {
-        var file = Path.Combine(TemporaryDirectory(), KeyStorePath.FileName);
+        var file = Path.Join(TemporaryDirectory(), KeyStorePath.FileName);
 
         System.IO.File.Copy(Fixture(), file);
 
@@ -479,7 +479,7 @@ public sealed class StoreFormatTests : IDisposable
 
     private string WithFuture()
     {
-        var file = Path.Combine(TemporaryDirectory(), KeyStorePath.FileName);
+        var file = Path.Join(TemporaryDirectory(), KeyStorePath.FileName);
 
         System.IO.File.WriteAllText(
             file,

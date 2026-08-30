@@ -242,7 +242,7 @@ public class CeremonyWordingTests
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);
 
-        while (directory is not null && !File.Exists(Path.Combine(directory.FullName, SolutionFileName)))
+        while (directory is not null && !File.Exists(Path.Join(directory.FullName, SolutionFileName)))
         {
             directory = directory.Parent;
         }
@@ -250,6 +250,6 @@ public class CeremonyWordingTests
         return directory is null
             ? throw new InvalidOperationException(
                 $"No directory at or above '{AppContext.BaseDirectory}' holds '{SolutionFileName}', so the markup scan has no root to read.")
-            : Path.Combine(directory.FullName, "Jellyfin.Plugin.ServerPairing");
+            : Path.Join(directory.FullName, "Jellyfin.Plugin.ServerPairing");
     }
 }

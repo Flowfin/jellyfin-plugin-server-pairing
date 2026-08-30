@@ -375,14 +375,14 @@ public class UserMappingTests
         => $"{Path.DirectorySeparatorChar}{name}{Path.DirectorySeparatorChar}";
 
     private static string PluginSourceDirectory()
-        => Path.Combine(RepositoryRoot(), "Jellyfin.Plugin.ServerPairing");
+        => Path.Join(RepositoryRoot(), "Jellyfin.Plugin.ServerPairing");
 
     private static string RepositoryRoot()
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);
 
         while (directory is not null
-            && !File.Exists(Path.Combine(directory.FullName, "Jellyfin.Plugin.ServerPairing.sln")))
+            && !File.Exists(Path.Join(directory.FullName, "Jellyfin.Plugin.ServerPairing.sln")))
         {
             directory = directory.Parent;
         }

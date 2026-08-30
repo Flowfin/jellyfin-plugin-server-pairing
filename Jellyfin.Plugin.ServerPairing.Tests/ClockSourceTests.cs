@@ -205,14 +205,14 @@ public class ClockSourceTests
     /// </summary>
     /// <returns>The absolute path of the plugin project directory.</returns>
     private static string PluginSourceDirectory()
-        => Path.Combine(RepositoryRoot(), "Jellyfin.Plugin.ServerPairing");
+        => Path.Join(RepositoryRoot(), "Jellyfin.Plugin.ServerPairing");
 
     /// <summary>
     /// The test project directory, derived the same way.
     /// </summary>
     /// <returns>The absolute path of the test project directory.</returns>
     private static string TestSourceDirectory()
-        => Path.Combine(RepositoryRoot(), "Jellyfin.Plugin.ServerPairing.Tests");
+        => Path.Join(RepositoryRoot(), "Jellyfin.Plugin.ServerPairing.Tests");
 
     /// <summary>
     /// The repository root, found by walking up from the directory the test assembly was
@@ -228,7 +228,7 @@ public class ClockSourceTests
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);
 
-        while (directory is not null && !File.Exists(Path.Combine(directory.FullName, SolutionFileName)))
+        while (directory is not null && !File.Exists(Path.Join(directory.FullName, SolutionFileName)))
         {
             directory = directory.Parent;
         }

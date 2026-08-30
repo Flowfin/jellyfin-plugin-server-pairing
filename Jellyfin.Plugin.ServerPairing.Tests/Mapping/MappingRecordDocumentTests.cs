@@ -229,7 +229,7 @@ public class MappingRecordDocumentTests
     /// <returns>One entry per row, with the header and the alignment row skipped.</returns>
     private static Row[] Rows()
     {
-        var lines = File.ReadAllLines(Path.Combine(RepositoryRoot(), DocumentPath));
+        var lines = File.ReadAllLines(Path.Join(RepositoryRoot(), DocumentPath));
         var header = Array.FindIndex(lines, line => string.Equals(line.Trim(), TableHeader, StringComparison.Ordinal));
 
         if (header < 0)
@@ -277,7 +277,7 @@ public class MappingRecordDocumentTests
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);
 
-        while (directory is not null && !File.Exists(Path.Combine(directory.FullName, SolutionFileName)))
+        while (directory is not null && !File.Exists(Path.Join(directory.FullName, SolutionFileName)))
         {
             directory = directory.Parent;
         }

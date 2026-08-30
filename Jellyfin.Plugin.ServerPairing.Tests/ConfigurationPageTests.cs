@@ -145,7 +145,7 @@ public class ConfigurationPageTests
     /// </summary>
     /// <returns>The absolute path of the plugin project directory.</returns>
     private static string PluginSourceDirectory()
-        => Path.Combine(RepositoryRoot(), "Jellyfin.Plugin.ServerPairing");
+        => Path.Join(RepositoryRoot(), "Jellyfin.Plugin.ServerPairing");
 
     /// <summary>
     /// The repository root, found by walking up from the directory the test assembly was
@@ -161,7 +161,7 @@ public class ConfigurationPageTests
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);
 
-        while (directory is not null && !File.Exists(Path.Combine(directory.FullName, SolutionFileName)))
+        while (directory is not null && !File.Exists(Path.Join(directory.FullName, SolutionFileName)))
         {
             directory = directory.Parent;
         }

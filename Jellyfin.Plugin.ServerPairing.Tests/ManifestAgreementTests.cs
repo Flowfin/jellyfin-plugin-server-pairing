@@ -130,7 +130,7 @@ public class ManifestAgreementTests
         var fields = new Dictionary<string, string>(StringComparer.Ordinal);
         var current = string.Empty;
 
-        foreach (var line in File.ReadAllLines(Path.Combine(RepositoryRoot(), fileName)))
+        foreach (var line in File.ReadAllLines(Path.Join(RepositoryRoot(), fileName)))
         {
             if (line.Length == 0 || line.StartsWith('#') || line.StartsWith("---", StringComparison.Ordinal))
             {
@@ -168,7 +168,7 @@ public class ManifestAgreementTests
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);
 
-        while (directory is not null && !File.Exists(Path.Combine(directory.FullName, SolutionFileName)))
+        while (directory is not null && !File.Exists(Path.Join(directory.FullName, SolutionFileName)))
         {
             directory = directory.Parent;
         }

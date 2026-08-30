@@ -32,7 +32,7 @@ public sealed class StorePermissionsTests : IDisposable
     /// </summary>
     private static readonly string[] OnePairing = { "pairing" };
 
-    private readonly string _root = Path.Combine(
+    private readonly string _root = Path.Join(
         Path.GetTempPath(),
         "server-pairing-permissions-" + Guid.NewGuid().ToString("n", System.Globalization.CultureInfo.InvariantCulture));
 
@@ -55,7 +55,7 @@ public sealed class StorePermissionsTests : IDisposable
     [Fact]
     public void NothingIsCreatedUntilSomethingIsWritten()
     {
-        var file = Path.Combine(_root, KeyStorePath.DirectoryName, KeyStorePath.FileName);
+        var file = Path.Join(_root, KeyStorePath.DirectoryName, KeyStorePath.FileName);
         var store = new FilePairingKeyStore(file);
 
         Assert.Empty(store.Pairings());
@@ -74,7 +74,7 @@ public sealed class StorePermissionsTests : IDisposable
     [Fact]
     public void TheFirstWriteCreatesBoth()
     {
-        var file = Path.Combine(_root, KeyStorePath.DirectoryName, KeyStorePath.FileName);
+        var file = Path.Join(_root, KeyStorePath.DirectoryName, KeyStorePath.FileName);
         var store = new FilePairingKeyStore(file);
 
         store.Add("pairing", KeyMaterial.From(new byte[32]));
@@ -92,8 +92,8 @@ public sealed class StorePermissionsTests : IDisposable
     [UnsupportedOSPlatform("windows")]
     public void BothAreCreatedWithTheModesTheStoreNames()
     {
-        var directory = Path.Combine(_root, KeyStorePath.DirectoryName);
-        var file = Path.Combine(directory, KeyStorePath.FileName);
+        var directory = Path.Join(_root, KeyStorePath.DirectoryName);
+        var file = Path.Join(directory, KeyStorePath.FileName);
 
         new FilePairingKeyStore(file).Add("pairing", KeyMaterial.From(new byte[32]));
 
@@ -127,8 +127,8 @@ public sealed class StorePermissionsTests : IDisposable
     [UnsupportedOSPlatform("windows")]
     public void TheTemporaryIsNarrowBeforeItBecomesTheStore()
     {
-        var directory = Path.Combine(_root, KeyStorePath.DirectoryName);
-        var file = Path.Combine(directory, KeyStorePath.FileName);
+        var directory = Path.Join(_root, KeyStorePath.DirectoryName);
+        var file = Path.Join(directory, KeyStorePath.FileName);
         var seen = UnixFileMode.None;
 
         var store = new FilePairingKeyStore(
@@ -154,8 +154,8 @@ public sealed class StorePermissionsTests : IDisposable
     [UnsupportedOSPlatform("windows")]
     public void AWideTemporaryLeftBehindDoesNotCarryItsModeOntoTheStore()
     {
-        var directory = Path.Combine(_root, KeyStorePath.DirectoryName);
-        var file = Path.Combine(directory, KeyStorePath.FileName);
+        var directory = Path.Join(_root, KeyStorePath.DirectoryName);
+        var file = Path.Join(directory, KeyStorePath.FileName);
 
         StorePermissions.PrepareDirectory(directory);
 
@@ -183,8 +183,8 @@ public sealed class StorePermissionsTests : IDisposable
     [UnsupportedOSPlatform("windows")]
     public void APreExistingOverPermissiveDirectoryIsRefusedAndNamed()
     {
-        var directory = Path.Combine(_root, KeyStorePath.DirectoryName);
-        var file = Path.Combine(directory, KeyStorePath.FileName);
+        var directory = Path.Join(_root, KeyStorePath.DirectoryName);
+        var file = Path.Join(directory, KeyStorePath.FileName);
 
         Directory.CreateDirectory(directory, StorePermissions.DirectoryMode | UnixFileMode.OtherRead);
 
@@ -213,8 +213,8 @@ public sealed class StorePermissionsTests : IDisposable
     [UnsupportedOSPlatform("windows")]
     public void APreExistingDirectoryAtTheStoreSOwnModeIsAccepted()
     {
-        var directory = Path.Combine(_root, KeyStorePath.DirectoryName);
-        var file = Path.Combine(directory, KeyStorePath.FileName);
+        var directory = Path.Join(_root, KeyStorePath.DirectoryName);
+        var file = Path.Join(directory, KeyStorePath.FileName);
 
         Directory.CreateDirectory(directory, StorePermissions.DirectoryMode);
 
@@ -242,8 +242,8 @@ public sealed class StorePermissionsTests : IDisposable
 
         foreach (var extra in extras)
         {
-            var directory = Path.Combine(_root, extra.ToString());
-            var file = Path.Combine(directory, KeyStorePath.FileName);
+            var directory = Path.Join(_root, extra.ToString());
+            var file = Path.Join(directory, KeyStorePath.FileName);
 
             Directory.CreateDirectory(directory, StorePermissions.DirectoryMode | extra);
 

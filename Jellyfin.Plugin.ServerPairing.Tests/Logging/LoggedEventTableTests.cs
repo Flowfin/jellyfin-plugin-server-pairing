@@ -252,7 +252,7 @@ public class LoggedEventTableTests
     /// <returns>One entry per row, with the header and the alignment row skipped.</returns>
     private static string[] Rows()
     {
-        var lines = File.ReadAllLines(Path.Combine(RepositoryRoot(), DocumentPath));
+        var lines = File.ReadAllLines(Path.Join(RepositoryRoot(), DocumentPath));
         var header = Array.FindIndex(lines, line => string.Equals(line.Trim(), TableHeader, StringComparison.Ordinal));
 
         if (header < 0)
@@ -285,7 +285,7 @@ public class LoggedEventTableTests
     /// <returns>The paths of the files found.</returns>
     private static string[] SourceFiles()
         => Directory
-            .EnumerateFiles(Path.Combine(RepositoryRoot(), "Jellyfin.Plugin.ServerPairing"), "*.cs", SearchOption.AllDirectories)
+            .EnumerateFiles(Path.Join(RepositoryRoot(), "Jellyfin.Plugin.ServerPairing"), "*.cs", SearchOption.AllDirectories)
             .Where(f => !f.Contains(Segment("obj"), StringComparison.Ordinal))
             .Where(f => !f.Contains(Segment("bin"), StringComparison.Ordinal))
             .OrderBy(f => f, StringComparer.Ordinal)
@@ -314,7 +314,7 @@ public class LoggedEventTableTests
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);
 
-        while (directory is not null && !File.Exists(Path.Combine(directory.FullName, SolutionFileName)))
+        while (directory is not null && !File.Exists(Path.Join(directory.FullName, SolutionFileName)))
         {
             directory = directory.Parent;
         }

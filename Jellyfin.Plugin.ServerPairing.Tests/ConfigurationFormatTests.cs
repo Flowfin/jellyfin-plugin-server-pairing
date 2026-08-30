@@ -357,7 +357,7 @@ public class ConfigurationFormatTests
     /// The committed configuration a previous build wrote.
     /// </summary>
     /// <returns>The path of the fixture.</returns>
-    private static string Fixture() => Path.Combine(
+    private static string Fixture() => Path.Join(
         RepositoryRoot(),
         "Jellyfin.Plugin.ServerPairing.Tests",
         "Configuration",
@@ -375,7 +375,7 @@ public class ConfigurationFormatTests
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);
 
-        while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "Jellyfin.Plugin.ServerPairing.sln")))
+        while (directory is not null && !File.Exists(Path.Join(directory.FullName, "Jellyfin.Plugin.ServerPairing.sln")))
         {
             directory = directory.Parent;
         }
@@ -423,13 +423,13 @@ public class ConfigurationFormatTests
         /// </summary>
         public HostWritingToATemporaryDirectory()
         {
-            _root = Path.Combine(Path.GetTempPath(), "pairing-configuration-format-" + Guid.NewGuid().ToString("N"));
-            Directory.CreateDirectory(Path.Combine(_root, "plugins"));
-            Directory.CreateDirectory(Path.Combine(_root, "configurations"));
+            _root = Path.Join(Path.GetTempPath(), "pairing-configuration-format-" + Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(Path.Join(_root, "plugins"));
+            Directory.CreateDirectory(Path.Join(_root, "configurations"));
 
             var paths = Substitute.For<IApplicationPaths>();
-            paths.PluginsPath.Returns(Path.Combine(_root, "plugins"));
-            paths.PluginConfigurationsPath.Returns(Path.Combine(_root, "configurations"));
+            paths.PluginsPath.Returns(Path.Join(_root, "plugins"));
+            paths.PluginConfigurationsPath.Returns(Path.Join(_root, "configurations"));
 
             var serialiser = Substitute.For<IXmlSerializer>();
             serialiser
