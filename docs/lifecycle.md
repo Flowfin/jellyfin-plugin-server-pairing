@@ -30,7 +30,7 @@ the host's own paths rather than from anything written down here:
     git grep -n 'DirectoryName = \|FileName = \|FileFor' -- Jellyfin.Plugin.ServerPairing/KeyStore/KeyStorePath.cs
     Jellyfin.Plugin.ServerPairing/KeyStore/KeyStorePath.cs:30:    public const string DirectoryName = "server-pairing";
     Jellyfin.Plugin.ServerPairing/KeyStore/KeyStorePath.cs:35:    public const string FileName = "keys.json";
-    Jellyfin.Plugin.ServerPairing/KeyStore/KeyStorePath.cs:56:    public static string FileFor(IApplicationPaths paths) => Path.Combine(DirectoryFor(paths), FileName);
+    Jellyfin.Plugin.ServerPairing/KeyStore/KeyStorePath.cs:56:    public static string FileFor(IApplicationPaths paths) => Path.Join(DirectoryFor(paths), FileName);
 
 So the file an operator is being told about is
 `<program data>/data/server-pairing/keys.json`, and the program data path is the
