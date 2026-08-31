@@ -31,7 +31,20 @@ out with every server release.
 Replaced by an in-process harness that constructs two sets of this plugin's own
 services and connects them over an in-memory transport. A full enrolment, a
 rotation and a revocation run inside one test process, which is the behaviour
-worth asserting on. That harness is #29.
+worth asserting on. That harness is #29 and it is in the tree:
+
+```
+git grep -n 'internal sealed class PairedInstances' origin/master -- Jellyfin.Plugin.ServerPairing.Tests/
+origin/master:Jellyfin.Plugin.ServerPairing.Tests/Harness/PairedInstances.cs:48:internal sealed class PairedInstances : IDisposable
+```
+
+WHAT IT RUNS TODAY IS NOT THAT SENTENCE, and the paragraph above states the
+target rather than the state. No enrolment, no rotation and no revocation runs
+through it, for the reason the section below this one gives, and the harness
+seeds the key an enrolment would have produced instead of producing one. What it
+does carry is a signed message from one side reaching the other side's
+controller and verifying there, and the four things a case may do to a message
+on the way - drop it, delay it, duplicate it, corrupt it.
 
 What it cannot see is anything the real server does around the plugin. The real
 HTTP stack, the real serialiser and the real routing are all absent from it, so
@@ -153,7 +166,7 @@ statement about `d070084` and about nothing later.
 None of that changes what the run shows about the runner, which is what this
 section is for.
 
-Of the three replacements above, one has been partly carried out and two have
+Of the three replacements above, two have been partly carried out and one has
 not. Nothing generates a certificate in memory and hands it to pinning code:
 
 ```
@@ -161,8 +174,25 @@ git grep -nE "CertificateRequest|X509" -- '*Tests*' ; echo "exit=$?"
 exit=1
 ```
 
-The two-instance harness is #29, which is open, and there is nothing here that
-runs a full enrolment, a rotation and a revocation in one test process.
+The two-instance harness exists and #29 is open, which are two statements
+rather than one. What the harness gives a case is two sides that share nothing,
+a clock each, a key store each, and a message crossing between them that the
+receiving side's own controller reads. THERE IS STILL NOTHING HERE THAT RUNS A
+FULL ENROLMENT, A ROTATION AND A REVOCATION IN ONE TEST PROCESS, which is what
+#29's first condition asks for, and that sentence is unchanged in what it
+denies. The reason is not the harness: nothing in this plugin derives a key
+pair, so there is no enrolment to drive, which is #18, and no route ends a
+pairing, which is #24.
+
+```
+git grep -lni 'ECDiffieHellman' origin/master -- Jellyfin.Plugin.ServerPairing ; echo "exit=$?"
+exit=1
+```
+
+So a lifecycle driven through the harness starts at a key the harness put into
+both stores. That is the state an enrolment would leave behind and it is not an
+enrolment, so nothing driven through it says anything about how two servers come
+to share a key.
 
 The dashboard replacement has two halves and only the first of them exists. The
 page is read as text by `ConfigurationPageTests`, which refuses a reference to
