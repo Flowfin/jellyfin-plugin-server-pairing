@@ -445,9 +445,25 @@ than set beside it, so the two cannot be put into a state where a nonce ages out
 while a request carrying it would still be accepted. A nonce older than that is
 dropped, so the store is bounded by the request rate rather than by uptime. The
 store is per pairing and is not persisted: a restart forgets it, and a request
-replayed across a restart inside the skew is accepted. That is a real gap, it is
-named rather than left out, and issue #21 is where it is either closed or
-accepted with a reason.
+replayed across a restart inside the skew is accepted.
+
+**That gap is accepted rather than owed, and the reason is here rather than in a
+tracker.** THIS PARAGRAPH SAID THE GAP WAS NAMED AND LEFT TO ISSUE #21 TO CLOSE
+OR ACCEPT. It is accepted, on #21, and what a reader of the freshness rule needs
+is the reason at the rule rather than a pointer away from it. Persisting a nonce
+means a disk write on every request that verifies, at a rate the peer sets, so a
+peer that can make this server write to disk as fast as it can send is a worse
+property than the one being bought. Narrowing the window under the time a restart
+takes is the other way out and it breaks the drift tolerance the window exists
+for. So the window stays, the store stays in memory, and this is the whole of what
+is lost: **a request captured and presented again within the freshness window,
+across a restart of this server, is not detected as a replay.** It is a bounded
+window rather than an open one, and the bound is the same number the paragraph
+above gives.
+
+What must not happen is this document saying the store is persisted while it is
+not. The mismatch is the defect and the gap is not, which is why the sentence
+above is written as plainly as it is and stays that way through every later edit.
 
 The store is bounded by count as well as by age, and this document said only the
 second until the count was added to it. A pairing may hold 4096 remembered nonces
@@ -463,8 +479,16 @@ origin/master:Jellyfin.Plugin.ServerPairing/Protocol/FreshnessWindow.cs:59:    p
 origin/master:Jellyfin.Plugin.ServerPairing/Protocol/FreshnessWindow.cs:71:    public const int NoncesPerPairing = 4096;
 ```
 
-What that refusal says on the wire is the taxonomy below. What the count should
-be is issue #21's along with the restart question, and it is not settled here.
+What that refusal says on the wire is the taxonomy below. THIS SENTENCE SAID THE
+COUNT WAS ISSUE #21'S ALONG WITH THE RESTART QUESTION AND THAT NEITHER WAS
+SETTLED HERE. The restart question is settled above. The count was never that
+issue's: its done conditions ask that the store be bounded on entries and that
+nothing inside the window be forgotten early, which 4096 satisfies whatever the
+number is, and no condition anywhere asks what the number should be. So the count
+is a constant of this specification, read out of the type above, and what is not
+known about it is a measurement rather than a decision: no run on any machine has
+said what request rate 4096 covers before a fresh request meets a full store, and
+nothing here claims one.
 
 Both numbers are constants of the specification rather than secrets, so a caller
 learns nothing by discovering them that reading this document would not have
@@ -882,8 +906,16 @@ this document repeats are named at the top.
 
 The `exchange` payloads, M6.
 
-Whether the nonce store survives a restart, issue #21, which is named above as an
-accepted gap rather than left silent.
+THIS LIST CARRIED WHETHER THE NONCE STORE SURVIVES A RESTART AND IT IS DECIDED.
+It does not survive one, the reason is written where the freshness rule is rather
+than here, and what is lost is stated there as plainly as it can be. It is off
+this list because a decided question left on a list of undecided ones is read as
+open by everybody who does not open the section it points at.
+
+What no route on this plane consults is a freshness window at all, so nothing in
+this section is refused by anything today. That is the fourth done condition of
+issue #26 rather than a question this document leaves open, and the `clock` code
+in the taxonomy above says the same of itself.
 
 What identifier holds a pairing in `Offered`, which is set out under the local
 events table above with both answers and what each costs. It is written there
