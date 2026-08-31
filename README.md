@@ -81,22 +81,21 @@ arrangement rests on, and it is the one step no software performs on their
 behalf. [`docs/threat-model.md`](docs/threat-model.md) states what is lost by an
 operator who confirms without comparing.
 
-Nobody can carry that out today. The one endpoint this plugin adds is the peer
-plane, which a stranger reaches and an operator does not:
+[`docs/operator-guide.md`](docs/operator-guide.md) is the walkthrough, from
+installing on both servers to a working pairing, and then through each way it
+goes wrong.
 
-    git grep -lE 'ControllerBase|\[ApiController\]' -- Jellyfin.Plugin.ServerPairing ; echo "exit=$?"
-    Jellyfin.Plugin.ServerPairing/Api/PeerPlaneController.cs
-    exit=0
-
-There is nothing an administrator can call to open an enrolment; its
-configuration page is still the plugin template's example fields:
+Nobody can carry that out today, which is why the guide opens by saying so and
+marks every step with what it waits on. There is nothing an administrator can
+call to open an enrolment; its configuration page is still the plugin template's
+example fields:
 
     grep -c 'AnInteger\|Several Options\|A String' Jellyfin.Plugin.ServerPairing/Configuration/configPage.html
     6
 
-and no release has been published from this repository. So this section links no
-walkthrough rather than linking one that does not exist; the walkthrough from
-installation to a working pairing is issue #75 and is not written.
+and no release has been published from this repository. So the guide is the
+sequence as specified, in the order an operator meets it, and not a record of
+anybody having followed it.
 
 ## Which server versions it supports
 
@@ -114,6 +113,9 @@ been no release.
 
 ## Where the rest is written
 
+- [`docs/operator-guide.md`](docs/operator-guide.md), the walkthrough from
+  installing on two servers to a working pairing, and what each failure looks
+  like
 - [`docs/protocol.md`](docs/protocol.md), the wire: the states, the messages,
   what is authenticated over which bytes, freshness, and the error taxonomy
 - [`docs/threat-model.md`](docs/threat-model.md), the assets, the adversaries,
@@ -152,7 +154,7 @@ That list is every document under `docs/`, and it is checkable rather than
 trusted:
 
     git ls-files 'docs/*.md' | wc -l
-    16
+    17
 
 ## Contributing
 
