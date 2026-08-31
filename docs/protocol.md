@@ -296,6 +296,8 @@ rather than as they would re-serialise.
 | `revoke` | response | none | empty |
 | `exchange` | both | none named here | opaque to this layer; M6 fixes what is inside it and this document names none of it |
 | every type | refusal | `code` | one of the codes in the error taxonomy below |
+| every type | refusal, `version` only | `versionLow` | protocol version, the lowest this server speaks |
+| every type | refusal, `version` only | `versionHigh` | protocol version, the highest this server speaks |
 
 The version range is two members rather than one nested object, so each half is
 checked against the protocol version limit by itself and a range whose halves
@@ -687,7 +689,7 @@ to hold it under. The wire already says as much about the request that arrives i
 that state:
 
     git grep -n "^them. Its .X-Pairing-Id. is 32" origin/master -- docs/protocol.md
-    origin/master:docs/protocol.md:413:them. Its `X-Pairing-Id` is 32 `0` characters, which is what line 5 of its
+    origin/master:docs/protocol.md:415:them. Its `X-Pairing-Id` is 32 `0` characters, which is what line 5 of its
 
 and nothing carries that over to the record.
 
@@ -727,6 +729,35 @@ object with exactly one member:
 The shape never varies. Only the code varies, and it varies only for a caller
 that has already proved it holds the key, or that is inside a window an
 administrator opened deliberately.
+
+**`version` IS THE ONE EXCEPTION TO THAT SHAPE AND IT IS NAMED HERE RATHER THAN
+DISCOVERED.** THIS SECTION SAID EVERY BODY CARRIES EXACTLY ONE MEMBER WITH NO
+EXCEPTION. That refusal carries two more, which are the range this server speaks:
+
+```
+{"code":"version","versionLow":1,"versionHigh":1}
+```
+
+The member names are the ones a `hello` request uses for the same two numbers, so
+a peer reads one spelling of a version range rather than two, and the numbers are
+read out of the same list the negotiation selects against rather than written
+beside it.
+
+Why the exception is worth its cost. A refusal that says only "no version in
+common" leaves the operator on the far side with nothing to act on, and every
+mismatch between two servers becomes a support conversation instead of a sentence
+on a page. What it discloses is nothing: the range is what a `hello` response
+advertises anyway and this document states it, so a probe learns from the refusal
+exactly what it learns from reading this file. Putting it in the `hello` response
+instead fails the one case that matters, because a peer outside the overlap never
+gets a `hello` response.
+
+Why it is an exception rather than a rule. Every other code is seen by a caller
+that has already proved it holds the key or is inside a window an administrator
+opened, and none of them has anything to add that the caller cannot already work
+out. Making refusal bodies variable-length in general would give every future code
+a place to leak into; making this one carry two named numbers does not. Issue #25
+is where that was decided.
 
 | Code | What caused it | Who can ever see it | Distinguishable from its neighbours |
 | --- | --- | --- | --- |
