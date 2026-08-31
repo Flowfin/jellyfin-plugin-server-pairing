@@ -1,4 +1,5 @@
 using System;
+using System.Globalization;
 using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
@@ -445,10 +446,10 @@ public class PeerPlaneTests
 
         for (var i = 0; i < ArrivalLimit.ArrivalsPerPairing; i++)
         {
-            Assert.True(plane.Serve(message, Signed(message), At).BodyWasHandedOn);
+            Assert.True(plane.Serve(message, Signed(message, carries: FreshNonce()), At).BodyWasHandedOn);
         }
 
-        var past = plane.Serve(message, Signed(message), At);
+        var past = plane.Serve(message, Signed(message, carries: FreshNonce()), At);
 
         Assert.False(past.BodyWasHandedOn);
         Assert.Equal(RefusalCode.Refused, past.Code);
@@ -469,11 +470,11 @@ public class PeerPlaneTests
 
         for (var i = 0; i < ArrivalLimit.ArrivalsPerPairing; i++)
         {
-            plane.Serve(message, Signed(message), At);
+            plane.Serve(message, Signed(message, carries: FreshNonce()), At);
         }
 
-        Assert.False(plane.Serve(message, Signed(message), At).BodyWasHandedOn);
-        Assert.True(plane.Serve(message, Signed(message), At.AddSeconds(ArrivalLimit.WindowSeconds)).BodyWasHandedOn);
+        Assert.False(plane.Serve(message, Signed(message, carries: FreshNonce()), At).BodyWasHandedOn);
+        Assert.True(plane.Serve(message, Signed(message, carries: FreshNonce()), At.AddSeconds(ArrivalLimit.WindowSeconds)).BodyWasHandedOn);
     }
 
     /// <summary>
@@ -507,21 +508,203 @@ public class PeerPlaneTests
     public void AnArrivalPastTheLimitCostsNoVerification(PairingMessage message)
     {
         var keys = new KnownKeys(PairingId, Key);
-        var plane = new PeerPlane(new RequestAuthenticator(keys), new ArrivalLimit());
+        var plane = new PeerPlane(new RequestAuthenticator(keys), new ArrivalLimit(), new FreshnessWindow());
 
         for (var i = 0; i < ArrivalLimit.ArrivalsPerPairing; i++)
         {
-            plane.Serve(message, Signed(message), At);
+            plane.Serve(message, Signed(message, carries: FreshNonce()), At);
         }
 
         var asked = keys.Asked;
 
         Assert.Equal(ArrivalLimit.ArrivalsPerPairing, asked);
-        Assert.False(plane.Serve(message, Signed(message), At).BodyWasHandedOn);
+        Assert.False(plane.Serve(message, Signed(message, carries: FreshNonce()), At).BodyWasHandedOn);
         Assert.Equal(asked, keys.Asked);
     }
 
-    private static PeerPlane Plane() => new PeerPlane(new RequestAuthenticator(new KnownKeys(PairingId, Key)), new ArrivalLimit());
+    /// <summary>
+    /// A peer whose clock is outside the tolerated skew is refused for the clock, and that is a
+    /// different answer from the one a bad signature gets. This is the fourth done condition of
+    /// issue #26, and the distinction is the one <c>docs/threat-model.md</c> keeps on this plane
+    /// deliberately rather than collapsing into the undistinguished refusal.
+    /// </summary>
+    /// <param name="direction">Which side of this server's clock the peer is on.</param>
+    /// <remarks>
+    /// Both directions, because a request from the future is as suspicious as one from the past,
+    /// and a window applied in one direction only would pass a case that drove the other.
+    /// </remarks>
+    [Theory]
+    [InlineData(1)]
+    [InlineData(-1)]
+    public void ASkewedPeerIsRefusedForTheClockRatherThanForItsSignature(int direction)
+    {
+        var stamp = Stamp(At.AddSeconds(direction * (FreshnessWindow.WindowSeconds + 1)));
+
+        var skewed = Plane().Serve(
+            PairingMessage.Exchange,
+            Signed(PairingMessage.Exchange, carries: FreshNonce(), stamp: stamp),
+            At);
+
+        Assert.Equal(RefusalCode.Clock, skewed.Code);
+        Assert.Equal("{\"code\":\"clock\"}", Refusal.Body(skewed.Code));
+        Assert.False(skewed.BodyWasHandedOn);
+        Assert.True(skewed.VerifiedBody.IsEmpty);
+
+        // The same skew, presented by somebody who does not hold the key. What comes back is the
+        // undistinguished refusal, so an operator reading the two answers is told which of them
+        // happened rather than being left to guess.
+        var unsigned = Plane().Serve(
+            PairingMessage.Exchange,
+            Signed(PairingMessage.Exchange, signature: null, carries: FreshNonce(), stamp: stamp),
+            At);
+
+        Assert.Equal(RefusalCode.Refused, unsigned.Code);
+        Assert.NotEqual(Refusal.Body(skewed.Code), Refusal.Body(unsigned.Code));
+    }
+
+    /// <summary>
+    /// A caller holding no verifying key learns nothing from a skew. A request that is both
+    /// stale and unsigned is answered exactly as one that is merely unsigned, because freshness
+    /// is judged after verification and never before it.
+    /// </summary>
+    /// <remarks>
+    /// This is the sentence <c>docs/threat-model.md</c> closes its oracle section with, made
+    /// into a case. Without it the clock refusal would hand every stranger one bit about this
+    /// server's window, and the argument for keeping the distinction at all rests on their not
+    /// getting it.
+    /// </remarks>
+    [Fact]
+    public void AStrangerLearnsNothingFromASkewBecauseFreshnessIsJudgedAfterVerification()
+    {
+        var stale = Plane().Serve(
+            PairingMessage.Exchange,
+            Signed(
+                PairingMessage.Exchange,
+                signature: null,
+                carries: FreshNonce(),
+                stamp: Stamp(At.AddSeconds(FreshnessWindow.WindowSeconds + 1))),
+            At);
+
+        var fresh = Plane().Serve(
+            PairingMessage.Exchange,
+            Signed(PairingMessage.Exchange, signature: null, carries: FreshNonce()),
+            At);
+
+        Assert.Equal(RefusalCode.Refused, stale.Code);
+        Assert.Equal(Refusal.Body(fresh.Code), Refusal.Body(stale.Code));
+        Assert.False(stale.BodyWasHandedOn);
+    }
+
+    /// <summary>
+    /// The edge of the window is inside it and the second past it is not, in both directions. A
+    /// window compared with the wrong operator passes every case that stays well away from its
+    /// edge, so these sit on it.
+    /// </summary>
+    /// <param name="direction">Which side of this server's clock the peer is on.</param>
+    [Theory]
+    [InlineData(1)]
+    [InlineData(-1)]
+    public void TheEdgeOfTheWindowIsInsideItAndTheSecondPastItIsNot(int direction)
+    {
+        var edge = Plane().Serve(
+            PairingMessage.Exchange,
+            Signed(
+                PairingMessage.Exchange,
+                carries: FreshNonce(),
+                stamp: Stamp(At.AddSeconds(direction * FreshnessWindow.WindowSeconds))),
+            At);
+
+        var past = Plane().Serve(
+            PairingMessage.Exchange,
+            Signed(
+                PairingMessage.Exchange,
+                carries: FreshNonce(),
+                stamp: Stamp(At.AddSeconds(direction * (FreshnessWindow.WindowSeconds + 1)))),
+            At);
+
+        // Inside the window, so it reaches the transition table and is refused by that instead.
+        Assert.Equal(RefusalCode.Refused, edge.Code);
+        Assert.True(edge.BodyWasHandedOn);
+
+        Assert.Equal(RefusalCode.Clock, past.Code);
+        Assert.False(past.BodyWasHandedOn);
+    }
+
+    /// <summary>
+    /// The same request sent twice is refused the second time, and the answer says replay. A
+    /// correctly signed request that is captured and sent again is still correctly signed, which
+    /// is why no signature check refuses one and why the nonce store exists at all.
+    /// </summary>
+    [Fact]
+    public void TheSameRequestSentTwiceIsRefusedAsAReplayTheSecondTime()
+    {
+        var plane = Plane();
+        var once = Signed(PairingMessage.Exchange, carries: FreshNonce());
+
+        var first = plane.Serve(PairingMessage.Exchange, once, At);
+        var second = plane.Serve(PairingMessage.Exchange, once, At);
+
+        Assert.Equal(RefusalCode.Refused, first.Code);
+        Assert.True(first.BodyWasHandedOn);
+
+        Assert.Equal(RefusalCode.Replay, second.Code);
+        Assert.Equal("{\"code\":\"replay\"}", Refusal.Body(second.Code));
+        Assert.False(second.BodyWasHandedOn);
+        Assert.True(second.VerifiedBody.IsEmpty);
+    }
+
+    /// <summary>
+    /// A nonce is remembered under the pairing it arrived on rather than for the whole server,
+    /// so a nonce seen once does not refuse a second pairing that carries the same one.
+    /// </summary>
+    /// <remarks>
+    /// Remembering across pairings would let one peer end another's traffic by sending the
+    /// nonces it expects that peer to use, which is a denial the store would have created rather
+    /// than refused. The second request here does not verify, and that is the point: it is
+    /// refused before freshness is reached, so what this asserts is that it was not refused as a
+    /// replay of the first.
+    /// </remarks>
+    [Fact]
+    public void ANonceIsRememberedForThePairingItArrivedUnderAndNotForTheServer()
+    {
+        var plane = Plane();
+        var carries = FreshNonce();
+        var once = Signed(PairingMessage.Exchange, carries: carries);
+
+        plane.Serve(PairingMessage.Exchange, once, At);
+
+        Assert.Equal(RefusalCode.Replay, plane.Serve(PairingMessage.Exchange, once, At).Code);
+
+        var elsewhere = plane.Serve(
+            PairingMessage.Exchange,
+            Signed(PairingMessage.Exchange, pairingId: "0011223344556677889900aabbccddee", carries: carries),
+            At);
+
+        Assert.Equal(RefusalCode.Refused, elsewhere.Code);
+    }
+
+    /// <summary>
+    /// The timestamp a peer whose clock reads this instant puts on a request.
+    /// </summary>
+    /// <param name="at">The peer's clock.</param>
+    /// <returns>The timestamp, as it is spelled on the wire.</returns>
+    private static string Stamp(DateTimeOffset at) =>
+        at.ToUnixTimeSeconds().ToString(CultureInfo.InvariantCulture);
+
+    private static PeerPlane Plane() => new PeerPlane(new RequestAuthenticator(new KnownKeys(PairingId, Key)), new ArrivalLimit(), new FreshnessWindow());
+
+    /// <summary>
+    /// A nonce no other request in a case carries, of the shape the specification fixes.
+    /// </summary>
+    /// <remarks>
+    /// A case that sends several requests to reach a limit is sending several REQUESTS, and the
+    /// specification says two that differ in nothing else must differ here. Reusing one nonce
+    /// makes every send after the first a replay, which is a different refusal from the one
+    /// those cases are about, so they would pass or fail for the wrong reason.
+    /// </remarks>
+    /// <returns>The nonce.</returns>
+    private static string FreshNonce() =>
+        Convert.ToHexString(RandomNumberGenerator.GetBytes(FieldShape.HexFieldLength / 2)).ToLowerInvariant();
 
     private static ArrivingRequest Signed(
         PairingMessage message,
@@ -531,15 +714,18 @@ public class PeerPlaneTests
         string? signature = "",
         string? drop = null,
         byte[]? body = null,
-        bool exceeded = false)
+        bool exceeded = false,
+        string? carries = null,
+        string stamp = Timestamp)
     {
         var path = PeerPlane.PathFor(message);
         var bytes = body ?? Array.Empty<byte>();
+        var carried = carries ?? Nonce;
 
         var id = string.Equals(drop, "id", StringComparison.Ordinal) ? null : pairingId;
         var version = string.Equals(drop, "version", StringComparison.Ordinal) ? null : Version;
-        var timestamp = string.Equals(drop, "timestamp", StringComparison.Ordinal) ? null : Timestamp;
-        var nonce = string.Equals(drop, "nonce", StringComparison.Ordinal) ? null : Nonce;
+        var timestamp = string.Equals(drop, "timestamp", StringComparison.Ordinal) ? null : stamp;
+        var nonce = string.Equals(drop, "nonce", StringComparison.Ordinal) ? null : carried;
 
         // An empty signature argument means "sign this properly", so every case that is not
         // about the signature carries one that verifies and the request fails for its own
@@ -553,8 +739,8 @@ public class PeerPlaneTests
                 path,
                 pairingId ?? string.Empty,
                 Version,
-                Timestamp,
-                Nonce,
+                stamp,
+                carried,
                 bytes);
 
             presented = RequestAuthenticator.Sign(signable, Key);

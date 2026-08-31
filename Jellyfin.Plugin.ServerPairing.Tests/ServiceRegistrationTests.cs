@@ -2,6 +2,7 @@ using System;
 using System.Linq;
 using Jellyfin.Plugin.ServerPairing.Api;
 using Jellyfin.Plugin.ServerPairing.Configuration;
+using Jellyfin.Plugin.ServerPairing.Protocol;
 using MediaBrowser.Common.Configuration;
 using MediaBrowser.Controller;
 using MediaBrowser.Controller.Plugins;
@@ -131,6 +132,61 @@ public class ServiceRegistrationTests
         using var provider = services.BuildServiceProvider();
 
         Assert.Same(provider.GetRequiredService<ArrivalLimit>(), provider.GetRequiredService<ArrivalLimit>());
+    }
+
+    /// <summary>
+    /// One freshness window per server rather than one per caller. The reason is stronger than
+    /// the one above it: what this object holds is the nonces already seen, so a second instance
+    /// remembers none of them and every replay is fresh to it.
+    /// </summary>
+    /// <remarks>
+    /// A per-caller window is not a weaker replay guard, it is no replay guard, and nothing about
+    /// the plane's own behaviour would say so - every case driving one plane holds one window and
+    /// passes either way. This is the only assertion in the tree that the server gets one.
+    /// </remarks>
+    [Fact]
+    public void ThePeerPlaneGetsOneFreshnessWindowRatherThanOnePerCaller()
+    {
+        var services = new ServiceCollection();
+
+        var paths = Substitute.For<IApplicationPaths>();
+        paths.DataPath.Returns(System.IO.Path.GetTempPath());
+        services.AddSingleton(paths);
+        services.AddLogging();
+
+        new PluginServiceRegistrator().RegisterServices(services, Substitute.For<IServerApplicationHost>());
+
+        using var provider = services.BuildServiceProvider();
+
+        Assert.Same(
+            provider.GetRequiredService<FreshnessWindow>(),
+            provider.GetRequiredService<FreshnessWindow>());
+    }
+
+    /// <summary>
+    /// The skew an operator set is the skew a verified request is judged against. Without this
+    /// the setting is a number that is read, refused out of range, and handed to a window the
+    /// plane never sees.
+    /// </summary>
+    [Fact]
+    public void ThePeerPlaneIsGivenTheSkewTheConfigurationCarries()
+    {
+        var services = new ServiceCollection();
+
+        var paths = Substitute.For<IApplicationPaths>();
+        paths.DataPath.Returns(System.IO.Path.GetTempPath());
+        services.AddSingleton(paths);
+        services.AddLogging();
+
+        // Registered before the registrator runs, which is what the TryAdd in it is for. The
+        // value is none of the defaults, so a window built on the default would fail here.
+        services.AddSingleton(new PluginConfiguration { TimestampWindowSeconds = 42 });
+
+        new PluginServiceRegistrator().RegisterServices(services, Substitute.For<IServerApplicationHost>());
+
+        using var provider = services.BuildServiceProvider();
+
+        Assert.Equal(42, provider.GetRequiredService<FreshnessWindow>().AcceptedSkewSeconds);
     }
 
     /// <summary>

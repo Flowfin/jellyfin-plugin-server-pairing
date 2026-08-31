@@ -185,17 +185,27 @@ public class PairedInstancesTests
     }
 
     /// <summary>
-    /// A duplicated message arrives twice, and both copies verify. The second half is the state
-    /// of this protocol today rather than something this case endorses: nothing refuses a
-    /// replay, and this is the point in the harness where that refusal will be proved when it
-    /// exists. THIS REMARK NAMED ISSUE #21 FOR IT AND THAT WAS THE WRONG ISSUE. The window and
-    /// the nonce store that would judge a replay are landed and are #21's; what no route does
-    /// is consult them on this plane, and a refusal on this plane that names the clock and is
-    /// told apart from a signature failure is the fourth done condition of issue #26.
+    /// A duplicated message arrives twice, both copies verify, and the second is refused as a
+    /// replay. This is the end-to-end half of the fourth done condition of issue #26: the plane
+    /// consults a freshness window, so the nonce store the window carries now judges what
+    /// arrives instead of judging nothing.
     /// </summary>
+    /// <remarks>
+    /// THIS CASE ASSERTED THAT NOTHING REFUSES THE SECOND COPY, and said so as the state of the
+    /// protocol rather than as something it endorsed. That state has moved. What made the old
+    /// assertion possible is that both copies reached the transition table and were refused
+    /// there for the same reason, so a replay was indistinguishable from a first arrival in the
+    /// only instrument this harness has. It is distinguishable now, and the two counters below
+    /// are what separate them.
+    /// <para>
+    /// Nothing about VERIFICATION moves here, which the third assertion holds: a replayed
+    /// request is correctly signed, which is exactly why a signature check cannot refuse one and
+    /// why the nonce store exists at all.
+    /// </para>
+    /// </remarks>
     /// <returns>The running case.</returns>
     [Fact]
-    public async Task ADuplicatedMessageArrivesTwiceAndNothingRefusesTheSecondCopy()
+    public async Task ADuplicatedMessageArrivesTwiceAndTheSecondCopyIsRefusedAsAReplay()
     {
         using var both = new PairedInstances(Start);
 
@@ -212,8 +222,10 @@ public class PairedInstancesTests
 
         // The same bytes both times, which is what makes it a duplicate rather than a second
         // send: a second send would carry a fresh nonce and a later timestamp.
-        Assert.Equal(2L, both.Right.Refusals.Counted(RefusalCause.NotAcceptedInThisState));
+        Assert.Equal(1L, both.Right.Refusals.Counted(RefusalCause.NotAcceptedInThisState));
+        Assert.Equal(1L, both.Right.Refusals.Counted(RefusalCause.NonceAlreadySeen));
         Assert.Equal(0L, both.Right.Refusals.Counted(RefusalCause.DidNotVerify));
+        Assert.Equal(0L, both.Right.Refusals.Counted(RefusalCause.TimestampOutsideTheWindow));
     }
 
     /// <summary>

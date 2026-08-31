@@ -272,7 +272,7 @@ public class EndpointKeyMaterialTests
             feature.RawTarget = path;
         }
 
-        return new PeerPlaneController(new PeerPlane(new RequestAuthenticator(new StoreBackedKeys(new InMemoryPairingKeyStore())), new ArrivalLimit()), TimeProvider.System, NullLogger<PeerPlaneController>.Instance)
+        return new PeerPlaneController(new PeerPlane(new RequestAuthenticator(new StoreBackedKeys(new InMemoryPairingKeyStore())), new ArrivalLimit(), new FreshnessWindow()), TimeProvider.System, NullLogger<PeerPlaneController>.Instance)
         {
             ControllerContext = new ControllerContext { HttpContext = context },
         };

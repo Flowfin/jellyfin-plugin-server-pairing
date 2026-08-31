@@ -65,10 +65,12 @@ public sealed class RefusalCounters
     /// <returns>The code.</returns>
     /// <exception cref="ArgumentOutOfRangeException">The cause is not one of the defined values.</exception>
     /// <remarks>
-    /// Every cause maps to <see cref="RefusalCode.Refused"/>, which is what
-    /// <see cref="PeerPlane.Serve"/> answers at every one of its refusal sites. This method is
-    /// the one place that says so, so a site that ever answers a different code is one edit
-    /// here rather than a payload that quietly disagrees with the wire.
+    /// THIS REMARK SAID EVERY CAUSE MAPS TO <see cref="RefusalCode.Refused"/>. Three do not,
+    /// and they are the three the plane reaches only after a request has verified. This method
+    /// is still the one place that says which code a cause answers, and it is now load-bearing
+    /// rather than a single constant: <see cref="PeerPlane.Serve"/> builds its answer by asking
+    /// this rather than by naming a code beside a cause, so counting cannot drift from
+    /// refusing in either direction.
     /// </remarks>
     public static RefusalCode CodeFor(RefusalCause cause) => cause switch
     {
@@ -78,6 +80,9 @@ public sealed class RefusalCounters
             or RefusalCause.NoRoomToCountTheArrival
             or RefusalCause.DidNotVerify
             or RefusalCause.NotAcceptedInThisState => RefusalCode.Refused,
+        RefusalCause.TimestampOutsideTheWindow => RefusalCode.Clock,
+        RefusalCause.NonceAlreadySeen => RefusalCode.Replay,
+        RefusalCause.NoRoomToRememberTheNonce => RefusalCode.Busy,
         _ => throw new ArgumentOutOfRangeException(nameof(cause)),
     };
 
@@ -101,6 +106,9 @@ public sealed class RefusalCounters
         RefusalCause.NoRoomToCountTheArrival => "no-room-to-count-the-arrival",
         RefusalCause.DidNotVerify => "did-not-verify",
         RefusalCause.NotAcceptedInThisState => "not-accepted-in-this-state",
+        RefusalCause.TimestampOutsideTheWindow => "timestamp-outside-the-window",
+        RefusalCause.NonceAlreadySeen => "nonce-already-seen",
+        RefusalCause.NoRoomToRememberTheNonce => "no-room-to-remember-the-nonce",
         _ => throw new ArgumentOutOfRangeException(nameof(cause)),
     };
 

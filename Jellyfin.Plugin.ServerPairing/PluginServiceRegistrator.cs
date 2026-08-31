@@ -80,9 +80,20 @@ public class PluginServiceRegistrator : IPluginServiceRegistrator
         // administrative plane reads it, which is the only path between the two planes and
         // carries numbers rather than anything a caller supplied.
         serviceCollection.AddSingleton<RefusalCounters>();
+
+        // Once, and for a reason that is not the same as the two above even though the word is.
+        // What this holds is the nonces already seen for each pairing, so a second instance
+        // remembers none of them and every replay it judges is fresh to it. A per-caller
+        // freshness window is not a weaker limit, it is no limit. The span it runs on is the
+        // operator's, read through the same reading every other setting comes through, so a
+        // refused skew is named at Error and the plane runs on the span a server nobody
+        // configured runs on.
+        serviceCollection.AddSingleton(services =>
+            services.GetRequiredService<ConfigurationReading>().NewFreshnessWindow());
         serviceCollection.AddSingleton(services => new PeerPlane(
             services.GetRequiredService<RequestAuthenticator>(),
             services.GetRequiredService<ArrivalLimit>(),
+            services.GetRequiredService<FreshnessWindow>(),
             services.GetRequiredService<RefusalCounters>()));
 
         // The one place in this plugin that reads a real clock. Everything downstream judges

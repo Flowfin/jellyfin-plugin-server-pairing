@@ -165,13 +165,17 @@ in both directions and is derived from it, because two numbers an operator can s
 apart are two numbers they can set into a state where the store forgets a replay
 it exists to refuse.
 
-NOTHING ON THE PEER PLANE CONSULTS A FRESHNESS WINDOW YET, which the refusal
-taxonomy says of its `clock` code in as many words, so the skew is refused out of
-range and reaches a window nothing asks. THIS SENTENCE NAMED ISSUE #21 FOR THE
-WIRING AND THAT WAS THE WRONG ISSUE. #21 owns the window and the nonce store, and
-its done conditions are about how those judge; asserting that a skewed peer
-produces a refusal naming the clock, told apart from a signature failure, is the
-fourth done condition of issue #26, which is where the wiring is.
+THIS PARAGRAPH SAID NOTHING ON THE PEER PLANE CONSULTS A FRESHNESS WINDOW YET, AND
+THAT THE SKEW REACHED A WINDOW NOTHING ASKS. The plane consults one. The window a
+server builds from this setting is the window an arriving request is judged
+against once its signature has verified, so a peer whose clock is further out than
+the number below is told so, and is told it in a different answer from the one a
+bad signature gets.
+
+What that does NOT mean is that a request has ever been judged this way on a
+running server. Nothing puts a key into a key store yet, so nothing verifies, and
+freshness is judged after verification and never before it. Setting this on a
+server today changes what that server will do rather than what it does.
 
 The three `PeerPlane` settings are the arrival allowance the peer plane runs on:
 how long an allowance is counted over, how many requests one pairing identifier

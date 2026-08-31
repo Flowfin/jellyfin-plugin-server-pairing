@@ -276,12 +276,16 @@ public sealed class ConfigurationReading
     /// </summary>
     /// <returns>A window that refuses a timestamp further out than the configured skew.</returns>
     /// <remarks>
-    /// NOTHING ON THE PEER PLANE CONSULTS A FRESHNESS WINDOW YET, which the refusal taxonomy
-    /// says of the <c>clock</c> code in as many words. So the skew is refused out of range and
-    /// reaches a window only here and in the test that proves it does. THIS REMARK NAMED ISSUE
-    /// #21 FOR THE WIRING AND THAT WAS THE WRONG ISSUE: #21 owns how the window and the nonce
-    /// store judge, and a refusal that names the clock and is told apart from a signature
-    /// failure is the fourth done condition of issue #26.
+    /// THIS REMARK SAID NOTHING ON THE PEER PLANE CONSULTS A FRESHNESS WINDOW YET, AND THAT
+    /// THE SKEW REACHED A WINDOW ONLY HERE AND IN THE TEST THAT PROVES IT DOES. The registrator
+    /// resolves this once per server and hands the window to <see cref="Api.PeerPlane"/>, so
+    /// the skew an operator sets is what a verified request is judged against.
+    /// <para>
+    /// One per server rather than one per caller, which the registrator holds to by registering
+    /// it once. The reason is stronger here than for the arrival limit beside it: what this
+    /// holds is the nonces already seen, so a second instance remembers none of them and every
+    /// replay is fresh to it.
+    /// </para>
     /// </remarks>
     public FreshnessWindow NewFreshnessWindow() => new FreshnessWindow(TimestampWindowSeconds);
 

@@ -79,6 +79,7 @@ internal sealed class PairedInstance : IDisposable
         Log = new CapturedLog();
         Configuration = new PluginConfiguration();
         Refusals = new RefusalCounters();
+        Freshness = new FreshnessWindow();
 
         // A directory of this side's own under the platform's temporary path, so the two
         // stores cannot meet and nothing is written where a real server would keep one.
@@ -96,7 +97,7 @@ internal sealed class PairedInstance : IDisposable
 
         KeyStoreFile = Path.Join(_directory, KeyStorePath.FileName);
         Keys = new FilePairingKeyStore(KeyStoreFile);
-        Plane = new PeerPlane(new RequestAuthenticator(new StoreBackedKeys(Keys)), Arrivals, Refusals);
+        Plane = new PeerPlane(new RequestAuthenticator(new StoreBackedKeys(Keys)), Arrivals, Freshness, Refusals);
     }
 
     /// <summary>
@@ -135,6 +136,17 @@ internal sealed class PairedInstance : IDisposable
     public ArrivalLimit Arrivals { get; }
 
     /// <summary>
+    /// Gets the timestamp window and nonce store this side judges a verified request against.
+    /// </summary>
+    /// <remarks>
+    /// One per side, built on the default skew, and held here so a case can see that the two
+    /// sides remember their own nonces rather than a shared set. A second one on either side
+    /// would remember nothing the first had seen, which is a replay window opened by
+    /// construction rather than by a peer.
+    /// </remarks>
+    public FreshnessWindow Freshness { get; }
+
+    /// <summary>
     /// Gets what this side has refused and why, since it was built.
     /// </summary>
     /// <remarks>
@@ -144,7 +156,11 @@ internal sealed class PairedInstance : IDisposable
     /// that verified from one that did not.
     /// <see cref="RefusalCause.NotAcceptedInThisState"/> is recorded only after verification
     /// succeeded and <see cref="RefusalCause.DidNotVerify"/> only when it failed, so the pair
-    /// is what a case asserts on.
+    /// is what a case asserts on. THIS REMARK SAID EVERY ANSWER ON THIS PLANE IS THE SAME
+    /// REFUSAL BY DESIGN. Three answers are not, and they are the three the plane reaches only
+    /// after verification, so what a sender receives now separates a stale or replayed request
+    /// from one that verified and was refused for its state. It still separates nothing before
+    /// verification, which is the property that sentence was written for.
     /// </remarks>
     public RefusalCounters Refusals { get; }
 

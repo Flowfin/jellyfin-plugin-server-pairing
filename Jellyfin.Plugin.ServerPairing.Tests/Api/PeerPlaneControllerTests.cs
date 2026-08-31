@@ -366,7 +366,7 @@ public class PeerPlaneControllerTests
     public async Task TheInstantAnArrivalIsJudgedAtIsReadFromTheClockPerRequest()
     {
         var limit = new ArrivalLimit();
-        var plane = new PeerPlane(new RequestAuthenticator(new StoreBackedKeys(new InMemoryPairingKeyStore())), limit);
+        var plane = new PeerPlane(new RequestAuthenticator(new StoreBackedKeys(new InMemoryPairingKeyStore())), limit, new FreshnessWindow());
         var clock = new MovableClock(DateTimeOffset.FromUnixTimeSeconds(1786000000));
 
         await Over(plane, clock).Hello().ConfigureAwait(true);
@@ -437,7 +437,7 @@ public class PeerPlaneControllerTests
             feature.RawTarget = rawTarget!;
         }
 
-        return new PeerPlaneController(new PeerPlane(new RequestAuthenticator(new StoreBackedKeys(new InMemoryPairingKeyStore())), new ArrivalLimit()), TimeProvider.System, logger)
+        return new PeerPlaneController(new PeerPlane(new RequestAuthenticator(new StoreBackedKeys(new InMemoryPairingKeyStore())), new ArrivalLimit(), new FreshnessWindow()), TimeProvider.System, logger)
         {
             ControllerContext = new ControllerContext { HttpContext = context },
         };

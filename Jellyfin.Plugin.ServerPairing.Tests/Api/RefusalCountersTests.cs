@@ -165,19 +165,31 @@ public class RefusalCountersTests
     }
 
     /// <summary>
-    /// Counting changes nothing a caller is told. Every cause is answered with the same code,
-    /// which is the property the wire rests on: an operator gains the split and a stranger
-    /// gains nothing.
+    /// What a caller is told is the code the cause maps to, at every site, driven through the
+    /// plane rather than read off the mapping.
     /// </summary>
     /// <param name="cause">The cause the request is built to produce.</param>
     /// <remarks>
-    /// The body is handed on for one of them, and that is the transition table refusing a
-    /// caller it authenticated rather than anything this file adds. The assertion says so
-    /// rather than leaving it out.
+    /// THIS CASE ASSERTED THAT EVERY CAUSE IS ANSWERED WITH THE SAME CODE. Three are not: the
+    /// plane judges freshness after verification, and the taxonomy in <c>docs/protocol.md</c>
+    /// allows a distinguishable code to a caller that has proved it holds the key. The property
+    /// that mattered is not weakened by the narrowing, it is moved to
+    /// <see cref="EveryRefusalACallerWithoutAKeyCanReachIsTheSameBytes"/>, which asserts it over
+    /// exactly the callers it was ever about.
+    /// <para>
+    /// Asserting against <see cref="RefusalCounters.CodeFor(RefusalCause)"/> rather than against
+    /// a literal is what makes this a case about the site: the mapping is one method, and a site
+    /// that answered a code while counting a cause carrying another would fail here.
+    /// </para>
+    /// <para>
+    /// The body is handed on for one of them, and that is the transition table refusing a caller
+    /// it authenticated rather than anything this file adds. A freshness refusal hands nothing
+    /// on, though its body verified, which the assertion says rather than leaving out.
+    /// </para>
     /// </remarks>
     [Theory]
     [MemberData(nameof(EveryCause))]
-    public void TheAnswerIsTheSameRefusalWhateverTheCause(RefusalCause cause)
+    public void TheAnswerIsTheCodeTheCauseMapsTo(RefusalCause cause)
     {
         var plane = PlaneFor(new RefusalCounters(), cause);
 
@@ -185,8 +197,55 @@ public class RefusalCountersTests
 
         var outcome = Final(plane, cause);
 
-        Assert.Equal(RefusalCode.Refused, outcome.Code);
+        Assert.Equal(RefusalCounters.CodeFor(cause), outcome.Code);
         Assert.Equal(cause == RefusalCause.NotAcceptedInThisState, outcome.BodyWasHandedOn);
+    }
+
+    /// <summary>
+    /// Every refusal a caller holding no verifying key can reach is the same bytes. That is the
+    /// oracle property, stated over the callers it is about rather than over every cause.
+    /// </summary>
+    /// <remarks>
+    /// The five below are the causes reachable before verification has succeeded, so they are
+    /// what a stranger walking this server can produce. A caller that reaches any of them learns
+    /// which of the five it met only if the bytes differ, and they do not.
+    /// <para>
+    /// The list is written out rather than derived from the code each cause maps to. Deriving it
+    /// would ask the mapping whether the mapping is right, and this case exists to hold the
+    /// mapping to something: a change putting a distinguishable code on a cause a stranger can
+    /// reach fails here rather than passing because it moved both sides at once.
+    /// </para>
+    /// </remarks>
+    [Fact]
+    public void EveryRefusalACallerWithoutAKeyCanReachIsTheSameBytes()
+    {
+        RefusalCause[] withoutAKey =
+        [
+            RefusalCause.NotOnThisPlane,
+            RefusalCause.BodyOverItsLimit,
+            RefusalCause.ArrivalAllowanceSpent,
+            RefusalCause.NoRoomToCountTheArrival,
+            RefusalCause.DidNotVerify,
+        ];
+
+        var answers = new List<string>();
+
+        foreach (var cause in withoutAKey)
+        {
+            var plane = PlaneFor(new RefusalCounters(), cause);
+
+            Setup(plane, cause);
+
+            var outcome = Final(plane, cause);
+
+            Assert.False(outcome.BodyWasHandedOn);
+
+            answers.Add(Refusal.Body(outcome.Code));
+        }
+
+        Assert.Equal(withoutAKey.Length, answers.Count);
+        Assert.Single(answers.Distinct());
+        Assert.Equal("{\"code\":\"refused\"}", answers[0]);
     }
 
     /// <summary>
@@ -204,7 +263,7 @@ public class RefusalCountersTests
 
         Assert.Same(counters, plane.Refusals);
         Assert.Equal(1, counters.Counted(RefusalCause.NotOnThisPlane));
-        Assert.Equal(0, new PeerPlane(new RequestAuthenticator(new KnownKeys()), new ArrivalLimit())
+        Assert.Equal(0, new PeerPlane(new RequestAuthenticator(new KnownKeys()), new ArrivalLimit(), new FreshnessWindow())
             .Refusals.Counted(RefusalCause.NotOnThisPlane));
     }
 
@@ -224,7 +283,7 @@ public class RefusalCountersTests
     {
         var counters = new RefusalCounters();
         var arrivals = new ArrivalLimit();
-        var plane = new PeerPlane(new RequestAuthenticator(new KnownKeys()), arrivals, counters);
+        var plane = new PeerPlane(new RequestAuthenticator(new KnownKeys()), arrivals, new FreshnessWindow(), counters);
 
         plane.Serve(PairingMessage.Hello, Arriving(target: "/ServerPairing/elsewhere"), At);
         plane.Serve(PairingMessage.Hello, Arriving(target: "/ServerPairing/elsewhere"), At);
@@ -286,11 +345,23 @@ public class RefusalCountersTests
     {
         // An allowance of one is what makes the second arrival the refusal, rather than sending
         // a full allowance and counting every admission on the way to it.
-        var arrivals = cause == RefusalCause.ArrivalAllowanceSpent
-            ? new ArrivalLimit(ArrivalLimit.WindowSeconds, 1, 1)
-            : new ArrivalLimit();
+        //
+        // Filling the nonce store needs the opposite. The store holds more nonces for one
+        // pairing than the default allowance admits requests, so the arrival limit would refuse
+        // long before the store filled and the case would assert the wrong cause. The allowance
+        // is widened for that one cause rather than the store being made smaller, because the
+        // store's bound is the constant the specification names.
+        var arrivals = cause switch
+        {
+            RefusalCause.ArrivalAllowanceSpent => new ArrivalLimit(ArrivalLimit.WindowSeconds, 1, 1),
+            RefusalCause.NoRoomToRememberTheNonce => new ArrivalLimit(
+                ArrivalLimit.WindowSeconds,
+                ArrivalLimit.MaximumArrivals,
+                ArrivalLimit.ArrivalsPerEnrolment),
+            _ => new ArrivalLimit(),
+        };
 
-        return new PeerPlane(new RequestAuthenticator(new KnownKeys()), arrivals, counters);
+        return new PeerPlane(new RequestAuthenticator(new KnownKeys()), arrivals, new FreshnessWindow(), counters);
     }
 
     /// <summary>
@@ -310,6 +381,22 @@ public class RefusalCountersTests
                 for (var i = 0; i < ArrivalLimit.PairingsCounted; i++)
                 {
                     plane.Serve(PairingMessage.Hello, Arriving(pairingId: Fresh(i)), At);
+                }
+
+                break;
+
+            case RefusalCause.NonceAlreadySeen:
+                // Seen once, so the request the case is about is the second copy of it. Signed,
+                // because a nonce is only ever remembered for a request that verified.
+                plane.Serve(PairingMessage.Hello, Arriving(sign: true), At);
+                break;
+
+            case RefusalCause.NoRoomToRememberTheNonce:
+                // One distinct nonce per request, all of them verifying, until the store holds
+                // as many as it will for one pairing.
+                for (var i = 0; i < FreshnessWindow.NoncesPerPairing; i++)
+                {
+                    plane.Serve(PairingMessage.Hello, Arriving(sign: true, carries: FreshNonce()), Filling(i));
                 }
 
                 break;
@@ -340,8 +427,49 @@ public class RefusalCountersTests
             plane.Serve(PairingMessage.Hello, Arriving(), At),
         RefusalCause.NotAcceptedInThisState =>
             plane.Serve(PairingMessage.Hello, Arriving(sign: true), At),
+        RefusalCause.TimestampOutsideTheWindow =>
+            plane.Serve(
+                PairingMessage.Hello,
+                Arriving(sign: true, stamp: Skewed(FreshnessWindow.WindowSeconds + 1)),
+                At),
+        RefusalCause.NonceAlreadySeen =>
+            plane.Serve(PairingMessage.Hello, Arriving(sign: true), At),
+        RefusalCause.NoRoomToRememberTheNonce =>
+            plane.Serve(
+                PairingMessage.Hello,
+                Arriving(sign: true, carries: FreshNonce()),
+                Filling(FreshnessWindow.NoncesPerPairing)),
         _ => throw new ArgumentOutOfRangeException(nameof(cause)),
     };
+
+    /// <summary>
+    /// The instant the request at this position in the fill is served at.
+    /// </summary>
+    /// <param name="which">Which request of the fill.</param>
+    /// <returns>The instant.</returns>
+    /// <remarks>
+    /// The store holds more nonces for one pairing than the widest arrival allowance this server
+    /// accepts admits requests in one window, so a fill cannot happen at a single instant: the
+    /// allowance is spent and comes back a window later. The clock moves rather than the
+    /// allowance being raised past its own maximum, because a case that had to exceed a bound
+    /// the plugin refuses would be proving something no server can be in.
+    /// <para>
+    /// The whole fill spans one arrival window, which is well inside how long a nonce is
+    /// remembered, so nothing put in the store at the start has aged out of it by the end. It is
+    /// also well inside the tolerated skew, so every request carries the same timestamp and none
+    /// of them is refused for the clock instead.
+    /// </para>
+    /// </remarks>
+    private static DateTimeOffset Filling(int which) =>
+        At.AddSeconds((which / ArrivalLimit.MaximumArrivals) * ArrivalLimit.WindowSeconds);
+
+    /// <summary>
+    /// A timestamp this many seconds later than the instant every case judges at.
+    /// </summary>
+    /// <param name="seconds">How far ahead.</param>
+    /// <returns>The timestamp, as it is spelled on the wire.</returns>
+    private static string Skewed(int seconds) =>
+        (At.ToUnixTimeSeconds() + seconds).ToString(CultureInfo.InvariantCulture);
 
     /// <summary>
     /// An identifier of the right shape that no other case uses.
@@ -366,14 +494,17 @@ public class RefusalCountersTests
         string? target = null,
         string pairingId = PairingId,
         bool sign = false,
-        bool exceeded = false)
+        bool exceeded = false,
+        string? carries = null,
+        string stamp = Timestamp)
     {
         var path = PeerPlane.PathFor(PairingMessage.Hello);
         var body = Array.Empty<byte>();
+        var carried = carries ?? Nonce;
 
         var presented = sign
             ? RequestAuthenticator.Sign(
-                new PairingRequest(PeerPlane.Method, path, pairingId, Version, Timestamp, Nonce, body),
+                new PairingRequest(PeerPlane.Method, path, pairingId, Version, stamp, carried, body),
                 Key)
             : NotASignature;
 
@@ -382,12 +513,19 @@ public class RefusalCountersTests
             PeerPlane.Method,
             pairingId,
             Version,
-            Timestamp,
-            Nonce,
+            stamp,
+            carried,
             presented,
             body,
             exceeded);
     }
+
+    /// <summary>
+    /// A nonce no other request in a case carries, of the shape the specification fixes.
+    /// </summary>
+    /// <returns>The nonce.</returns>
+    private static string FreshNonce() =>
+        Convert.ToHexString(RandomNumberGenerator.GetBytes(FieldShape.HexFieldLength / 2)).ToLowerInvariant();
 
     /// <summary>
     /// A key source holding the one key this file signs with.

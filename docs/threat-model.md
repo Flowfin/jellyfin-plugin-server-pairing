@@ -351,22 +351,33 @@ one. A request from the network now reaches one of the three, the request
 authenticator, through the plane; it reaches neither the freshness window nor the
 peer address, because the plane is given neither of them to consult:
 
-    git grep -n 'public PeerPlane(' origin/master -- Jellyfin.Plugin.ServerPairing/Api/PeerPlane.cs
-    origin/master:Jellyfin.Plugin.ServerPairing/Api/PeerPlane.cs:57:    public PeerPlane(RequestAuthenticator authenticator, ArrivalLimit arrivals, RefusalCounters? refusals = null)
+<!-- reading-check: no-output -->
+```
+git grep -n 'public PeerPlane(' origin/master -- Jellyfin.Plugin.ServerPairing/Api/PeerPlane.cs
+```
 
-THE PASTE ABOVE CARRIED TWO PARAMETERS AND CARRIES THREE. The third is where a
-refusal is counted for this server's own administrator, which is issue #51, and
-it moves nothing in this section: it holds one number per member of two
-enumerations, it is written to and never read on this path, and no caller
-reaches it. The sentence it corrects said the authenticator and the bound on
-arrivals and nothing else, and what that sentence is about is unchanged - the
-plane is still given neither the freshness window nor the peer address, so it
-still consults neither. And what the one it does reach
-answers with is a refusal for every caller, because the key source it is given
-holds no keys, which is the reading pasted above under what exists today. So the
-first paragraph above still describes a design position rather than a measured
-property, and this sentence is meant to stay until something reaches those types
-from the network and verifies.
+THE PLANE IS GIVEN THE FRESHNESS WINDOW NOW, AND THIS PASSAGE SAID TWICE THAT IT
+IS NOT. It said the plane is given neither the freshness window nor the peer
+address and consults neither, and it corrected itself once about a third
+constructor parameter while leaving that half standing. The parameter list is no
+longer pasted here, because a paste of it goes stale every time an argument is
+added and the command above is what a reader should run.
+
+What is true now: a request from the network reaches the request authenticator
+through the plane, and, once it has verified, the freshness window as well. So a
+captured request replayed to this server is refused by the nonce store rather than
+by nothing, which is the limit this section claims and previously could not point
+at. The peer address is unchanged - the plane is given none and consults none,
+which is issue #22.
+
+WHAT THAT DOES NOT BUY IS THE MEASUREMENT, and it is the same absence as before.
+The key source the plane is given holds no keys, because nothing puts one there,
+so on a server today every request is refused before its freshness is judged and
+the window judges nothing. The reach is proved against the types and against the
+two-instance harness rather than against a server. So the first paragraph above
+still describes a design position rather than a measured property, and this
+sentence is meant to stay until something reaches those types from the network on
+a running server and verifies.
 
 ### A2, someone on the network path, active
 
@@ -854,11 +865,21 @@ two reasons. The window is a documented constant rather than a secret, so a
 caller can learn the same bit by reading the specification. And the alternative
 costs an operator an evening of debugging a signature error that is really a
 clock error, on two home servers where one of them has no time source. Issue #26
-owns the skew policy and the test for that distinction.
+owns the skew policy and the test for that distinction, and both have landed: the
+plane judges freshness against a window built from the operator's setting, and
+`PeerPlaneTests.ASkewedPeerIsRefusedForTheClockRatherThanForItsSignature` is where
+the two answers are shown to differ.
 
 An unauthenticated caller does not get that distinction, because a request that
 fails signature verification is refused before its timestamp is considered. So
 the clock refusal is only ever reported to a caller that already holds the key.
+That ordering is what the whole argument rests on, so it is held by a case rather
+than by this paragraph:
+
+<!-- reading-check: no-output -->
+```
+git grep -n 'public void AStrangerLearnsNothingFromASkewBecauseFreshnessIsJudgedAfterVerification' origin/master -- Jellyfin.Plugin.ServerPairing.Tests/Api/PeerPlaneTests.cs
+```
 
 ## Out of scope
 

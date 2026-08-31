@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
@@ -178,14 +179,25 @@ public sealed class RevocationTests : IDisposable
         store.Replace(PairingId, KeyMaterial.From(replacement), endsAt);
 
         var plane = PlaneOver(store);
-        var underTheOldKey = Signed(PairingMessage.Revoke, superseded);
+
+        // Stamped at the instant it is judged at, which is what a peer whose clock agrees with
+        // this server sends. The rotation this case is about ends two hours out, so a request
+        // still carrying the fixed timestamp every other case uses would be refused for the
+        // clock long before the key it is signed with was reached.
+        var stamp = StampAt(judgedAt);
+        var underTheOldKey = Signed(PairingMessage.Revoke, superseded, carries: FreshNonce(), stamp: stamp);
 
         Assert.True(plane.Serve(PairingMessage.Revoke, underTheOldKey, judgedAt).BodyWasHandedOn);
 
         store.Destroy(PairingId);
 
         Assert.False(plane.Serve(PairingMessage.Revoke, underTheOldKey, judgedAt).BodyWasHandedOn);
-        Assert.False(plane.Serve(PairingMessage.Revoke, Signed(PairingMessage.Revoke, replacement), judgedAt).BodyWasHandedOn);
+        Assert.False(plane
+            .Serve(
+                PairingMessage.Revoke,
+                Signed(PairingMessage.Revoke, replacement, carries: FreshNonce(), stamp: stamp),
+                judgedAt)
+            .BodyWasHandedOn);
     }
 
     /// <summary>
@@ -203,17 +215,15 @@ public sealed class RevocationTests : IDisposable
         store.Add(AnotherPairing, KeyMaterial.From(kept));
 
         var plane = PlaneOver(store);
-        var theOther = Arriving(
-            PairingMessage.Exchange,
-            AnotherPairing,
-            RequestAuthenticator.Sign(Signable(PairingMessage.Exchange, AnotherPairing, Array.Empty<byte>()), kept),
-            Array.Empty<byte>());
 
-        Assert.True(plane.Serve(PairingMessage.Exchange, theOther, At).BodyWasHandedOn);
+        // Two requests rather than one sent twice. A peer sending a second request carries a
+        // fresh nonce, and re-serving the same bytes would be a replay, which is refused for a
+        // reason that has nothing to do with the pairing this case is about.
+        Assert.True(plane.Serve(PairingMessage.Exchange, FromTheOther(kept), At).BodyWasHandedOn);
 
         store.Destroy(PairingId);
 
-        Assert.True(plane.Serve(PairingMessage.Exchange, theOther, At).BodyWasHandedOn);
+        Assert.True(plane.Serve(PairingMessage.Exchange, FromTheOther(kept), At).BodyWasHandedOn);
         Assert.Equal(new[] { AnotherPairing }, store.Pairings());
     }
 
@@ -256,15 +266,22 @@ public sealed class RevocationTests : IDisposable
     /// <param name="message">The message.</param>
     /// <param name="pairingId">The identifier the request claims.</param>
     /// <param name="body">The body.</param>
+    /// <param name="carries">The nonce it carries.</param>
+    /// <param name="stamp">The timestamp it carries.</param>
     /// <returns>The request.</returns>
-    private static PairingRequest Signable(PairingMessage message, string pairingId, byte[] body)
+    private static PairingRequest Signable(
+        PairingMessage message,
+        string pairingId,
+        byte[] body,
+        string? carries = null,
+        string stamp = Timestamp)
         => new PairingRequest(
             PeerPlane.Method,
             PeerPlane.PathFor(message),
             pairingId,
             Version,
-            Timestamp,
-            Nonce,
+            stamp,
+            carries ?? Nonce,
             body);
 
     /// <summary>
@@ -274,15 +291,23 @@ public sealed class RevocationTests : IDisposable
     /// <param name="pairingId">The identifier the request claims.</param>
     /// <param name="signature">The signature presented, which may be nothing at all.</param>
     /// <param name="body">The body.</param>
+    /// <param name="carries">The nonce it carries.</param>
+    /// <param name="stamp">The timestamp it carries.</param>
     /// <returns>The arriving request.</returns>
-    private static ArrivingRequest Arriving(PairingMessage message, string pairingId, string? signature, byte[] body)
+    private static ArrivingRequest Arriving(
+        PairingMessage message,
+        string pairingId,
+        string? signature,
+        byte[] body,
+        string? carries = null,
+        string stamp = Timestamp)
         => new ArrivingRequest(
             PeerPlane.PathFor(message),
             PeerPlane.Method,
             pairingId,
             Version,
-            Timestamp,
-            Nonce,
+            stamp,
+            carries ?? Nonce,
             signature,
             body,
             false);
@@ -294,11 +319,58 @@ public sealed class RevocationTests : IDisposable
     /// <param name="key">The key the peer signs with.</param>
     /// <param name="body">The body, empty where a case does not care about one.</param>
     /// <returns>The arriving request.</returns>
-    private static ArrivingRequest Signed(PairingMessage message, byte[] key, byte[]? body = null)
+    private static ArrivingRequest Signed(
+        PairingMessage message,
+        byte[] key,
+        byte[]? body = null,
+        string? carries = null,
+        string stamp = Timestamp)
     {
         var bytes = body ?? Array.Empty<byte>();
 
-        return Arriving(message, PairingId, RequestAuthenticator.Sign(Signable(message, PairingId, bytes), key), bytes);
+        return Arriving(
+            message,
+            PairingId,
+            RequestAuthenticator.Sign(Signable(message, PairingId, bytes, carries, stamp), key),
+            bytes,
+            carries,
+            stamp);
+    }
+
+    /// <summary>
+    /// A nonce no other request in a case carries, of the shape the specification fixes.
+    /// </summary>
+    /// <returns>The nonce.</returns>
+    private static string FreshNonce() =>
+        Convert.ToHexString(RandomNumberGenerator.GetBytes(FieldShape.HexFieldLength / 2)).ToLowerInvariant();
+
+    /// <summary>
+    /// The timestamp a peer whose clock agrees with this server's puts on a request judged at
+    /// this instant.
+    /// </summary>
+    /// <param name="at">The instant the request is judged at.</param>
+    /// <returns>The timestamp, as it is spelled on the wire.</returns>
+    private static string StampAt(DateTimeOffset at) =>
+        at.ToUnixTimeSeconds().ToString(CultureInfo.InvariantCulture);
+
+    /// <summary>
+    /// A request from the second pairing, signed under its own key and carrying a nonce no
+    /// other request in the case carries.
+    /// </summary>
+    /// <param name="key">The key that pairing holds.</param>
+    /// <returns>The arriving request.</returns>
+    private static ArrivingRequest FromTheOther(byte[] key)
+    {
+        var carries = FreshNonce();
+
+        return Arriving(
+            PairingMessage.Exchange,
+            AnotherPairing,
+            RequestAuthenticator.Sign(
+                Signable(PairingMessage.Exchange, AnotherPairing, Array.Empty<byte>(), carries),
+                key),
+            Array.Empty<byte>(),
+            carries);
     }
 
     /// <summary>
@@ -307,7 +379,7 @@ public sealed class RevocationTests : IDisposable
     /// <param name="store">The key store.</param>
     /// <returns>The plane.</returns>
     private static PeerPlane PlaneOver(IPairingKeyStore store)
-        => new PeerPlane(new RequestAuthenticator(new StoreBackedKeys(store)), new ArrivalLimit());
+        => new PeerPlane(new RequestAuthenticator(new StoreBackedKeys(store)), new ArrivalLimit(), new FreshnessWindow());
 
     /// <summary>
     /// A path to a store file in a directory of its own, removed when the class is disposed.
