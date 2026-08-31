@@ -311,13 +311,21 @@ public class FreshnessWindowTests
     /// window is accepted.
     /// </summary>
     /// <remarks>
-    /// This asserts a gap rather than a protection, and it is not the gap being accepted.
-    /// <c>docs/protocol.md</c> names it and leaves it to issue #21 to close or accept with a
-    /// reason. That issue's own rule is that losing the store on a restart is acceptable only
-    /// where the window is narrower than a restart takes, and 300 seconds is not, so by that
-    /// rule the store is persisted. Nothing here persists anything, because what it would
-    /// persist into is the store M4 owns. The case exists so that the behaviour in the tree is
-    /// stated rather than assumed while that is outstanding.
+    /// This asserts a gap rather than a protection, AND THE GAP IS NOW ACCEPTED RATHER THAN
+    /// OUTSTANDING. This remark said the opposite, on the rule in issue #21's body that losing
+    /// the store on a restart is acceptable only where the window is narrower than a restart
+    /// takes. That rule was replaced on that issue by the answer it was waiting for:
+    /// persisting a nonce is a disk write on every request that verifies, at a rate the peer
+    /// sets, and narrowing the window under a restart breaks the drift tolerance the window
+    /// exists for. So the store stays in memory and <c>docs/protocol.md</c> states in its own
+    /// words what is lost, which is that a replay presented inside the freshness window across
+    /// a restart is not detected.
+    /// <para>
+    /// What the case is for does not change with the answer. It holds the behaviour in the
+    /// tree equal to the sentence in the document, so a later change that quietly persisted
+    /// the store, or that widened what is forgotten, reddens here rather than leaving the
+    /// document describing a plugin that no longer exists.
+    /// </para>
     /// </remarks>
     [Fact]
     public void ARestartForgetsTheStoreAndAReplayInsideTheWindowIsAccepted()

@@ -278,8 +278,10 @@ public sealed class ConfigurationReading
     /// <remarks>
     /// NOTHING ON THE PEER PLANE CONSULTS A FRESHNESS WINDOW YET, which the refusal taxonomy
     /// says of the <c>clock</c> code in as many words. So the skew is refused out of range and
-    /// reaches a window only here and in the test that proves it does. Wiring the plane to a
-    /// freshness window is issue #21.
+    /// reaches a window only here and in the test that proves it does. THIS REMARK NAMED ISSUE
+    /// #21 FOR THE WIRING AND THAT WAS THE WRONG ISSUE: #21 owns how the window and the nonce
+    /// store judge, and a refusal that names the clock and is told apart from a signature
+    /// failure is the fourth done condition of issue #26.
     /// </remarks>
     public FreshnessWindow NewFreshnessWindow() => new FreshnessWindow(TimestampWindowSeconds);
 

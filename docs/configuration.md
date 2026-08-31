@@ -167,7 +167,11 @@ it exists to refuse.
 
 NOTHING ON THE PEER PLANE CONSULTS A FRESHNESS WINDOW YET, which the refusal
 taxonomy says of its `clock` code in as many words, so the skew is refused out of
-range and reaches a window nothing asks. Wiring the plane to one is issue #21.
+range and reaches a window nothing asks. THIS SENTENCE NAMED ISSUE #21 FOR THE
+WIRING AND THAT WAS THE WRONG ISSUE. #21 owns the window and the nonce store, and
+its done conditions are about how those judge; asserting that a skewed peer
+produces a refusal naming the clock, told apart from a signature failure, is the
+fourth done condition of issue #26, which is where the wiring is.
 
 The three `PeerPlane` settings are the arrival allowance the peer plane runs on:
 how long an allowance is counted over, how many requests one pairing identifier

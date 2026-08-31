@@ -187,8 +187,11 @@ public class PairedInstancesTests
     /// <summary>
     /// A duplicated message arrives twice, and both copies verify. The second half is the state
     /// of this protocol today rather than something this case endorses: nothing refuses a
-    /// replay, which is issue #21, and this is the point in the harness where that refusal will
-    /// be proved when it exists.
+    /// replay, and this is the point in the harness where that refusal will be proved when it
+    /// exists. THIS REMARK NAMED ISSUE #21 FOR IT AND THAT WAS THE WRONG ISSUE. The window and
+    /// the nonce store that would judge a replay are landed and are #21's; what no route does
+    /// is consult them on this plane, and a refusal on this plane that names the clock and is
+    /// told apart from a signature failure is the fourth done condition of issue #26.
     /// </summary>
     /// <returns>The running case.</returns>
     [Fact]
