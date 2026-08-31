@@ -129,6 +129,78 @@ origin/master:Jellyfin.Plugin.ServerPairing/Configuration/PluginConfiguration.cs
 So what that half waits on is a decision about which number to stamp and when,
 which is issue #55's, rather than a type with nothing on it worth versioning.
 
+## A file that is there and is not a key store
+
+A file that does not hold what a key store holds is refused. Every operation on
+the store refuses with it, because every operation reads the file, and nothing
+repairs, truncates or replaces the file on the way to refusing.
+
+**The failure this exists against is not a crash.** It is the quiet answer that
+used to stand in its place. A file that parsed as anything other than an object
+was read as an empty store, and an empty store is what a fresh installation has.
+So an operator whose store had been truncated, half-overwritten or replaced saw a
+plugin with no pairings, concluded the pairings were gone, and did the one thing
+that makes the loss permanent: paired again, over bytes that were still on the
+disk in front of them.
+
+**What counts as damaged**, which is every shape that is not one this plugin
+writes:
+
+- bytes that do not parse as JSON at all, which is what truncation and a partial
+  overwrite actually look like: an empty file, a run of NUL bytes, a document cut
+  off part way, anything that is not JSON
+- JSON that parses and is not an object: an array, a number, a string, a boolean,
+  and the literal `null`, which this store answered as empty before this rule and
+  no longer does
+- an object carrying the envelope whose `pairings` member is absent, or is
+  anything other than an object: every write this store makes puts an object
+  there, so a file without one was not written by this plugin
+- pairings that are not pairings, which is where a file damaged inside the member
+  the keys live in is caught rather than at the parse
+
+**The refusal reads the file before it migrates it.** A file in an older format
+is carried up on the first read, which writes two files; a file whose keys are
+damaged is refused with nothing written, because the pairings are read out of the
+document as it arrived rather than out of the migrated one. Without that order a
+damaged store would be rewritten and copied on the way to a refusal that says
+nothing has changed the file.
+
+**What an operator does about it.** Move the file aside and keep it. It is
+refused rather than read, so what is in it is exactly what was in it, and
+whoever looks at it later has the whole of it. Pairing afresh before moving it
+aside is the one action to avoid, because the first write of a new store replaces
+the file. Both servers have to be paired again once the store is gone, since the
+peer holds its own half and this side's key is not recoverable from it.
+
+**What this does NOT see, and it is the larger half of issue #33.** A file that
+is an intact key store and is nevertheless the wrong one is not damaged in any
+way a reading of that file can find:
+
+- a store restored from a backup taken before a rotation, so this side offers a
+  key the peer has already retired
+- a store restored from before an enrolment, so this side has no pairing the peer
+  still believes in
+- a store restored from before a revocation, so this side holds a key the
+  operator deliberately destroyed
+- a store copied to a second machine, so two servers hold the same pairing
+  identity and both sign requests the peer accepts
+
+Each of those parses, carries the envelope and holds well-formed keys. Telling
+them apart from the store they were copied from needs something the peer can
+see, and the decision taken on issue #33 is that no such field is added to the
+wire: it would move the problem rather than solve it, because a peer that was
+itself restored presents valid signatures over a state it legitimately holds, and
+nothing on the wire separates a rewound peer from an attacker. So **a peer that
+was restored behind this server's back is not detectable from here**, stated as
+undetectable rather than covered by a mechanism that implies otherwise.
+
+What stands in one direction only is the peer's own state, and it is a property of
+the specification rather than of anything running: `Revoked` is terminal in the
+state machine, so a peer that holds a pairing revoked answers nothing under it and
+a request from a copy restored to before that revocation is refused there. No
+route on a server reaches `Revoked` yet, which is issue #24, so this is what the
+transition table says rather than something anybody has watched happen.
+
 ## The type key material travels in
 
 Key material has its own type rather than being an array of bytes. That is not
@@ -274,15 +346,17 @@ that copied the data directory. Naming it precisely matters because the phrase
 of one, and a plugin that says its keys are encrypted and stops there has told an
 operator something false by leaving the rest out.
 
-**Why this file does not describe such a scheme today.** The store has no answer
-for a file that does not parse, which is issue #33, and that decides how bytes on
-this path are read. It does carry a format version now, so the half of this
-paragraph that named issue #55 has an answer: a wrapping layer arriving later is
-a rung on the ladder above rather than a shape nothing can migrate. What is left
-is the corruption half, and a wrapping layer added before it is a layer that work
-then has to tell apart from damage. Whether to add one at all,
-where the wrapping key would live, and what a server does when the file is there
-and the key is not, is issue #268 rather than this paragraph.
+**Why this file does not describe such a scheme today.** THIS PARAGRAPH SAID THE
+STORE HAS NO ANSWER FOR A FILE THAT DOES NOT PARSE AND THAT THE CORRUPTION HALF
+WAS WHAT WAS LEFT. It has one: a file that is there and is not a key store is
+refused, which is the section above, and both halves this paragraph named are
+therefore answered. The format version was the first of them - a wrapping layer
+arriving later is a rung on the ladder above rather than a shape nothing can
+migrate - and damage is the second, so a wrapping layer added now has a refusal
+to be told apart from rather than a silence. Whether to add one at all, where the
+wrapping key would live, and what a server does when the file is there and the
+key is not, is issue #268 rather than this paragraph, and none of that is decided
+by the corruption answer arriving.
 
 ## Residual risk, adversary by adversary
 
@@ -358,12 +432,16 @@ mistaken for reading a finished design.
   created with whatever the platform gives them, nothing is checked, and this
   plugin sets no access control of its own. Issue #35 landed the Unix half and
   did not decide this one.
-- **A restored, copied or corrupt store.** A file that does not parse currently
-  throws rather than being answered for, and a store restored from a backup or
-  copied to a second server is not detected. Issue #33 owns all three. The format
-  number above does not reach any of them: it separates a file this build is too
-  old to read from one it can, and says nothing about a file that is damaged or
-  about one that is an older copy of this same store.
+- **A restored or copied store.** THIS ENTRY SAID A FILE THAT DOES NOT PARSE
+  THROWS RATHER THAN BEING ANSWERED FOR, AND THAT ALL THREE CASES WERE UNDECIDED.
+  The corrupt one is decided and built: a file that is there and is not a key
+  store is refused, which is the section above. What is left is the two that no
+  reading of one file can see - a store restored from a backup and a store copied
+  to a second server - and the wire carries nothing that would let a peer see them
+  either, which is the decision recorded on issue #33 rather than an absence. That
+  issue owns what is left. The format number above reaches none of it: it
+  separates a file this build is too old to read from one it can, and says nothing
+  about a file that is an older copy of this same store.
 - **A format number on the plugin configuration.** Only the key store carries
   one. This entry said the configuration type held only the template's example
   settings, so that a number stamped on it would version fields no operator ever

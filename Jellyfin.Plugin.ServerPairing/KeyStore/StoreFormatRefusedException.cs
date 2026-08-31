@@ -18,9 +18,11 @@ namespace Jellyfin.Plugin.ServerPairing.KeyStore;
 /// </para>
 /// <para>
 /// It is deliberately NOT the answer for a file that does not parse. That is a different
-/// question - a damaged store rather than a newer one - and it is issue #33, which is open.
-/// A file this type refuses is one that parsed, carried a format number, and carried one
-/// higher than <see cref="StoreFormat.Current"/>.
+/// question - a damaged store rather than a newer one - and it is
+/// <see cref="StoreDamagedException"/>. A file this type refuses is one that parsed, carried a
+/// format number, and carried one higher than <see cref="StoreFormat.Current"/>. The two are
+/// separate because what an operator does about them is separate: this one is fixed by
+/// installing the newer plugin again, and a damaged file is not fixed by installing anything.
 /// </para>
 /// </remarks>
 public sealed class StoreFormatRefusedException : Exception

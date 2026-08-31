@@ -27,10 +27,11 @@ namespace Jellyfin.Plugin.ServerPairing.KeyStore;
 /// <para>
 /// A read that throws is caught. A hosted service whose <see cref="StartAsync"/> throws stops
 /// the host, so a key store file that does not parse would take the whole server down at boot
-/// - and a store that does not parse is exactly the case issue #33 says nothing answers for
-/// yet. What an operator gets instead is one line at Error and a server that starts. The
-/// pairings do not work either way; the difference is whether anything else on the server
-/// does.
+/// - and a store that does not parse is now refused rather than read, which is
+/// <see cref="StoreDamagedException"/>. So this catch is what stands between that refusal and
+/// a server that does not start. What an operator gets instead is one line at Error with the
+/// refusal attached to it, and a server that starts. The pairings do not work either way; the
+/// difference is whether anything else on the server does.
 /// </para>
 /// <para>
 /// Nothing here runs at shutdown, and that is the whole of <see cref="StopAsync"/>. A plugin

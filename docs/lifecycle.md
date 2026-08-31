@@ -149,8 +149,10 @@ there rather than repeating this reader.
 A store that cannot be read does not stop the server. A hosted service whose
 start throws stops the host, so a key store file that does not parse would
 otherwise take the whole server down at boot, and a file that does not parse is
-the case issue #33 says nothing answers for yet. What an operator gets instead is
-one line at Error and a server that starts. The pairings do not work either way.
+now refused rather than read as an empty store, which is [what a damaged store
+does](keystore.md#a-file-that-is-there-and-is-not-a-key-store). What an operator
+gets instead is one line at Error and a server that starts. The pairings do not
+work either way.
 
 **Nothing runs at shutdown, and that is deliberate.** A plugin that swept,
 compacted or removed anything on the way down would be a plugin whose store

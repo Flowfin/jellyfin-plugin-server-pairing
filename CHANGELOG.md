@@ -47,6 +47,22 @@ there is no page and no endpoint an administrator can open an enrolment from.
 Two servers cannot be paired with this version. The `changelog` field in
 `build.yaml` and `build.net10.0.yaml` carries that paragraph in the same words.
 
+- A key store file that is there and is not a key store is now refused instead of
+  being read as an empty one. Truncated bytes, a partial overwrite, something
+  that is not JSON, JSON that is not the shape this plugin writes, and an
+  envelope whose pairings are not pairings all produce the same answer: no
+  pairing works, and the message names the file and says to move it aside and
+  keep it rather than to pair afresh over it. That last part is the whole of the
+  change. An empty store is what a fresh installation has, so a damaged one that
+  read as empty told an operator their pairings were gone and invited them to
+  make that true. Nothing is repaired, truncated or rewritten on the way to the
+  refusal, including for a file in the older format, which is read before it is
+  carried up rather than after. A store this plugin has never written to still
+  answers with nothing, and a store in a format newer than this build is still a
+  separate refusal with its own message. What is still not detected is a file
+  that is an intact key store and the wrong one: a store restored from a backup,
+  or a copy of another server's, holds well-formed keys and cannot be told from
+  the store it came from.
 - An administrator can ask this server what it has refused on the pairing plane
   and why, at `GET /ServerPairing/Administration/diagnostics`. It answers one
   number per refusal code the protocol defines and one per cause this server can

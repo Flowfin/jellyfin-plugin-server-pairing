@@ -154,17 +154,17 @@ reading rather than counted here.
     origin/master:Jellyfin.Plugin.ServerPairing/Configuration/ConfigurationAtStartup.cs:45:        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     origin/master:Jellyfin.Plugin.ServerPairing/Configuration/ConfigurationAtStartup.cs:58:            _logger.LogError(
     origin/master:Jellyfin.Plugin.ServerPairing/Configuration/ConfigurationAtStartup.cs:65:            _logger.LogWarning(
-    origin/master:Jellyfin.Plugin.ServerPairing/KeyStore/FilePairingKeyStore.cs:76:    private readonly ILogger<FilePairingKeyStore>? _logger;
-    origin/master:Jellyfin.Plugin.ServerPairing/KeyStore/FilePairingKeyStore.cs:130:    public FilePairingKeyStore(string file, Action<string, string>? moveIntoPlace, ILogger<FilePairingKeyStore>? logger)
-    origin/master:Jellyfin.Plugin.ServerPairing/KeyStore/FilePairingKeyStore.cs:134:        _logger = logger;
-    origin/master:Jellyfin.Plugin.ServerPairing/KeyStore/FilePairingKeyStore.cs:302:        if (_logger is not null && _logger.IsEnabled(LogLevel.Information))
-    origin/master:Jellyfin.Plugin.ServerPairing/KeyStore/FilePairingKeyStore.cs:304:            _logger.LogInformation(
-    origin/master:Jellyfin.Plugin.ServerPairing/KeyStore/StoreAtStartup.cs:45:    private readonly ILogger<StoreAtStartup> _logger;
-    origin/master:Jellyfin.Plugin.ServerPairing/KeyStore/StoreAtStartup.cs:52:    public StoreAtStartup(IPairingKeyStore store, ILogger<StoreAtStartup> logger)
-    origin/master:Jellyfin.Plugin.ServerPairing/KeyStore/StoreAtStartup.cs:55:        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-    origin/master:Jellyfin.Plugin.ServerPairing/KeyStore/StoreAtStartup.cs:81:            if (_logger.IsEnabled(LogLevel.Information))
-    origin/master:Jellyfin.Plugin.ServerPairing/KeyStore/StoreAtStartup.cs:85:                    _logger.LogInformation(
-    origin/master:Jellyfin.Plugin.ServerPairing/KeyStore/StoreAtStartup.cs:95:            _logger.LogError(fault, "The key store could not be read at startup, so what it holds is unknown and no pairing will work. The server is left running.");
+    origin/master:Jellyfin.Plugin.ServerPairing/KeyStore/FilePairingKeyStore.cs:87:    private readonly ILogger<FilePairingKeyStore>? _logger;
+    origin/master:Jellyfin.Plugin.ServerPairing/KeyStore/FilePairingKeyStore.cs:141:    public FilePairingKeyStore(string file, Action<string, string>? moveIntoPlace, ILogger<FilePairingKeyStore>? logger)
+    origin/master:Jellyfin.Plugin.ServerPairing/KeyStore/FilePairingKeyStore.cs:145:        _logger = logger;
+    origin/master:Jellyfin.Plugin.ServerPairing/KeyStore/FilePairingKeyStore.cs:373:        if (_logger is not null && _logger.IsEnabled(LogLevel.Information))
+    origin/master:Jellyfin.Plugin.ServerPairing/KeyStore/FilePairingKeyStore.cs:375:            _logger.LogInformation(
+    origin/master:Jellyfin.Plugin.ServerPairing/KeyStore/StoreAtStartup.cs:46:    private readonly ILogger<StoreAtStartup> _logger;
+    origin/master:Jellyfin.Plugin.ServerPairing/KeyStore/StoreAtStartup.cs:53:    public StoreAtStartup(IPairingKeyStore store, ILogger<StoreAtStartup> logger)
+    origin/master:Jellyfin.Plugin.ServerPairing/KeyStore/StoreAtStartup.cs:56:        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+    origin/master:Jellyfin.Plugin.ServerPairing/KeyStore/StoreAtStartup.cs:82:            if (_logger.IsEnabled(LogLevel.Information))
+    origin/master:Jellyfin.Plugin.ServerPairing/KeyStore/StoreAtStartup.cs:86:                    _logger.LogInformation(
+    origin/master:Jellyfin.Plugin.ServerPairing/KeyStore/StoreAtStartup.cs:96:            _logger.LogError(fault, "The key store could not be read at startup, so what it holds is unknown and no pairing will work. The server is left running.");
     origin/master:Jellyfin.Plugin.ServerPairing/PluginServiceRegistrator.cs:113:                services.GetRequiredService<ILogger<FilePairingKeyStore>>()));
 
 THIS BLOCK WENT STALE TWICE AND NO RUN ON THIS REPOSITORY SAW EITHER TIME. It
