@@ -321,18 +321,98 @@ public class PeerPlaneTests
     }
 
     /// <summary>
-    /// Every refusal body is one JSON object with one member, whatever the code.
+    /// Every refusal body is one JSON object with one member, whatever the code, with
+    /// <see cref="RefusalCode.Version"/> as the one exception the taxonomy names.
     /// </summary>
+    /// <remarks>
+    /// THIS CASE ASSERTED ONE MEMBER FOR EVERY CODE AND NOW EXCLUDES ONE BY NAME. The exclusion
+    /// is written as a list of one rather than as a condition, so a second code given a second
+    /// member reddens here instead of joining an exception that grew a rule of its own.
+    /// </remarks>
     [Fact]
-    public void EveryRefusalBodyIsOneObjectWithOneMember()
+    public void EveryRefusalBodyIsOneObjectWithOneMemberButTheVersionOne()
     {
-        foreach (var code in Enum.GetValues<RefusalCode>())
+        foreach (var code in Enum.GetValues<RefusalCode>().Where(code => code != RefusalCode.Version))
         {
             var body = Refusal.Body(code);
 
             Assert.Equal("{\"code\":\"" + Refusal.Wire(code) + "\"}", body);
             Assert.Equal(1, body.Count(c => c == ':'));
         }
+    }
+
+    /// <summary>
+    /// The version refusal carries the range this build speaks, in the member names a
+    /// <c>hello</c> request uses for the same two numbers.
+    /// </summary>
+    /// <remarks>
+    /// The whole body is compared rather than searched, because member order and spacing are
+    /// what a caller parses and what a change here would move. The expected numbers are read
+    /// out of <see cref="SupportedVersions"/> rather than written down, which is what makes
+    /// this an assertion about one list rather than a second copy of it.
+    /// </remarks>
+    [Fact]
+    public void AVersionRefusalCarriesTheRangeThisBuildSpeaks()
+    {
+        var body = Refusal.Body(RefusalCode.Version);
+
+        Assert.Equal(
+            "{\"code\":\"version\",\"versionLow\":" + SupportedVersions.Lowest
+                + ",\"versionHigh\":" + SupportedVersions.Highest + "}",
+            body);
+
+        Assert.Equal(3, body.Count(c => c == ':'));
+    }
+
+    /// <summary>
+    /// The two members land the right way round, driven with a range whose ends differ.
+    /// </summary>
+    /// <remarks>
+    /// This build's lowest and highest version are the same number, so the case above cannot
+    /// tell a body that reads the range correctly from one that reads the high end into both
+    /// members - both produce the same bytes. Watched: swapping the two reads in the shape
+    /// function leaves every other case green and reddens this one alone.
+    /// </remarks>
+    [Fact]
+    public void TheLowEndAndTheHighEndAreNotInterchangeable()
+    {
+        Assert.Equal(
+            "{\"code\":\"version\",\"versionLow\":2,\"versionHigh\":7}",
+            Refusal.VersionBody(new VersionRange(2, 7)));
+    }
+
+    /// <summary>
+    /// The refusal every route produces is the shape function over this build's own range, so
+    /// there is one version refusal for a build rather than one per caller.
+    /// </summary>
+    [Fact]
+    public void TheRefusalARouteProducesNamesThisBuildsOwnRange()
+    {
+        Assert.Equal(Refusal.VersionBody(SupportedVersions.Range), Refusal.Body(RefusalCode.Version));
+    }
+
+    /// <summary>
+    /// The range a version refusal names is the range the negotiation selects against, so a
+    /// peer told what this server speaks is told something it can act on.
+    /// </summary>
+    /// <remarks>
+    /// The two are driven rather than compared as constants: a range one below this build's
+    /// lowest has no version in common, and the numbers the refusal hands that peer are the
+    /// ones that would have let it choose. A build whose refusal and whose negotiation read
+    /// different lists passes neither half.
+    /// </remarks>
+    [Fact]
+    public void TheRangeInAVersionRefusalIsTheOneTheNegotiationSelectsAgainst()
+    {
+        var tooOld = new VersionRange(SupportedVersions.Lowest - 1, SupportedVersions.Lowest - 1);
+
+        Assert.Equal(VersionOutcome.NoVersionInCommon, VersionNegotiation.Select(tooOld).Outcome);
+
+        var body = Refusal.Body(RefusalCode.Version);
+
+        Assert.Contains("\"versionLow\":" + SupportedVersions.Range.Low, body, StringComparison.Ordinal);
+        Assert.Contains("\"versionHigh\":" + SupportedVersions.Range.High, body, StringComparison.Ordinal);
+        Assert.Equal(VersionOutcome.Selected, VersionNegotiation.Select(SupportedVersions.Range).Outcome);
     }
 
     /// <summary>

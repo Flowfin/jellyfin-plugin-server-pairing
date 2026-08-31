@@ -47,6 +47,16 @@ there is no page and no endpoint an administrator can open an enrolment from.
 Two servers cannot be paired with this version. The `changelog` field in
 `build.yaml` and `build.net10.0.yaml` carries that paragraph in the same words.
 
+- [protocol] A refusal that says the two servers have no protocol version in
+  common now carries the range this server speaks, as `versionLow` and
+  `versionHigh` beside the code, in the same member names a pairing request uses
+  for the same two numbers. Every other refusal is unchanged and still carries the
+  code alone. Nothing on either server produces this refusal yet: no route on the
+  pairing plane negotiates a version, so what changed is what a server will answer
+  with rather than what one answers with today. An operator whose two servers are
+  on versions that do not overlap gets the numbers to compare instead of a refusal
+  they can do nothing with, and the numbers were already public: they are what a
+  pairing request advertises.
 - A key store file that is there and is not a key store is now refused instead of
   being read as an empty one. Truncated bytes, a partial overwrite, something
   that is not JSON, JSON that is not the shape this plugin writes, and an
