@@ -105,7 +105,7 @@ and there is a key store:
 
 ```
 git ls-tree -r --name-only origin/master -- Jellyfin.Plugin.ServerPairing/KeyStore | wc -l
-13
+14
 ```
 
 There is still no pairing and no dashboard page, and the reason the rest of this
@@ -246,7 +246,7 @@ THIS PARAGRAPH SAID THERE WAS NOWHERE TO HOLD ONE AND PASTED AN EMPTY READING
 FOR IT. There is a store, and a document about it:
 
     git ls-tree -r --name-only origin/master -- Jellyfin.Plugin.ServerPairing/KeyStore docs/keystore.md | wc -l
-    14
+    15
 
 The three issues named here as owing the store, the path it lives at and what
 protects it at rest are closed:

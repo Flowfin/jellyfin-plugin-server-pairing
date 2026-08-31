@@ -30,7 +30,7 @@ and there is a key store:
 
 ```
 git ls-tree -r --name-only origin/master -- Jellyfin.Plugin.ServerPairing/KeyStore | wc -l
-13
+14
 ```
 
 **A fourth has stopped being true since, and the sentence still stands.** This

@@ -37,11 +37,22 @@ namespace Jellyfin.Plugin.ServerPairing.KeyStore;
 /// anything, and the last write wins.
 /// </para>
 /// <para>
-/// TWO NEIGHBOURING RULES ARE NOT HERE AND EACH HAS AN ISSUE. The file is created with
-/// whatever permissions the platform gives it, which is issue #35. What a restored, copied or
-/// corrupt store does is issue #33, and a file that does not parse currently throws rather
-/// than being answered for. Reading this class as covering either is the mistake this
-/// paragraph exists to stop.
+/// A FILE THAT IS THERE AND IS NOT A KEY STORE IS REFUSED, and that is one third of issue
+/// #33 rather than the whole of it. <see cref="StoreDamagedException"/> is the answer and
+/// carries the argument. What this class still cannot see is a file that is an intact key
+/// store and is the wrong one: a store restored from a backup, or a copy of another machine's,
+/// parses and holds well-formed keys, so no reading of one file tells it from the store it
+/// came from. Reading this class as covering those is the mistake this paragraph exists to
+/// stop.
+/// </para>
+/// <para>
+/// THIS PARAGRAPH ALSO SAID THE FILE IS CREATED WITH WHATEVER PERMISSIONS THE PLATFORM GIVES
+/// IT AND NAMED ISSUE #35 FOR IT. That issue is closed and the permissions landed with it: the
+/// directory and the file are made by <see cref="StorePermissions"/>, at creation rather than
+/// afterwards, on a platform that expresses a Unix mode. It was found by reading the sentence
+/// against a search for that type's callers while rewriting the one beside it. What is still
+/// true there is Windows, where no mode is set and none is checked, and that is written where
+/// the modes are rather than here.
 /// </para>
 /// <para>
 /// The file carries the format number <see cref="StoreFormat"/> declares, and a read is where
@@ -236,13 +247,25 @@ public sealed class FilePairingKeyStore : IPairingKeyStore
 
         var json = System.IO.File.ReadAllText(_file);
 
-        // A file holding the literal null answered with an empty store before the envelope
-        // existed and answers the same way now. Anything else that is not an object threw
-        // then and throws now: what a damaged store should do instead is issue #33, and it is
-        // deliberately not decided here.
-        if (JsonNode.Parse(json) is not JsonObject document)
+        // A file that is there and is not a key store is refused rather than answered as an
+        // empty one. An empty answer is what a fresh installation gives, so an operator whose
+        // file was truncated or overwritten would see a plugin with no pairings and pair
+        // afresh over bytes that are still on the disk. That is issue #33's rule and
+        // StoreDamagedException carries the whole of the argument.
+        JsonNode? parsed;
+
+        try
         {
-            return new Dictionary<string, StoredPairing>(StringComparer.Ordinal);
+            parsed = JsonNode.Parse(json);
+        }
+        catch (JsonException damaged)
+        {
+            throw StoreDamagedException.For(_file, damaged);
+        }
+
+        if (parsed is not JsonObject document)
+        {
+            throw StoreDamagedException.For(_file);
         }
 
         var format = StoreFormat.Read(document);
@@ -252,15 +275,63 @@ public sealed class FilePairingKeyStore : IPairingKeyStore
             throw new StoreFormatRefusedException(format, StoreFormat.Current, _file);
         }
 
+        // Read before migrating rather than after, so a file whose keys are damaged is refused
+        // with nothing written. Migrating first would put a rewritten store and a copy of the
+        // original on the disk on the way to refusing, and the refusal says nothing has
+        // changed the file. In format 0 the document IS the map of pairings; from format 1 it
+        // is the member, and a document carrying anything else there is damaged.
+        var held = format == StoreFormat.Unversioned ? document : Pairings(document);
+
+        var read = Deserialise(held);
+
         if (format < StoreFormat.Current)
         {
-            document = MigrateOnDisk(json, document, format);
+            MigrateOnDisk(json, document, format);
         }
 
-        var read = StoreFormat.Pairings(document).Deserialize<Dictionary<string, StoredPairing>>(_format);
+        return read;
+    }
+
+    /// <summary>
+    /// The pairings member of a document that carries an envelope, or a refusal where it holds
+    /// anything but an object.
+    /// </summary>
+    /// <param name="document">The parsed store.</param>
+    /// <returns>The pairings.</returns>
+    /// <exception cref="StoreDamagedException">The member is absent or is not an object.</exception>
+    /// <remarks>
+    /// <see cref="StoreFormat.Pairings"/> answers an absent member with an empty object, which
+    /// is the right answer for a caller asking what a document holds and the wrong one for a
+    /// store deciding whether it may answer at all: every write this store makes puts an
+    /// object there, so a document without one was not written by this plugin.
+    /// </remarks>
+    private JsonObject Pairings(JsonObject document) =>
+        document.TryGetPropertyValue(StoreFormat.PairingsMember, out var member) && member is JsonObject pairings
+            ? pairings
+            : throw StoreDamagedException.For(_file);
+
+    /// <summary>
+    /// The pairings as this plugin's own type, or a refusal where the bytes are not that
+    /// shape.
+    /// </summary>
+    /// <param name="pairings">The pairings as the file holds them.</param>
+    /// <returns>What they deserialise to.</returns>
+    /// <exception cref="StoreDamagedException">They are not the shape a store holds.</exception>
+    private Dictionary<string, StoredPairing> Deserialise(JsonObject pairings)
+    {
+        Dictionary<string, StoredPairing>? read;
+
+        try
+        {
+            read = pairings.Deserialize<Dictionary<string, StoredPairing>>(_format);
+        }
+        catch (JsonException damaged)
+        {
+            throw StoreDamagedException.For(_file, damaged);
+        }
 
         return read is null
-            ? new Dictionary<string, StoredPairing>(StringComparer.Ordinal)
+            ? throw StoreDamagedException.For(_file)
             : new Dictionary<string, StoredPairing>(read, StringComparer.Ordinal);
     }
 

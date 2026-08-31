@@ -19,9 +19,13 @@ public enum AdministrativeProblem
 {
     /// <summary>
     /// The key store could not be read, so what this server holds is unknown. What makes a
-    /// store unreadable, and what an operator does about a restored or corrupt one, is issue
-    /// #33 and is not decided here; this member is only the answer an administrator gets
-    /// instead of a fault.
+    /// store unreadable is decided where the store is: a file that is there and is not a key
+    /// store is refused, which is
+    /// <see cref="Jellyfin.Plugin.ServerPairing.KeyStore.StoreDamagedException"/>, and a file
+    /// in a newer format is refused separately. What an operator does about a RESTORED or
+    /// COPIED store is issue #33 and is not decided here. This member is only the answer an
+    /// administrator gets instead of a fault, and it is the same answer for every reason the
+    /// store would not read.
     /// </summary>
     KeyStoreUnreadable = 0,
 }
