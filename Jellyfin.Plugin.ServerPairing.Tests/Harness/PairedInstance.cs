@@ -81,11 +81,17 @@ internal sealed class PairedInstance : IDisposable
 
         // A directory of this side's own under the platform's temporary path, so the two
         // stores cannot meet and nothing is written where a real server would keep one.
+        //
+        // NOT CREATED HERE, AND THAT IS THE POINT RATHER THAN AN OMISSION. The store makes
+        // its own directory at the mode it requires and REFUSES one it finds wider than
+        // that. A harness that created it first would hand the store a directory at the
+        // platform's default, which on Linux is wider, so every case would fail on the
+        // store's own guard - which is what the first CI run of this file did, on the
+        // net9.0 job, while every case passed on the machine it was written on because
+        // Windows has no such mode to be wider.
         _directory = Path.Join(
             Path.GetTempPath(),
             "server-pairing-harness-" + Guid.NewGuid().ToString("n"));
-
-        Directory.CreateDirectory(_directory);
 
         KeyStoreFile = Path.Join(_directory, KeyStorePath.FileName);
         Keys = new FilePairingKeyStore(KeyStoreFile);
