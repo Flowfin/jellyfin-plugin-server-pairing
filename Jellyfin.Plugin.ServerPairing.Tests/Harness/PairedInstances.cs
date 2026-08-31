@@ -106,7 +106,7 @@ internal sealed class PairedInstances : IDisposable
     /// Puts one key into both stores under one identifier.
     /// </summary>
     /// <param name="pairingId">The identifier both sides will use.</param>
-    /// <returns>The identifier, so a case can name it in one place.</returns>
+    /// <returns>The identifier and the key bytes, so a case can assert their absence.</returns>
     /// <remarks>
     /// THIS IS NOT AN ENROLMENT AND MUST NOT BE READ AS ONE. It writes the state an enrolment
     /// would leave behind, so that everything downstream of a key existing can be exercised
@@ -114,16 +114,18 @@ internal sealed class PairedInstances : IDisposable
     /// exchange, the fingerprint and the two confirmations. A case built on this proves what
     /// happens once two servers hold a shared key and proves nothing about how they came to.
     /// </remarks>
-    public string PairBothSides(string pairingId)
+    public SeededPairing PairBothSides(string pairingId)
     {
         var bytes = RandomNumberGenerator.GetBytes(KeyMaterial.Length);
 
         Left.Keys.Add(pairingId, KeyMaterial.From(bytes));
         Right.Keys.Add(pairingId, KeyMaterial.From(bytes));
 
-        CryptographicOperations.ZeroMemory(bytes);
-
-        return pairingId;
+        // The bytes are handed back rather than zeroed, and that is the one place this
+        // harness deliberately keeps a secret alive. A case asserting that a surface does
+        // not carry a key has to hold the key to look for it, and a case that searched for
+        // a value nothing ever created would pass by asserting the absence of nothing.
+        return new SeededPairing(pairingId, bytes);
     }
 
     /// <inheritdoc />

@@ -58,6 +58,7 @@ internal sealed class PairedInstance : IDisposable
 
     private readonly string _directory;
     private readonly List<Delivery> _delivered = new List<Delivery>();
+    private readonly List<SentMessage> _sent = new List<SentMessage>();
 
     private PeerChannel? _channel;
     private PeerAddress? _peer;
@@ -163,6 +164,16 @@ internal sealed class PairedInstance : IDisposable
     public IReadOnlyList<Delivery> Delivered => _delivered;
 
     /// <summary>
+    /// Gets what this side put on the wire, oldest first.
+    /// </summary>
+    /// <remarks>
+    /// Kept so a case can assert that a surface does not carry back a value this run
+    /// produced. A nonce and a signature are on the list <c>docs/logging.md</c> says may
+    /// never be written, and looking for them requires knowing which ones existed.
+    /// </remarks>
+    public IReadOnlyList<SentMessage> Sent => _sent;
+
+    /// <summary>
     /// Gets the address this side sends to.
     /// </summary>
     /// <exception cref="InvalidOperationException">The two sides have not been joined.</exception>
@@ -218,6 +229,8 @@ internal sealed class PairedInstance : IDisposable
             [NonceHeader] = request.Nonce,
             [SignatureHeader] = RequestAuthenticator.Sign(request, key.Span),
         };
+
+        _sent.Add(new SentMessage(request.Nonce, headers[SignatureHeader], request.Timestamp));
 
         return await Channel.SendAsync(
             Peer,
