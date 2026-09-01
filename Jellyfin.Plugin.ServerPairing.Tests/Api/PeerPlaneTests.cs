@@ -538,7 +538,7 @@ public class PeerPlaneTests
     [InlineData(-1)]
     public void ASkewedPeerIsRefusedForTheClockRatherThanForItsSignature(int direction)
     {
-        var stamp = Stamp(At.AddSeconds(direction * (FreshnessWindow.WindowSeconds + 1)));
+        var stamp = Stamp(Skewed(direction, FreshnessWindow.WindowSeconds + 1));
 
         var skewed = Plane().Serve(
             PairingMessage.Exchange,
@@ -582,7 +582,7 @@ public class PeerPlaneTests
                 PairingMessage.Exchange,
                 signature: null,
                 carries: FreshNonce(),
-                stamp: Stamp(At.AddSeconds(FreshnessWindow.WindowSeconds + 1))),
+                stamp: Stamp(Skewed(1, FreshnessWindow.WindowSeconds + 1))),
             At);
 
         var fresh = Plane().Serve(
@@ -611,7 +611,7 @@ public class PeerPlaneTests
             Signed(
                 PairingMessage.Exchange,
                 carries: FreshNonce(),
-                stamp: Stamp(At.AddSeconds(direction * FreshnessWindow.WindowSeconds))),
+                stamp: Stamp(Skewed(direction, FreshnessWindow.WindowSeconds))),
             At);
 
         var past = Plane().Serve(
@@ -619,7 +619,7 @@ public class PeerPlaneTests
             Signed(
                 PairingMessage.Exchange,
                 carries: FreshNonce(),
-                stamp: Stamp(At.AddSeconds(direction * (FreshnessWindow.WindowSeconds + 1)))),
+                stamp: Stamp(Skewed(direction, FreshnessWindow.WindowSeconds + 1))),
             At);
 
         // Inside the window, so it reaches the transition table and is refused by that instead.
@@ -682,6 +682,22 @@ public class PeerPlaneTests
 
         Assert.Equal(RefusalCode.Refused, elsewhere.Code);
     }
+
+    /// <summary>
+    /// The instant on a peer's clock this many seconds to one side of this server's.
+    /// </summary>
+    /// <param name="direction">Which side, as 1 for the future and -1 for the past.</param>
+    /// <param name="seconds">How far.</param>
+    /// <returns>The instant.</returns>
+    /// <remarks>
+    /// The product is taken in <see cref="double"/> rather than in <see cref="int"/>. Both
+    /// factors are small constants and neither could overflow, but an integer multiplication
+    /// whose result is handed to a parameter taking a double is a shape the analysis refuses on
+    /// sight, and writing it so that it cannot be wrong costs less than arguing that this
+    /// instance is safe.
+    /// </remarks>
+    private static DateTimeOffset Skewed(int direction, int seconds) =>
+        At.AddSeconds(direction * (double)seconds);
 
     /// <summary>
     /// The timestamp a peer whose clock reads this instant puts on a request.

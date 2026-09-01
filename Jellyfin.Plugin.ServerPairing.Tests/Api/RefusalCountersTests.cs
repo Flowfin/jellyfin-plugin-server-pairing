@@ -460,8 +460,16 @@ public class RefusalCountersTests
     /// of them is refused for the clock instead.
     /// </para>
     /// </remarks>
-    private static DateTimeOffset Filling(int which) =>
-        At.AddSeconds((which / ArrivalLimit.MaximumArrivals) * ArrivalLimit.WindowSeconds);
+    private static DateTimeOffset Filling(int which)
+    {
+        // Integer division on purpose, and held in an int so that it says so: an allowance is
+        // spent every MaximumArrivals requests, so the window a request falls in is the floor of
+        // its position over that allowance. Written as one expression it reads to the analysis
+        // as a fraction being dropped by accident.
+        var window = which / ArrivalLimit.MaximumArrivals;
+
+        return At.AddSeconds(window * (double)ArrivalLimit.WindowSeconds);
+    }
 
     /// <summary>
     /// A timestamp this many seconds later than the instant every case judges at.
