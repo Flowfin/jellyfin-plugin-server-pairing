@@ -123,6 +123,21 @@ public class PluginServiceRegistrator : IPluginServiceRegistrator
                 null,
                 services.GetRequiredService<ILogger<FilePairingKeyStore>>()));
 
+        // The pairing record store, over its own file in the same directory. Two files rather
+        // than one, because the two answer different questions: a key store that refuses is not a
+        // reason an operator cannot be told what state a pairing is in, and a record carries no
+        // key material for the two to share a refusal over.
+        //
+        // NOTHING RESOLVES THIS YET AND THAT IS THE POINT OF REGISTERING IT. PairingStateMachine
+        // takes this and an IUserMappingStore, and the second has no implementation in this
+        // assembly, so the state machine is still not resolvable on a server and is not
+        // registered here: a registration that cannot be satisfied is a plugin that fails to load
+        // rather than one missing a feature. The mapping store is issue #36 and the day it lands
+        // is the day the state machine can be registered beside these two.
+        serviceCollection.AddSingleton<IPairingRecordStore>(services =>
+            new FilePairingRecordStore(
+                RecordStorePath.FileFor(services.GetRequiredService<IApplicationPaths>())));
+
         // The one thing that runs on its own rather than answering a caller. It reads the
         // store once at startup and says what survived, because a store outside the plugin
         // directory outlives an uninstall and a reinstall comes up paired with whatever it was

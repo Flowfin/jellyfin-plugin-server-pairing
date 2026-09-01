@@ -34,12 +34,32 @@ public sealed class StoreFormatRefusedException : Exception
     /// <param name="understood">The highest format this build understands.</param>
     /// <param name="file">The file that was read.</param>
     public StoreFormatRefusedException(int found, int understood, string file)
+        : this(found, understood, file, StoreDamagedException.KeyStoreName)
+    {
+    }
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="StoreFormatRefusedException"/> class, for a
+    /// store of the kind named.
+    /// </summary>
+    /// <param name="found">The format the file declares.</param>
+    /// <param name="understood">The highest format this build understands.</param>
+    /// <param name="file">The file that was read.</param>
+    /// <param name="store">What the store is called, which is one of the two names on
+    /// <see cref="StoreDamagedException"/>.</param>
+    /// <remarks>
+    /// The name is a parameter for the reason the neighbouring type gives: the two stores are
+    /// refused by one rule and read by two files, and a sentence naming the wrong file sends an
+    /// operator to look at a file that is fine.
+    /// </remarks>
+    public StoreFormatRefusedException(int found, int understood, string file, string store)
         : base(string.Format(
             CultureInfo.InvariantCulture,
-            "The key store at '{0}' is in format {1} and this build understands format {2} at the highest. It was written by a newer plugin than this one, so it is refused rather than read: reading it would drop whatever that format added. Install the newer plugin again, or move this file aside and pair afresh. No pairing works until then.",
+            "The {3} at '{0}' is in format {1} and this build understands format {2} at the highest. It was written by a newer plugin than this one, so it is refused rather than read: reading it would drop whatever that format added. Install the newer plugin again, or move this file aside and pair afresh. No pairing works until then.",
             file,
             found,
-            understood))
+            understood,
+            store))
     {
         Found = found;
         Understood = understood;

@@ -69,12 +69,12 @@ the sentence says so in those words.
 The tree holds a plugin skeleton, a test project and the protocol core: the
 state machine, the canonical form and its field limits, the freshness window
 with its nonce store, the key overlap, the peer address and the channel that
-holds a request to it, the request authenticator, the enrolment window and the
-version negotiation.
+holds a request to it, the request authenticator, the enrolment window, the
+version negotiation and the file a pairing record is kept in.
 
 ```
 git ls-tree -r --name-only origin/master -- Jellyfin.Plugin.ServerPairing/Protocol | wc -l
-35
+39
 ```
 
 That count rises whenever a file lands under that directory, so a reader who

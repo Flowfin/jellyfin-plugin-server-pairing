@@ -60,6 +60,16 @@ Two servers cannot be paired with this version. The `changelog` field in
   with every other line here, nothing on a server produces this yet: no route puts
   a key into a key store, so nothing verifies, and what changed is what a server
   will answer rather than what one answers today.
+- [protocol] A pairing's state is now kept in a file of its own, beside the key
+  store and under the same permissions, so what a server believes about a pairing
+  survives a restart instead of living only in whatever object happened to hold
+  it. A pairing that has been offered but not yet answered is held under an
+  identifier this server mints for itself, which no peer can ever name, and it is
+  retired the moment the two public keys derive the real one. Nothing on a server
+  writes a record yet: no enrolment exists to put a pairing into any state, so
+  what changed is what a server can remember rather than what one remembers today.
+  An operator will find two files in this plugin's directory rather than one, and
+  both move together.
 - [protocol] A refusal that says the two servers have no protocol version in
   common now carries the range this server speaks, as `versionLow` and
   `versionHigh` beside the code, in the same member names a pairing request uses
