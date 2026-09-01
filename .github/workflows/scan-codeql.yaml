@@ -9,6 +9,21 @@
 # the code it reads. The build and test calls have the same shape and are
 # recorded as #62; they are separate work.
 #
+# READING THE OPEN SET IS NOT THE OBVIOUS COMMAND. An alert's `state` is one
+# value for the alert across every ref it has ever been seen on, so filtering
+# the listing by `ref=refs/heads/master&state=open` returns alerts whose
+# instance on master is `fixed` and which are held open by a pull-request ref
+# nobody will push to again. Four of the nine that listing returned on
+# 2026-09-01 were of that kind. What answers the question is the head:
+#
+#     head=$(git rev-parse origin/master)
+#     gh api "repos/Flowfin/jellyfin-plugin-server-pairing/code-scanning/alerts?state=open&ref=refs/heads/master&per_page=100" \
+#       --jq ".[] | select(.most_recent_instance.commit_sha == \"$head\") | \"\(.tool.name)\t\(.rule.id)\"" \
+#       | sort | uniq -c
+#
+# It answers for the commit it is handed and for nothing else, so a run of it
+# says what the mainline holds now rather than what has ever been reported.
+#
 # The push trigger skips documentation-only changes, because a push to master
 # gates nothing and the baseline simply stays at the previous analysis. The
 # pull request trigger is never filtered: a filter there does not make the
@@ -82,10 +97,33 @@ jobs:
           # workflow lives here: the shared workflow it replaces has no way
           # to carry it. The generated sources under obj/ are not in the
           # tree, and nobody can change them.
+          #
+          # A rule is excluded here only where this repository judges the same
+          # property itself and judges it more tightly. The reason sits beside
+          # the exclusion rather than in a document, because a reader who wants
+          # to know why an alert stopped arriving opens this file.
+          #
+          # cs/catch-of-all-exceptions: this plugin has four catches that take
+          # every fault. Three are boundaries where a fault has to become the
+          # same refusal every caller gets, and the fourth discards a
+          # half-written temporary and rethrows. The rule reports the three
+          # typed ones on every run, cannot read the pragma each of them
+          # carries, and is a note in a report somebody has to open - it does
+          # not see the fourth at all. CatchAllSiteTests in the
+          # suite names each site with its reason and fails the build both ways:
+          # a catch-all at a site the table does not name, and a declaration for
+          # a site that no longer holds one. That is the same property with a
+          # declaration and a verdict, so the note is turned off rather than
+          # carried beside it. Nothing else in the build says it: jellyfin.ruleset
+          # sets CA1031 to Info, which is why the pragmas at those sites suppress
+          # a warning that is not raised.
           config: |
             paths-ignore:
               - "**/obj/**"
               - "**/bin/**"
+            query-filters:
+              - exclude:
+                  id: cs/catch-of-all-exceptions
 
       - name: Build what is scanned
         # Built by name rather than by autobuild. Autobuild guesses, and a
