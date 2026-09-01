@@ -765,9 +765,17 @@ window from a nonce already seen:
 
 ```
 git grep -n "AlreadySeen = \|OutsideTheWindow = " origin/master -- Jellyfin.Plugin.ServerPairing/Protocol/FreshnessOutcome.cs
-origin/master:Jellyfin.Plugin.ServerPairing/Protocol/FreshnessOutcome.cs:33:    OutsideTheWindow = 2,
-origin/master:Jellyfin.Plugin.ServerPairing/Protocol/FreshnessOutcome.cs:38:    AlreadySeen = 3,
+origin/master:Jellyfin.Plugin.ServerPairing/Protocol/FreshnessOutcome.cs:35:    OutsideTheWindow = 2,
+origin/master:Jellyfin.Plugin.ServerPairing/Protocol/FreshnessOutcome.cs:40:    AlreadySeen = 3,
 ```
+
+IT IS ALSO THE ONE OF THE SIX THAT IS NOW CONSULTED RATHER THAN ONLY LANDED, AND
+THIS PARAGRAPH SAID ONLY THAT THE TYPE EXISTS. The peer plane judges an arriving
+request against that window once its signature has verified, so a captured request
+sent again is refused by the store rather than by nothing. What that does not buy
+is the measurement: nothing puts a key into a key store, so on a server today
+every request is refused before its freshness is reached, and the reach is proved
+against the types and the two-instance harness rather than against a server.
 
 The third and the fourth are the two that are owed in full, and this paragraph
 said that was because the tree held neither a mapping table nor a key store. It
