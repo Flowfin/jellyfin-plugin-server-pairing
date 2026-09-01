@@ -59,13 +59,13 @@ representative at an online or offline event.
 ## Enforcement
 
 Instances of abusive, harassing, or otherwise unacceptable behavior may be
-reported to the maintainer of this repository. All complaints will be reviewed
-and investigated promptly and fairly.
+reported to me. All complaints will be reviewed and investigated promptly and
+fairly.
 
 There is no separate reporting address for this repository yet. Until there is,
-a report reaches the maintainer through GitHub, either as a private message to
-the repository owner or through GitHub's own abuse reporting. Anything that is
-also a vulnerability in the pairing path goes through the route in
+a report reaches me through GitHub, either as a private message to the
+repository owner or through GitHub's own abuse reporting. Anything that is also
+a vulnerability in the pairing path goes through the route in
 [`SECURITY.md`](SECURITY.md) instead, because a public report is the
 disclosure.
 

@@ -60,7 +60,7 @@ on:
     #
     #     git grep -n 'cron:' -- .github/workflows
     - cron: "17 5 * * 3"
-  # Let a maintainer run it on demand from the Actions tab.
+  # I run it on demand from the Actions tab.
   workflow_dispatch:
 
 # Read-only. This job reads the source, runs tests against mutated copies of it

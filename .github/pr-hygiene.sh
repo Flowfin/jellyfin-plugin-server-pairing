@@ -85,9 +85,9 @@ fi
 # An author from outside this repository is meeting these rules for the first
 # time at the moment the check reds, having had no way to read them before
 # pushing. That is a wall in front of a contribution rather than a correction,
-# and the reference belongs in the body a maintainer can edit. Association is
-# GitHub's own field, so a fork author cannot claim to be inside the repository
-# by anything they write.
+# and the reference belongs in the body I can edit. Association is GitHub's own
+# field, so a fork author cannot claim to be inside the repository by anything
+# they write.
 #
 # Both reasons are collected rather than the second overwriting the first. A bot
 # is usually also outside the repository, and printing one reason for a pull
