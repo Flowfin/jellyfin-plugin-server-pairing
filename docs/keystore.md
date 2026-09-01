@@ -38,6 +38,18 @@ setting to get wrong:
 assertion, and it compares against the two paths the host reports rather than
 against a string written twice.
 
+**THE DIRECTORY IS NO LONGER THIS STORE'S ALONE.** The pairing record store
+writes a second file beside this one, under the same directory and the same
+permissions, and issue #311 is where that landed. It holds what state each
+pairing is in and how it got there and no key material of any kind, so nothing in
+the rest of this document changes; what does change is that a reader listing that
+directory will find two files rather than one, and that an operator moving this
+plugin's state moves both. The two are separate files on purpose: a key store
+that refuses is not a reason an operator cannot be told what state a pairing is
+in.
+
+    git grep -n 'public const string FileName' -- Jellyfin.Plugin.ServerPairing/Protocol/RecordStorePath.cs
+
 ## What the store holds
 
 Three things per pairing: the current key, the key a rotation superseded, and

@@ -7,12 +7,12 @@ somebody can disagree with the design without reading code.
 Part of what this document describes now exists in the tree, and the part that
 does not is what a reader has to be told about first. The types that hold the
 state machine, the canonical form, the field limits, the freshness window with
-its nonce store, the key overlap, the peer address, the enrolment window and
-the version negotiation are here:
+its nonce store, the key overlap, the peer address, the enrolment window, the
+version negotiation and the store a pairing record is kept in are here:
 
 ```
 git ls-tree -r --name-only origin/master -- Jellyfin.Plugin.ServerPairing/Protocol | wc -l
-35
+39
 ```
 
 **This paragraph said nothing reached any of them from outside this server, that
