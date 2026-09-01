@@ -1020,10 +1020,12 @@ it. Nothing in the tree keeps it:
 
 Empty output, exit one, over the record, the record store, the key store and the
 keys a pairing holds. The same command is why the peer address is not there
-either; that field is claimed by issue #18 and unbuilt, and the version is
-claimed by no issue at all. Neither has bitten yet because nothing in this plugin
-sends a message: the only mentions of the channel's send are its own declaration
-and its own call into the HTTP client.
+either; that field is claimed by issue #18 and unbuilt, and the version is issue
+#316, which was opened because this paragraph said it was claimed by no issue at
+all and that was still true when it was read. Both are claimed and neither is
+built. Neither has bitten yet because nothing in this plugin sends a message: the
+only mentions of the channel's send are its own declaration and its own call into
+the HTTP client.
 
     git grep -n 'SendAsync' origin/master -- Jellyfin.Plugin.ServerPairing
     origin/master:Jellyfin.Plugin.ServerPairing/Protocol/PeerChannel.cs:131:    public async Task<PeerReply> SendAsync(
