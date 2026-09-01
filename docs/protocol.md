@@ -477,8 +477,8 @@ skew:
 
 ```
 git grep -n "const int NoncesPerPairing\|const int MaximumWindowSeconds" origin/master -- Jellyfin.Plugin.ServerPairing/Protocol/FreshnessWindow.cs
-origin/master:Jellyfin.Plugin.ServerPairing/Protocol/FreshnessWindow.cs:59:    public const int MaximumWindowSeconds = 900;
-origin/master:Jellyfin.Plugin.ServerPairing/Protocol/FreshnessWindow.cs:71:    public const int NoncesPerPairing = 4096;
+origin/master:Jellyfin.Plugin.ServerPairing/Protocol/FreshnessWindow.cs:61:    public const int MaximumWindowSeconds = 900;
+origin/master:Jellyfin.Plugin.ServerPairing/Protocol/FreshnessWindow.cs:73:    public const int NoncesPerPairing = 4096;
 ```
 
 What that refusal says on the wire is the taxonomy below. THIS SENTENCE SAID THE
@@ -496,8 +496,13 @@ Both numbers are constants of the specification rather than secrets, so a caller
 learns nothing by discovering them that reading this document would not have
 told them. What makes them testable is already here: every judgement takes the
 instant as an argument, so a case chooses the moment rather than waiting for it,
-and nothing is injected. Issue #26 owns the skew policy the refusal below rests
-on.
+and nothing is injected.
+
+THIS PARAGRAPH ENDED BY SAYING ISSUE #26 OWNS THE SKEW POLICY THE REFUSAL BELOW
+RESTS ON. It owns it and has taken it. The plane consults a window: a request is
+judged for freshness once its signature has verified, and the three answers below
+are what a caller holding the key is told. The order is the security property and
+is stated where the taxonomy is, not here.
 
 ## The arrival limit
 
@@ -982,10 +987,20 @@ than here, and what is lost is stated there as plainly as it can be. It is off
 this list because a decided question left on a list of undecided ones is read as
 open by everybody who does not open the section it points at.
 
-What no route on this plane consults is a freshness window at all, so nothing in
-this section is refused by anything today. That is the fourth done condition of
-issue #26 rather than a question this document leaves open, and the `clock` code
-in the taxonomy above says the same of itself.
+THIS LIST ALSO CARRIED THAT NO ROUTE ON THIS PLANE CONSULTS A FRESHNESS WINDOW AT
+ALL, so that nothing in this section was refused by anything. One does. A request
+that has verified is judged against the window and the nonce store, and a stale
+one, a replayed one and one arriving with no room left to remember its nonce are
+each answered with their own code out of the taxonomy above. It is off this list
+for the same reason the restart question is: it was the fourth done condition of
+issue #26 rather than a question this document left open, and it has been met.
+
+What is NOT claimed by that, and is the half to read carefully: no request has
+ever reached this on a running server. Nothing puts a key into a key store, so
+nothing verifies there, and a request that does not verify is refused before its
+timestamp is considered. What is proved is proved against the types and against
+the two-instance harness, and what a server does is unchanged until an enrolment
+exists, which is issue #18.
 
 THIS LIST CARRIED WHAT IDENTIFIER HOLDS A PAIRING IN `Offered` AND IT IS DECIDED.
 A record is written, under a provisional identifier that no peer can name and that

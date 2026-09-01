@@ -29,7 +29,9 @@ namespace Jellyfin.Plugin.ServerPairing.Protocol;
 /// </para>
 /// <para>
 /// Nothing here reads a clock. The instant to judge against is an argument, so a skew is
-/// testable without waiting for one, and which clock supplies it is issue #26.
+/// testable without waiting for one. What supplies it on the request path is the clock the
+/// controller reads once and hands down, so the window, the arrival limit and the key store are
+/// judged against one reading of the time rather than three.
 /// </para>
 /// <para>
 /// The store is not persisted. A restart forgets it, and a request replayed across a restart

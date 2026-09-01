@@ -47,6 +47,19 @@ there is no page and no endpoint an administrator can open an enrolment from.
 Two servers cannot be paired with this version. The `changelog` field in
 `build.yaml` and `build.net10.0.yaml` carries that paragraph in the same words.
 
+- [protocol] A request that arrives with a correct signature is now judged for
+  freshness before this server acts on it. One whose timestamp is further from this
+  server's clock than the tolerated skew is answered `clock`, one carrying a nonce
+  already seen for that pairing is answered `replay`, and one arriving when that
+  pairing has no room left to remember another nonce is answered `busy`. A captured
+  request sent again is refused instead of being served. Only a peer that has
+  proved it holds the pairing's key is told which of the three happened; every
+  other caller gets the same refusal as before, because freshness is judged after
+  the signature and never before it. An operator whose two servers disagree about
+  the time now reads a clock refusal rather than debugging a signature error. As
+  with every other line here, nothing on a server produces this yet: no route puts
+  a key into a key store, so nothing verifies, and what changed is what a server
+  will answer rather than what one answers today.
 - [protocol] A pairing's state is now kept in a file of its own, beside the key
   store and under the same permissions, so what a server believes about a pairing
   survives a restart instead of living only in whatever object happened to hold

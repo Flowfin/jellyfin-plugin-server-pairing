@@ -21,8 +21,14 @@ namespace Jellyfin.Plugin.ServerPairing.Api;
 /// that map to it, which cannot move when a cause is added beside them.
 /// </para>
 /// <para>
-/// Every member below maps to <see cref="RefusalCode.Refused"/> today, because that is the only
-/// code any site in this tree produces. A member is added here when a site can distinguish it,
+/// THIS PARAGRAPH SAID EVERY MEMBER BELOW MAPS TO <see cref="RefusalCode.Refused"/>, BECAUSE
+/// THAT WAS THE ONLY CODE ANY SITE IN THIS TREE PRODUCED. Three of them no longer do. The plane
+/// judges freshness once a request has verified, so a caller that has already proved it holds
+/// the pairing's key is told which of the three it met. The taxonomy in <c>docs/protocol.md</c>
+/// is what allows that and bounds it: a distinguishable code to a caller holding the key, and
+/// none to anyone else. Every other member still maps to <see cref="RefusalCode.Refused"/>, and
+/// <see cref="RefusalCounters.CodeFor(RefusalCause)"/> is the one place that says which does
+/// which. A member is added here when a site can distinguish it,
 /// never ahead of one: a cause nothing produces is a number an operator reads as a measurement
 /// and is not one. What each site refuses is <see cref="PeerPlane.Serve"/>, in the order that
 /// method fixes, and that order is the security property rather than a style.
@@ -75,4 +81,36 @@ public enum RefusalCause
     /// <see cref="RefusalCode.State"/> is issue #287 and is not decided here.
     /// </summary>
     NotAcceptedInThisState = 5,
+
+    /// <summary>
+    /// The signature verified and the timestamp is further from this server's clock than the
+    /// tolerated skew allows, in either direction. A request from the future is as suspicious
+    /// as one from the past, so both directions are this one cause.
+    /// </summary>
+    /// <remarks>
+    /// This is the one distinction <c>docs/threat-model.md</c> keeps deliberately rather than
+    /// collapsing. It hands a caller one bit, which is whether their timestamp was inside this
+    /// server's window, and that bit is in the specification already; what it buys is an
+    /// operator on two home servers reading a clock refusal instead of debugging a signature
+    /// failure that is really a clock error. It is reached only after verification, so nobody
+    /// without a verifying key ever sees it.
+    /// </remarks>
+    TimestampOutsideTheWindow = 6,
+
+    /// <summary>
+    /// The signature verified, the timestamp is inside the window, and this nonce has already
+    /// been seen for this pairing. What this counts is a correctly signed request that was
+    /// captured and sent again, so a number here that is not zero says something none of the
+    /// others do.
+    /// </summary>
+    NonceAlreadySeen = 7,
+
+    /// <summary>
+    /// The signature verified, the request is fresh, and this pairing has no room left to
+    /// remember another nonce, so it is refused rather than remembered. Separated from the
+    /// member above for the reason <see cref="NoRoomToCountTheArrival"/> is separated from
+    /// <see cref="ArrivalAllowanceSpent"/>: a peer replaying and this server having run out of
+    /// room are repaired in opposite directions.
+    /// </summary>
+    NoRoomToRememberTheNonce = 8,
 }

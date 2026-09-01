@@ -165,7 +165,7 @@ reading rather than counted here.
     origin/master:Jellyfin.Plugin.ServerPairing/KeyStore/StoreAtStartup.cs:82:            if (_logger.IsEnabled(LogLevel.Information))
     origin/master:Jellyfin.Plugin.ServerPairing/KeyStore/StoreAtStartup.cs:86:                    _logger.LogInformation(
     origin/master:Jellyfin.Plugin.ServerPairing/KeyStore/StoreAtStartup.cs:96:            _logger.LogError(fault, "The key store could not be read at startup, so what it holds is unknown and no pairing will work. The server is left running.");
-    origin/master:Jellyfin.Plugin.ServerPairing/PluginServiceRegistrator.cs:113:                services.GetRequiredService<ILogger<FilePairingKeyStore>>()));
+    origin/master:Jellyfin.Plugin.ServerPairing/PluginServiceRegistrator.cs:124:                services.GetRequiredService<ILogger<FilePairingKeyStore>>()));
 
 THIS BLOCK WENT STALE TWICE AND NO RUN ON THIS REPOSITORY SAW EITHER TIME. It
 pasted two types, then four, and the command returns five; the registration line

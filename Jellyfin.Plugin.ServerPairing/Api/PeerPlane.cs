@@ -42,6 +42,8 @@ public sealed class PeerPlane
 
     private readonly ArrivalLimit _arrivals;
 
+    private readonly FreshnessWindow _freshness;
+
     private readonly RefusalCounters _refusals;
 
     /// <summary>
@@ -49,15 +51,26 @@ public sealed class PeerPlane
     /// </summary>
     /// <param name="authenticator">What decides whether an arriving request is authentic.</param>
     /// <param name="arrivals">How much of this plane one claimed identifier may use.</param>
+    /// <param name="freshness">
+    /// The timestamp window and the nonce store a verified request is judged against. One per
+    /// server rather than one per caller: what it holds is the nonces already seen, and a
+    /// second instance would remember none of them, which is a replay window opened by
+    /// construction.
+    /// </param>
     /// <param name="refusals">
     /// Where a refusal is counted for this server's own administrator. A plane built without one
     /// gets a counter of its own that nothing reads, so counting can never change what a caller
     /// is told; the composition root hands in the one the diagnostics action renders.
     /// </param>
-    public PeerPlane(RequestAuthenticator authenticator, ArrivalLimit arrivals, RefusalCounters? refusals = null)
+    public PeerPlane(
+        RequestAuthenticator authenticator,
+        ArrivalLimit arrivals,
+        FreshnessWindow freshness,
+        RefusalCounters? refusals = null)
     {
         _authenticator = authenticator ?? throw new ArgumentNullException(nameof(authenticator));
         _arrivals = arrivals ?? throw new ArgumentNullException(nameof(arrivals));
+        _freshness = freshness ?? throw new ArgumentNullException(nameof(freshness));
         _refusals = refusals ?? new RefusalCounters();
     }
 
@@ -131,10 +144,28 @@ public sealed class PeerPlane
     /// every site answers the same code and a count taken from the answer would be one number.
     /// </para>
     /// <para>
-    /// Every answer today is <see cref="RefusalCode.Refused"/>, and that is the transition
-    /// table rather than a placeholder. No record store exists, so every pairing is
-    /// <see cref="PairingState.Absent"/>, and the <c>Absent</c> row of that table is the
-    /// undistinguished refusal for all five messages.
+    /// FRESHNESS IS JUDGED AFTER VERIFICATION AND THAT POSITION IS THE ORACLE ARGUMENT RATHER
+    /// THAN AN ORDERING CONVENIENCE. <c>docs/threat-model.md</c> keeps one distinction on this
+    /// plane deliberately: a refusal caused by clock skew says clock rather than reading as a
+    /// signature failure, which costs a caller one bit that the specification already gives
+    /// them and saves an operator an evening on two home servers whose clocks disagree. It is
+    /// affordable only because a caller that reaches it has already proved it holds the
+    /// pairing's key, so judging freshness before verifying would hand that bit to a stranger
+    /// and is the mistake this ordering exists against. The same holds for
+    /// <see cref="RefusalCode.Replay"/> and <see cref="RefusalCode.Busy"/>.
+    /// </para>
+    /// <para>
+    /// A request refused for freshness hands nothing on, even though its body verified.
+    /// Verification says the bytes are authentic and freshness says they are not this request,
+    /// and acting on a replayed body is exactly what the nonce store exists to stop.
+    /// </para>
+    /// <para>
+    /// THIS PARAGRAPH SAID EVERY ANSWER TODAY IS <see cref="RefusalCode.Refused"/>. A verified
+    /// request that is stale, replayed or arriving with no room left to remember its nonce is
+    /// answered with its own code. What is unchanged is the answer to everything before
+    /// verification, and the answer to a request that is verified and fresh: no record store
+    /// exists, so every pairing is <see cref="PairingState.Absent"/>, and the <c>Absent</c> row
+    /// of that table is the undistinguished refusal for all five messages.
     /// <c>PeerPlaneTests.TheAbsentRowRefusesEveryMessage</c> is the assertion that ties this
     /// answer to the table instead of to this sentence.
     /// <para>
@@ -197,6 +228,16 @@ public sealed class PeerPlane
             return Refuse(RefusalCause.DidNotVerify);
         }
 
+        // Only now, and never earlier. Everything below this line answers a caller that has
+        // proved it holds the pairing's key, which is what lets these three refusals be told
+        // apart from one another at all.
+        var freshness = _freshness.Judge(request.PairingId, request.Nonce, request.Timestamp, at);
+
+        if (freshness != FreshnessOutcome.Fresh)
+        {
+            return Refuse(CauseOf(freshness));
+        }
+
         _refusals.Record(RefusalCause.NotAcceptedInThisState);
 
         return new PeerPlaneOutcome(RefusalCode.Refused, true, verified);
@@ -206,16 +247,46 @@ public sealed class PeerPlane
     /// Counts a refusal and answers it.
     /// </summary>
     /// <param name="cause">Why the request is refused.</param>
-    /// <returns>The undistinguished refusal, with no body handed on.</returns>
+    /// <returns>The refusal the cause carries, with no body handed on.</returns>
     /// <remarks>
-    /// One place builds the answer so that counting cannot drift from refusing. What the caller
-    /// receives does not depend on the cause and this method is where that is visible: the code
-    /// is the same constant whatever is passed in.
+    /// One place builds the answer so that counting cannot drift from refusing. THIS REMARK
+    /// SAID THE CODE IS THE SAME CONSTANT WHATEVER IS PASSED IN. It is derived from the cause
+    /// now, through <see cref="RefusalCounters.CodeFor(RefusalCause)"/>, which is the same
+    /// method the diagnostics payload sums by. That is a stronger version of the property the
+    /// sentence it replaced was about rather than a weaker one: a site cannot answer one code
+    /// while counting a cause that maps to another, because it does not choose a code at all.
+    /// <para>
+    /// Which causes still collapse into <see cref="RefusalCode.Refused"/> is that method's to
+    /// say, and all of the ones reached before verification do.
+    /// </para>
     /// </remarks>
     private PeerPlaneOutcome Refuse(RefusalCause cause)
     {
         _refusals.Record(cause);
 
-        return new PeerPlaneOutcome(RefusalCode.Refused, false, ReadOnlyMemory<byte>.Empty);
+        return new PeerPlaneOutcome(RefusalCounters.CodeFor(cause), false, ReadOnlyMemory<byte>.Empty);
     }
+
+    /// <summary>
+    /// The cause this server counts for a freshness judgement that is not fresh.
+    /// </summary>
+    /// <param name="freshness">What judging the request's freshness produced.</param>
+    /// <returns>The cause.</returns>
+    /// <remarks>
+    /// <see cref="FreshnessOutcome.Malformed"/> is not reachable from this plane and is mapped
+    /// rather than thrown on. <see cref="FieldShape.IsWellFormed(PairingRequest)"/> runs inside
+    /// verification, before any key is fetched, and refuses exactly the two field shapes this
+    /// outcome is about, so a request reaching the judgement has already passed them. It is
+    /// answered as the undistinguished refusal because the alternative is an exception on a
+    /// request path, and it is counted as <see cref="RefusalCause.DidNotVerify"/> rather than
+    /// under a cause of its own because a cause no site can reach is a number an operator reads
+    /// as a measurement and is not one.
+    /// </remarks>
+    private static RefusalCause CauseOf(FreshnessOutcome freshness) => freshness switch
+    {
+        FreshnessOutcome.OutsideTheWindow => RefusalCause.TimestampOutsideTheWindow,
+        FreshnessOutcome.AlreadySeen => RefusalCause.NonceAlreadySeen,
+        FreshnessOutcome.NoRoomToRemember => RefusalCause.NoRoomToRememberTheNonce,
+        _ => RefusalCause.DidNotVerify,
+    };
 }

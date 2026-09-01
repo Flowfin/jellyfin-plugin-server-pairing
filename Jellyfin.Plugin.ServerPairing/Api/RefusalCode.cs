@@ -10,12 +10,18 @@ namespace Jellyfin.Plugin.ServerPairing.Api;
 /// peer can interpret.
 /// <para>
 /// Which members this tree can currently produce is a smaller set than this enumeration, and
-/// deliberately so. <see cref="PeerPlane"/> produces <see cref="Refused"/> and nothing else,
-/// because every pairing is <see cref="Protocol.PairingState.Absent"/> while no record store
-/// exists, and the <c>Absent</c> row of the transition table is the undistinguished refusal
-/// for all five messages. THIS SENTENCE SAID NO KEY STORE EXISTS EITHER, and one does and is
-/// read on that path, which is issue #287: a request signed under a pairing's key verifies
-/// there and is still answered with the row above. The rest are named here so the taxonomy has
+/// deliberately so. THIS PARAGRAPH SAID <see cref="PeerPlane"/> PRODUCES <see cref="Refused"/>
+/// AND NOTHING ELSE. It produces four codes now: the plane judges freshness once a request has
+/// verified, so <see cref="Clock"/>, <see cref="Replay"/> and <see cref="Busy"/> are answered
+/// to a caller that has proved it holds the pairing's key. What is unchanged is what an
+/// unauthenticated caller gets, which is <see cref="Refused"/> and only that, because freshness
+/// is judged after verification and never before it.
+/// </para>
+/// <para>
+/// The <c>Absent</c> row of the transition table is still the undistinguished refusal for all
+/// five messages, so a request that is fresh and verified is answered <see cref="Refused"/>
+/// while no record store exists. THIS SENTENCE SAID NO KEY STORE EXISTS EITHER, and one does
+/// and is read on that path, which is issue #287. The rest are named here so the taxonomy has
 /// one expression in code rather than a partial one that grows a second.
 /// </para>
 /// </remarks>
@@ -29,8 +35,10 @@ public enum RefusalCode
 
     /// <summary>
     /// The signature verified and the timestamp is outside the freshness window. Only a
-    /// caller holding a verifying key ever sees it. No site produces it yet; the freshness
-    /// window is landed and nothing on this plane consults it.
+    /// caller holding a verifying key ever sees it. THIS SENTENCE SAID NO SITE PRODUCES IT AND
+    /// THAT NOTHING ON THIS PLANE CONSULTS THE WINDOW. <see cref="PeerPlane.Serve"/> consults
+    /// one, and this is what it answers where the timestamp is further from this server's clock
+    /// than the tolerated skew allows.
     /// </summary>
     Clock = 1,
 
@@ -54,16 +62,16 @@ public enum RefusalCode
     Malformed = 4,
 
     /// <summary>
-    /// The signature verified, the request is fresh, and this nonce has already been seen for
-    /// this pairing. Only a caller holding a verifying key ever sees it. No site produces it
-    /// yet.
+    /// The signature verified, the timestamp is inside the window, and this nonce has already
+    /// been seen for this pairing. Only a caller holding a verifying key ever sees it.
+    /// <see cref="PeerPlane.Serve"/> produces it.
     /// </summary>
     Replay = 5,
 
     /// <summary>
     /// The signature verified, the request is fresh, and this pairing has no room left to
-    /// remember another nonce. Only a caller holding a verifying key ever sees it. No site
-    /// produces it yet.
+    /// remember another nonce. Only a caller holding a verifying key ever sees it.
+    /// <see cref="PeerPlane.Serve"/> produces it.
     /// </summary>
     Busy = 6,
 }
