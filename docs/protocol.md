@@ -7,12 +7,12 @@ somebody can disagree with the design without reading code.
 Part of what this document describes now exists in the tree, and the part that
 does not is what a reader has to be told about first. The types that hold the
 state machine, the canonical form, the field limits, the freshness window with
-its nonce store, the key overlap, the peer address, the enrolment window and
-the version negotiation are here:
+its nonce store, the key overlap, the peer address, the enrolment window, the
+version negotiation and the store a pairing record is kept in are here:
 
 ```
 git ls-tree -r --name-only origin/master -- Jellyfin.Plugin.ServerPairing/Protocol | wc -l
-35
+39
 ```
 
 **This paragraph said nothing reached any of them from outside this server, that
@@ -679,8 +679,10 @@ revocation an unreachable peer can refuse.
 
 ### What holds a pairing that is not yet identified
 
-The first row of that table has a problem the other five do not, and it is
-written here rather than being met inside whichever change reaches it first.
+The first row of that table has a problem the other five do not. This section
+carried both answers and took neither for as long as the row existed; it takes
+one now, so the row is written against a decision rather than against whichever
+change reaches it first.
 
 A pairing is held by its identifier, and the identifier is derived from both
 public keys. A window opens before any peer key has arrived, so at the moment
@@ -691,31 +693,68 @@ that state:
     git grep -n "^them. Its .X-Pairing-Id. is 32" origin/master -- docs/protocol.md
     origin/master:docs/protocol.md:415:them. Its `X-Pairing-Id` is 32 `0` characters, which is what line 5 of its
 
-and nothing carries that over to the record.
+**`OFFERED` IS WRITTEN, UNDER A PROVISIONAL IDENTIFIER.** Opening a window mints
+one and writes the record under it. The record moves to the derived identifier at
+the transition that first has one, which is `Offered` to `Pending`, and the
+provisional identifier is retired there and never reused.
 
-Two answers are available and this document takes neither.
+The other answer was that `Offered` is a state no record is written for, and what
+that costs is why it is not taken. The reader that asks what state a pairing is in
+would answer `Absent` for one this table says is `Offered`, so both tables above
+would describe a state nothing can report. The fifth row of the local events table
+- an administrator revoking from `Offered` - would name a pairing nothing could
+find, and revocation reaching a half-built pairing is a property rather than a
+convenience. And an open window would be visible only inside `EnrolmentWindow`,
+which holds an address and no state, so a dashboard would have to read one surface
+for a pairing an operator has started and another for every pairing that finished.
 
-`Offered` is a state no record is written for. Then the reader that asks what
-state a pairing is in answers `Absent` for one this table says is `Offered`, and
-the fifth row - an administrator revoking from `Offered` - names a pairing
-nothing could find.
+**WHAT THE ANSWER TAKEN COSTS IS THAT AN IDENTIFIER MOVES, ONCE.** The guarantee
+it looks like it breaks is worth stating exactly rather than waving at. `Revoked`
+records are kept so that a later request naming an identifier is refused rather
+than treated as new, and that is a guarantee about DERIVED identifiers: a derived
+identifier is written once, never moves, and is never reused. What moves here is a
+handle this side made for itself and no peer has ever seen.
 
-`Offered` is written under a provisional identifier that changes when the peer
-key arrives. Then a record's identifier moves, and `Revoked` records are kept
-precisely so that a later request naming an identifier is refused rather than
-treated as new, which is a guarantee about identifiers not moving.
+**A PROVISIONAL IDENTIFIER CANNOT BE A WIRE IDENTIFIER, AND THAT IS A SHAPE RATHER
+THAN A PROMISE.** A pairing identifier on the wire is exactly 32 lowercase hex
+characters:
 
-What is in the tree today sidesteps it rather than settling it: the enrolment
-window is held against the peer address, which is how a `hello` is matched to a
-window, and it writes no record and calls no state machine.
+    git grep -n 'public const int HexFieldLength' origin/master -- Jellyfin.Plugin.ServerPairing/Protocol/FieldShape.cs
+    origin/master:Jellyfin.Plugin.ServerPairing/Protocol/FieldShape.cs:19:    public const int HexFieldLength = 32;
+
+A provisional one is a word, a hyphen and 32 hex characters, so it is longer than
+a wire identifier and carries a byte no hex field may hold:
+
+    git grep -n 'public const string Prefix' origin/master -- Jellyfin.Plugin.ServerPairing/Protocol/ProvisionalPairingId.cs
+    origin/master:Jellyfin.Plugin.ServerPairing/Protocol/ProvisionalPairingId.cs:46:    public const string Prefix = "offered-";
+
+An arriving request naming one is therefore refused by the field shape before any
+store is read, so no peer can reach a record held under one, and the two
+namespaces are disjoint by construction rather than by anybody remembering to keep
+them apart. Nothing about the value is secret: it is random so that two windows
+opened in the same second are two records, and it is unreachable because of its
+shape rather than because of its entropy.
+
+**THE MOVE DELETES BEFORE IT WRITES, SO AN INTERRUPTION FAILS CLOSED.** Each of
+the store's two operations is all or nothing and the pair of them is not, so a
+process that dies between them leaves one outcome or the other. Deleting first
+leaves no record at all, which is `Absent`, which is where an enrolment that was
+interrupted belongs and is what a second `hello` with a different key already
+produces. Writing first would leave one pairing under two identifiers, and the one
+nothing will ever name again would sit in the file until somebody looked.
+
+What this section does not decide is which type mints the identifier and what the
+administrative action that opens a window looks like. That is issue #18, and the
+window in the tree today still holds itself against the peer address, writes no
+record and calls no state machine:
 
     git grep -n 'OpenAddresses' origin/master -- Jellyfin.Plugin.ServerPairing/Protocol/EnrolmentWindow.cs
     origin/master:Jellyfin.Plugin.ServerPairing/Protocol/EnrolmentWindow.cs:264:    public IReadOnlyList<string> OpenAddresses(DateTimeOffset at)
 
-That is enough for the bounds issue #18 owns and it is not enough for this
-transition. Whoever wires the window to the state machine meets this question
-first, and answering it inside that pull request is how the document and the code
-come to disagree.
+So no pairing has ever been in `Offered` on a running server, and nothing in this
+plugin has ever minted one of these. What has landed is the store the record is
+kept in and the shape the identifier takes, which is issue #311; what puts a
+pairing into that state is still unbuilt.
 
 ## The error taxonomy
 
@@ -948,9 +987,13 @@ this section is refused by anything today. That is the fourth done condition of
 issue #26 rather than a question this document leaves open, and the `clock` code
 in the taxonomy above says the same of itself.
 
-What identifier holds a pairing in `Offered`, which is set out under the local
-events table above with both answers and what each costs. It is written there
-rather than here because the row it is about is there.
+THIS LIST CARRIED WHAT IDENTIFIER HOLDS A PAIRING IN `Offered` AND IT IS DECIDED.
+A record is written, under a provisional identifier that no peer can name and that
+is retired when the derived one arrives. The answer, what the other one would have
+cost, and what the decision does not settle are written under the local events
+table above rather than here, because the row it is about is there. It is off this
+list because a decided question left on a list of undecided ones is read as open
+by everybody who does not open the section it points at.
 
 **Where this side remembers the version a pairing settled on.** Every message
 after `hello` carries the selected version in `X-Pairing-Version` and nowhere

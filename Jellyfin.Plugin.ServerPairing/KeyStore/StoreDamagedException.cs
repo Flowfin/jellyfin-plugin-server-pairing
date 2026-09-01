@@ -38,6 +38,22 @@ namespace Jellyfin.Plugin.ServerPairing.KeyStore;
 public sealed class StoreDamagedException : Exception
 {
     /// <summary>
+    /// What the key store is called in the sentence an operator reads.
+    /// </summary>
+    public const string KeyStoreName = "key store";
+
+    /// <summary>
+    /// What the pairing record store is called in the sentence an operator reads.
+    /// </summary>
+    /// <remarks>
+    /// The two stores share this type because what an operator does about either is the same
+    /// thing, and they do not share a sentence because a sentence naming the wrong file is a
+    /// sentence that sends somebody to look at a file that is fine. The name is a parameter
+    /// rather than a second exception type for the same reason: the refusal is one rule.
+    /// </remarks>
+    public const string RecordStoreName = "pairing record store";
+
+    /// <summary>
     /// Initializes a new instance of the <see cref="StoreDamagedException"/> class.
     /// </summary>
     /// <remarks>
@@ -79,15 +95,23 @@ public sealed class StoreDamagedException : Exception
     public string File { get; init; }
 
     /// <summary>
-    /// The refusal for a damaged store, naming the file.
+    /// The refusal for a damaged key store, naming the file.
     /// </summary>
     /// <param name="file">The file that was read.</param>
     /// <returns>The refusal.</returns>
-    public static StoreDamagedException For(string file) =>
-        new StoreDamagedException(Sentence(file)) { File = file };
+    public static StoreDamagedException For(string file) => For(file, KeyStoreName);
 
     /// <summary>
-    /// The refusal for a damaged store that failed while it was being read, keeping what it
+    /// The refusal for a damaged store of the kind named, naming the file.
+    /// </summary>
+    /// <param name="file">The file that was read.</param>
+    /// <param name="store">What the store is called, which is one of the two names above.</param>
+    /// <returns>The refusal.</returns>
+    public static StoreDamagedException For(string file, string store) =>
+        new StoreDamagedException(Sentence(file, store)) { File = file };
+
+    /// <summary>
+    /// The refusal for a damaged key store that failed while it was being read, keeping what it
     /// failed with.
     /// </summary>
     /// <param name="file">The file that was read.</param>
@@ -99,10 +123,22 @@ public sealed class StoreDamagedException : Exception
     /// wants to know whether the file failed to parse or failed to deserialise.
     /// </remarks>
     public static StoreDamagedException For(string file, Exception cause) =>
-        new StoreDamagedException(Sentence(file), cause) { File = file };
+        For(file, cause, KeyStoreName);
 
-    private static string Sentence(string file) => string.Format(
+    /// <summary>
+    /// The refusal for a damaged store of the kind named that failed while it was being read,
+    /// keeping what it failed with.
+    /// </summary>
+    /// <param name="file">The file that was read.</param>
+    /// <param name="cause">What the read failed with.</param>
+    /// <param name="store">What the store is called, which is one of the two names above.</param>
+    /// <returns>The refusal.</returns>
+    public static StoreDamagedException For(string file, Exception cause, string store) =>
+        new StoreDamagedException(Sentence(file, store), cause) { File = file };
+
+    private static string Sentence(string file, string store) => string.Format(
         CultureInfo.InvariantCulture,
-        "The key store at '{0}' is damaged: it is there and it does not hold what a key store holds. It is refused rather than read as an empty store, because an empty store is what a fresh installation has, and pairing afresh over this one would overwrite whatever is still in it. Nothing here has changed the file. Move it aside and keep it before pairing again, and no pairing works until then.",
-        file);
+        "The {1} at '{0}' is damaged: it is there and it does not hold what a {1} holds. It is refused rather than read as an empty store, because an empty store is what a fresh installation has, and pairing afresh over this one would overwrite whatever is still in it. Nothing here has changed the file. Move it aside and keep it before pairing again, and no pairing works until then.",
+        file,
+        store);
 }
