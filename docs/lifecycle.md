@@ -131,7 +131,7 @@ no code ran at startup.
 
     git grep -n 'AddHostedService' -- Jellyfin.Plugin.ServerPairing/PluginServiceRegistrator.cs
     Jellyfin.Plugin.ServerPairing/PluginServiceRegistrator.cs:50:        serviceCollection.AddHostedService<ConfigurationAtStartup>();
-    Jellyfin.Plugin.ServerPairing/PluginServiceRegistrator.cs:145:        serviceCollection.AddHostedService<StoreAtStartup>();
+    Jellyfin.Plugin.ServerPairing/PluginServiceRegistrator.cs:160:        serviceCollection.AddHostedService<StoreAtStartup>();
 
 The second of those two is this reader. The first is the one that says a setting
 was refused, which is a different thing that also runs at startup, and this block
