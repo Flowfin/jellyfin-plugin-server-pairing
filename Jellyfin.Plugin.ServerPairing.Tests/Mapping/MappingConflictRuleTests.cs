@@ -223,6 +223,9 @@ public class MappingConflictRuleTests
         private readonly System.Collections.Generic.Dictionary<string, PairingRecord> _held =
             new System.Collections.Generic.Dictionary<string, PairingRecord>(StringComparer.Ordinal);
 
+        public System.Collections.Generic.IReadOnlyList<string> Pairings()
+            => new System.Collections.Generic.List<string>(_held.Keys);
+
         public PairingRecord? Read(string pairingId)
             => _held.TryGetValue(pairingId, out var record) ? record : null;
 

@@ -157,16 +157,19 @@ public sealed class FilePairingRecordStore : IPairingRecordStore
         }
     }
 
-    /// <summary>
-    /// Every pairing this store holds a record for.
-    /// </summary>
-    /// <returns>The identifiers, in no particular order.</returns>
+    /// <inheritdoc />
     /// <remarks>
-    /// This is not on <see cref="IPairingRecordStore"/> and is deliberately not put there by this
-    /// change. What the interface owes is what the state machine needs, which is one record at a
-    /// time; a walk over every pairing is what an administrative surface and the removal of one
-    /// user's data need, and those are issues #40 and #60. It is here because a store that cannot
-    /// say what it holds cannot be proved to have swept itself, and the cases below read it.
+    /// THIS REMARK SAID THE WALK IS NOT ON <see cref="IPairingRecordStore"/> AND IS DELIBERATELY
+    /// NOT PUT THERE. It is on the interface now. What that sentence rested on was that the only
+    /// caller was the state machine, which needs one record at a time, and the two callers it
+    /// named as needing a walk - issues #40 and #60 - were both unbuilt. The administrative read
+    /// of the open enrolment windows is a third, it resolves the interface rather than this
+    /// class, and a plane built against a concrete file store to get a walk is the coupling the
+    /// interface exists against.
+    /// <para>
+    /// The reason it was here first is unchanged and is why the cases below read it: a store that
+    /// cannot say what it holds cannot be proved to have swept itself.
+    /// </para>
     /// </remarks>
     public IReadOnlyList<string> Pairings()
     {

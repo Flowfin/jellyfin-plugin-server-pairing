@@ -241,6 +241,8 @@ public class MappingAuditTests
         private readonly Dictionary<string, PairingRecord> _held =
             new Dictionary<string, PairingRecord>(StringComparer.Ordinal);
 
+        public IReadOnlyList<string> Pairings() => new List<string>(_held.Keys);
+
         public PairingRecord? Read(string pairingId)
             => _held.TryGetValue(pairingId, out var record) ? record : null;
 

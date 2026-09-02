@@ -128,12 +128,18 @@ public class PluginServiceRegistrator : IPluginServiceRegistrator
         // reason an operator cannot be told what state a pairing is in, and a record carries no
         // key material for the two to share a refusal over.
         //
-        // NOTHING RESOLVES THIS YET AND THAT IS THE POINT OF REGISTERING IT. PairingStateMachine
-        // takes this and an IUserMappingStore, and the second has no implementation in this
-        // assembly, so the state machine is still not resolvable on a server and is not
-        // registered here: a registration that cannot be satisfied is a plugin that fails to load
-        // rather than one missing a feature. The mapping store is issue #36 and the day it lands
-        // is the day the state machine can be registered beside these two.
+        // THIS COMMENT SAID NOTHING RESOLVES THIS YET AND THAT THIS IS THE POINT OF REGISTERING
+        // IT. The administrative plane resolves it now, for the read that says whether an
+        // enrolment window is open, so the registration is load-bearing rather than ahead of its
+        // callers.
+        //
+        // What is unchanged is the reason the state machine is not registered beside it.
+        // PairingStateMachine takes this and an IUserMappingStore, and the second has no
+        // implementation in this assembly: a registration that cannot be satisfied is a plugin
+        // that fails to load rather than one missing a feature. The mapping store is issue #36 and
+        // the day it lands is the day the state machine can be registered beside these two. Until
+        // then nothing on a server writes a record, so the read above answers an empty list on
+        // every server, which is stated at the action rather than left for a reader to infer.
         serviceCollection.AddSingleton<IPairingRecordStore>(services =>
             new FilePairingRecordStore(
                 RecordStorePath.FileFor(services.GetRequiredService<IApplicationPaths>())));

@@ -1,6 +1,8 @@
 using System;
+using System.Collections.Generic;
 using System.Text.Json;
 using Jellyfin.Plugin.ServerPairing.KeyStore;
+using Jellyfin.Plugin.ServerPairing.Protocol;
 using MediaBrowser.Common.Api;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -55,6 +57,7 @@ namespace Jellyfin.Plugin.ServerPairing.Api;
 public sealed class AdministrativePlaneController : ControllerBase
 {
     private readonly IPairingKeyStore _keys;
+    private readonly IPairingRecordStore _records;
     private readonly RefusalCounters _refusals;
     private readonly ArrivalLimit _arrivals;
     private readonly ILogger<AdministrativePlaneController> _logger;
@@ -63,16 +66,19 @@ public sealed class AdministrativePlaneController : ControllerBase
     /// Initializes a new instance of the <see cref="AdministrativePlaneController"/> class.
     /// </summary>
     /// <param name="keys">Where this server keeps the keys it holds.</param>
+    /// <param name="records">What state each pairing this server holds is in.</param>
     /// <param name="refusals">What the peer plane has refused, and why.</param>
     /// <param name="arrivals">How much of the peer plane each claimed identifier has used.</param>
     /// <param name="logger">Where the detail of an unreadable store goes.</param>
     public AdministrativePlaneController(
         IPairingKeyStore keys,
+        IPairingRecordStore records,
         RefusalCounters refusals,
         ArrivalLimit arrivals,
         ILogger<AdministrativePlaneController> logger)
     {
         _keys = keys ?? throw new ArgumentNullException(nameof(keys));
+        _records = records ?? throw new ArgumentNullException(nameof(records));
         _refusals = refusals ?? throw new ArgumentNullException(nameof(refusals));
         _arrivals = arrivals ?? throw new ArgumentNullException(nameof(arrivals));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
@@ -122,6 +128,76 @@ public sealed class AdministrativePlaneController : ControllerBase
                 StatusCode = AdministrativeAnswer.ProblemStatus,
                 ContentType = "application/json",
                 Content = AdministrativeAnswer.Body(AdministrativeProblem.KeyStoreUnreadable),
+            };
+        }
+    }
+
+    /// <summary>
+    /// The enrolment windows this server has open.
+    /// </summary>
+    /// <returns>One entry per open window, or the named problem where the store could not be read.</returns>
+    /// <remarks>
+    /// This is the seventh property of issue #18: while a window is open the plugin says so,
+    /// because a window an operator opened and forgot is the failure the rest of the enrolment
+    /// bounds exist against. The bounds close a window on the first use, on a timer and after a
+    /// small number of failures; none of them helps an operator who does not know one is open.
+    /// <para>
+    /// It reads the record store rather than <see cref="EnrolmentWindow"/>, which is the surface
+    /// <c>docs/protocol.md</c> decided on and is argued at <see cref="OpenWindow"/>. A window is
+    /// a pairing in <see cref="PairingState.Offered"/>, which is what the transition table says
+    /// an administrator opening one produces, so a reader asking what pairings are half-built and
+    /// a reader asking what windows are open are the same reader.
+    /// </para>
+    /// <para>
+    /// WHAT WRITES THAT RECORD IS NOT BUILT, AND THIS ACTION DOES NOT BUILD IT. `EnrolmentWindow`
+    /// holds an address, writes no record and calls no state machine, and the state machine is not
+    /// registered on a server at all. So on a running server this answers an empty list, and it
+    /// will go on answering one until the join between the window and the state machine exists.
+    /// What is delivered here is the reader; the producer is named in the issue rather than
+    /// implied by an answer nobody can tell an empty server from a broken one by.
+    /// </para>
+    /// <para>
+    /// It is a read and changes nothing, so it is not the state-changing endpoint issue #53's
+    /// third condition asks for. The catch is the one <see cref="Pairings"/> carries and for the
+    /// same reason: a store whose file does not parse throws out of the deserialiser, and an
+    /// exception leaving an action reaches the host's own pipeline.
+    /// </para>
+    /// </remarks>
+    [HttpGet("windows")]
+    public IActionResult Windows()
+    {
+        try
+        {
+            var open = new List<OpenWindow>();
+
+            foreach (var pairingId in _records.Pairings())
+            {
+                var record = _records.Read(pairingId);
+
+                if (record is not null && record.State == PairingState.Offered)
+                {
+                    open.Add(new OpenWindow(record.PairingId, record.At));
+                }
+            }
+
+            return new ContentResult
+            {
+                StatusCode = 200,
+                ContentType = "application/json",
+                Content = JsonSerializer.Serialize(open),
+            };
+        }
+#pragma warning disable CA1031 // Every escaping exception is the failure this catch exists for, so the type cannot be narrowed without reopening it.
+        catch (Exception fault)
+#pragma warning restore CA1031
+        {
+            _logger.LogError(fault, "The pairing record store could not be read for an administrator, so whether a window is open is unknown. The answer names the problem and carries nothing of the fault.");
+
+            return new ContentResult
+            {
+                StatusCode = AdministrativeAnswer.ProblemStatus,
+                ContentType = "application/json",
+                Content = AdministrativeAnswer.Body(AdministrativeProblem.RecordStoreUnreadable),
             };
         }
     }

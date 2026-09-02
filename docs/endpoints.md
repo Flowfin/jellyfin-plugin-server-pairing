@@ -19,16 +19,29 @@ describing them once they exist.
 | `PeerPlaneController.Exchange` | `POST` | `/ServerPairing/exchange` | peer | `anonymous` | the pairing signature |
 | `AdministrativePlaneController.Pairings` | `GET` | `/ServerPairing/Administration/pairings` | administrative | `elevation` | the host's elevation policy |
 | `AdministrativePlaneController.Diagnostics` | `GET` | `/ServerPairing/Administration/diagnostics` | administrative | `elevation` | the host's elevation policy |
+| `AdministrativePlaneController.Windows` | `GET` | `/ServerPairing/Administration/windows` | administrative | `elevation` | the host's elevation policy |
 
-Seven rows. Five are the peer plane, which is the paths the specification fixes.
+Eight rows. Five are the peer plane, which is the paths the specification fixes.
 THIS PARAGRAPH SAID THE ADMINISTRATIVE PLANE HAS NO ENDPOINT AND THEREFORE NO
-ROW; it has two. The first is issue #289, and the plane is what that issue is
+ROW; it has three. The first is issue #289, and the plane is what that issue is
 about rather than the action on it: what it answers is the identifiers of the
 pairings this server holds a key for, and nothing else. The second is the
 diagnostics read, which is issue #51, and what it answers is how many requests
 the peer plane has refused since this server started and why, as numbers over two
 enumerations. It names no pairing, no address and no person, and the payload has
 the same shape on a server that has never been paired as on one that has.
+
+The third is the open enrolment windows, which is the seventh property of issue
+#18: while a window is open the plugin says so, because a window an operator
+opened and forgot is the failure the other six properties exist against. It reads
+the pairing record store and not `EnrolmentWindow`, which is the surface the
+decision under the local events table in [`protocol.md`](protocol.md) settled on:
+a pairing in `Offered` is written as a record, so what is half-built and what is
+finished are one surface rather than two. WHAT WRITES THAT RECORD IS NOT BUILT.
+Nothing joins the window to the state machine, and the state machine is not
+registered on a server at all, so this action answers an empty list on every
+server today. That is stated here and at the action rather than left for an
+operator to read an empty answer as a server with no window open.
 
 That second row is narrower than the issue it comes from. A state per pairing,
 the protocol version each side speaks and a last error per pairing are all things
@@ -38,10 +51,12 @@ first, so the payload's silence is written down where somebody reading the
 payload will find it rather than being inferred from what is missing.
 
 The rest of the administrative actions are still issues rather than actions, and
-a row for one of them would describe something no request can reach: opening an
-enrolment window and confirming a ceremony are #18 and #19, revoking is #24,
-editing mappings is #40 and the pairing states the page renders are #49. Each of
-them lands on the plane above rather than bringing a controller of its own.
+a row for one of them would describe something no request can reach: OPENING an
+enrolment window is #18, which the row above does not do - it says whether one is
+open and provides no way to open one - confirming a ceremony is #19, revoking is
+#24, editing mappings is #40 and the pairing states the page renders are #49.
+Each of them lands on the plane above rather than bringing a controller of its
+own.
 
 ### What the two authorization words mean
 
@@ -56,7 +71,9 @@ else.
 
 `elevation` is the action carrying `Authorize` naming the host's
 `RequiresElevation` policy, which is the constant read out of the server source
-in the section below. TWO ROWS CARRY IT AND THIS SENTENCE SAID ONE DID. What
+in the section below. THREE ROWS CARRY IT AND THIS SENTENCE SAID TWO DID, having
+said one before that; the count moves with the plane and is derived by the suite
+rather than trusted from here. What
 decides such a request is the host's elevation policy together with the
 endpoint's own repeat of the check, which is the third bullet under `What this
 plugin does about it`.
@@ -418,8 +435,8 @@ is prose and stays prose.
 
 Issue #53's third condition asks that a test assert every state-changing
 endpoint refuses a request lacking whatever this document names. It is not met,
-and the administrative row above does not meet it: that action is a read and
-changes nothing, so the set the condition quantifies over is still empty.
+and no administrative row above meets it: all three of those actions are reads
+and change nothing, so the set the condition quantifies over is still empty.
 `PeerPlaneTests` does assert that a request without a verifying signature is
 refused and that its body is not handed on, but every answer this plane gives
 today is the same refusal whatever arrives, so that assertion cannot be

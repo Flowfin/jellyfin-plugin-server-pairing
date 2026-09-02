@@ -7,6 +7,8 @@ using System.Security.Cryptography;
 using Jellyfin.Plugin.ServerPairing;
 using Jellyfin.Plugin.ServerPairing.Api;
 using Jellyfin.Plugin.ServerPairing.KeyStore;
+using Jellyfin.Plugin.ServerPairing.Protocol;
+using Jellyfin.Plugin.ServerPairing.Tests.Protocol;
 using MediaBrowser.Common.Api;
 using MediaBrowser.Common.Configuration;
 using MediaBrowser.Controller;
@@ -273,8 +275,21 @@ public class AdministrativePlaneControllerTests
     /// <param name="keys">The store.</param>
     /// <returns>The controller.</returns>
     private static AdministrativePlaneController Controller(IPairingKeyStore keys)
+        => Controller(keys, new InMemoryPairingRecords());
+
+    /// <summary>
+    /// A controller over a given key store and a given record store, with the logger going
+    /// nowhere.
+    /// </summary>
+    /// <param name="keys">The key store.</param>
+    /// <param name="records">The record store.</param>
+    /// <returns>The controller.</returns>
+    private static AdministrativePlaneController Controller(
+        IPairingKeyStore keys,
+        IPairingRecordStore records)
         => new AdministrativePlaneController(
             keys,
+            records,
             new RefusalCounters(),
             new ArrivalLimit(),
             NullLogger<AdministrativePlaneController>.Instance);

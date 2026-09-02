@@ -25,6 +25,7 @@ says why underneath the table.
 | A refusal rate crossed its threshold | Warning | pairing id, the count and the window it was counted over |
 | A mapping was added, changed or removed | Information | pairing id, the administrator who did it, which direction |
 | The key store could not be read or written | Error | the operation, the reason, no path contents |
+| The pairing record store could not be read | Error | the operation, the reason, no path contents, no pairing identifier |
 | A request on the pairing plane faulted | Error | which of the five messages it arrived on, and the fault the runtime raised, with no pairing identifier |
 | The plugin started against a store that already holds a pairing | Information | pairing id, one entry per pairing found |
 | The key store was carried up from an older format | Information | the format it was in, the format it is now, and the name of the copy left beside it |
@@ -34,12 +35,11 @@ says why underneath the table.
 Debug adds timing and state machine transitions for the same events. It adds no
 field that is not in the table above.
 
-Five rows carry no pairing identifier and each has its own reason. **This
-paragraph said three**, and it was written before the two configuration rows
-existed; before that it said the fault row was the only one, which was wrong
-about the table it sits under from the day the store rows landed. Both counts are
-corrected here rather than by adding an identifier those rows have no way to
-know.
+Six rows carry no pairing identifier and each has its own reason. **This
+paragraph said five**, and before that three, and before that it said the fault
+row was the only one, which was wrong about the table it sits under from the day
+the store rows landed. Every count is corrected here rather than by adding an
+identifier those rows have no way to know.
 
 The fault row leaves it out deliberately. A fault is reachable before the request
 has been read, so at that moment the only identifier available is the one the
@@ -48,9 +48,11 @@ assumed hostile. Writing it would let a stranger choose which pairing an
 operator's error line appears to be about. What the entry names instead is the
 path the request arrived on, which is this server's own fact.
 
-The two store rows leave it out because neither is about a pairing. A store that
-cannot be read holds no identifier anybody can name, and a store being carried up
-from an older format is one event about one file however many pairings are in it.
+The three store rows leave it out because none of them is about a pairing. A
+store that cannot be read holds no identifier anybody can name, and that is true
+of both stores: the record store is the one that would carry an identifier, and a
+walk that threw is a walk that reached none. A store being carried up from an
+older format is one event about one file however many pairings are in it.
 The migration row names the file rather than its contents on purpose: what is
 inside is key material, and a row naming contents would put every key the store
 holds into the log.
@@ -141,10 +143,11 @@ that four do, then that five do. Six do. Which rows of the table each of them
 writes is under the reading rather than counted here.
 
     git grep -nE "ILogger|_logger" origin/master -- Jellyfin.Plugin.ServerPairing
-    origin/master:Jellyfin.Plugin.ServerPairing/Api/AdministrativePlaneController.cs:60:    private readonly ILogger<AdministrativePlaneController> _logger;
-    origin/master:Jellyfin.Plugin.ServerPairing/Api/AdministrativePlaneController.cs:73:        ILogger<AdministrativePlaneController> logger)
-    origin/master:Jellyfin.Plugin.ServerPairing/Api/AdministrativePlaneController.cs:78:        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-    origin/master:Jellyfin.Plugin.ServerPairing/Api/AdministrativePlaneController.cs:118:            _logger.LogError(fault, "The key store could not be read for an administrator, so what this server holds is unknown. The answer names the problem and carries nothing of the fault.");
+    origin/master:Jellyfin.Plugin.ServerPairing/Api/AdministrativePlaneController.cs:63:    private readonly ILogger<AdministrativePlaneController> _logger;
+    origin/master:Jellyfin.Plugin.ServerPairing/Api/AdministrativePlaneController.cs:78:        ILogger<AdministrativePlaneController> logger)
+    origin/master:Jellyfin.Plugin.ServerPairing/Api/AdministrativePlaneController.cs:84:        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+    origin/master:Jellyfin.Plugin.ServerPairing/Api/AdministrativePlaneController.cs:124:            _logger.LogError(fault, "The key store could not be read for an administrator, so what this server holds is unknown. The answer names the problem and carries nothing of the fault.");
+    origin/master:Jellyfin.Plugin.ServerPairing/Api/AdministrativePlaneController.cs:194:            _logger.LogError(fault, "The pairing record store could not be read for an administrator, so whether a window is open is unknown. The answer names the problem and carries nothing of the fault.");
     origin/master:Jellyfin.Plugin.ServerPairing/Api/PeerPlaneController.cs:39:    private readonly ILogger<PeerPlaneController> _logger;
     origin/master:Jellyfin.Plugin.ServerPairing/Api/PeerPlaneController.cs:69:    public PeerPlaneController(PeerPlane plane, TimeProvider time, ILogger<PeerPlaneController> logger)
     origin/master:Jellyfin.Plugin.ServerPairing/Api/PeerPlaneController.cs:73:        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
@@ -189,8 +192,12 @@ appears in any of them. So two rows have their contents checked and every other
 row in the table does not.
 
 `FilePairingKeyStore` writes the migration row. `AdministrativePlaneController`
-writes the unreadable-store row from the other side, where what meets an
-administrator's request is a store that will not open.
+writes both unreadable-store rows from the other side, where what meets an
+administrator's request is a store that will not open. Two rows rather than one,
+because the plane reads two files: the key store, for what this server holds, and
+the pairing record store, for whether an enrolment window is open. An answer
+naming one when the other is the broken one is a sentence an operator can act on,
+pointed at the wrong disk.
 
 `ConfigurationAtStartup` writes the two entries the table above carried no row
 for at all, a refused setting at Error and an acknowledged cleartext peer address

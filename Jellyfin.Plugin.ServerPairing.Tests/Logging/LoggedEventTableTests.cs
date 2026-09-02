@@ -75,6 +75,8 @@ public class LoggedEventTableTests
             "A cleartext peer address was acknowledged",
         ["The key store could not be read for an administrator, so what this server holds is unknown."] =
             "The key store could not be read or written",
+        ["The pairing record store could not be read for an administrator, so whether a window is open is unknown."] =
+            "The pairing record store could not be read",
         ["The key store could not be read at startup, so what it holds is unknown and no pairing will work."] =
             "The key store could not be read or written",
         ["The key store was written by an older build and has been carried up to the format this one reads."] =

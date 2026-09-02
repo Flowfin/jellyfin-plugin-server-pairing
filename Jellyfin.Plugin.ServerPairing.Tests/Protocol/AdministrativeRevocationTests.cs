@@ -220,6 +220,9 @@ public sealed class AdministrativeRevocationTests : IDisposable
     private sealed class RefusingRecords : IPairingRecordStore
     {
         /// <inheritdoc />
+        public IReadOnlyList<string> Pairings() => Array.Empty<string>();
+
+        /// <inheritdoc />
         public PairingRecord? Read(string pairingId)
             => new PairingRecord(pairingId, PairingState.Active, PairingState.ConfirmedHere, "Confirm", "peer", At);
 
