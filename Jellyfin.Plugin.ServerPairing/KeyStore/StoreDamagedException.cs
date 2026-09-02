@@ -54,6 +54,17 @@ public sealed class StoreDamagedException : Exception
     public const string RecordStoreName = "pairing record store";
 
     /// <summary>
+    /// What the mapping store is called in the sentence an operator reads.
+    /// </summary>
+    /// <remarks>
+    /// The third file under the same directory, and it shares this type for the reason the second
+    /// one does: what an operator does about a damaged store is the same thing whichever store it
+    /// is, and only the sentence has to differ so that nobody is sent to look at a file that is
+    /// fine.
+    /// </remarks>
+    public const string MappingStoreName = "mapping store";
+
+    /// <summary>
     /// Initializes a new instance of the <see cref="StoreDamagedException"/> class.
     /// </summary>
     /// <remarks>
@@ -105,7 +116,7 @@ public sealed class StoreDamagedException : Exception
     /// The refusal for a damaged store of the kind named, naming the file.
     /// </summary>
     /// <param name="file">The file that was read.</param>
-    /// <param name="store">What the store is called, which is one of the two names above.</param>
+    /// <param name="store">What the store is called, which is one of the names above.</param>
     /// <returns>The refusal.</returns>
     public static StoreDamagedException For(string file, string store) =>
         new StoreDamagedException(Sentence(file, store)) { File = file };
@@ -131,7 +142,7 @@ public sealed class StoreDamagedException : Exception
     /// </summary>
     /// <param name="file">The file that was read.</param>
     /// <param name="cause">What the read failed with.</param>
-    /// <param name="store">What the store is called, which is one of the two names above.</param>
+    /// <param name="store">What the store is called, which is one of the names above.</param>
     /// <returns>The refusal.</returns>
     public static StoreDamagedException For(string file, Exception cause, string store) =>
         new StoreDamagedException(Sentence(file, store), cause) { File = file };

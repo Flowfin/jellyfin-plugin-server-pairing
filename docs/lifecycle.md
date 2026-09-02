@@ -76,7 +76,10 @@ them is told which they are getting.
 
 **For an operator who is finished with this plugin:** delete
 `<program data>/data/server-pairing/` after uninstalling. Deleting it destroys
-the key material for every pairing this server held. Nothing else reads that
+the key material for every pairing this server held, the record of what state
+each one was in, and the mapping table, which is the one of the three that names
+people: it holds the peer's display name for every mapped user, and
+[`data.md`](data.md) is where that field is argued. Nothing else reads that
 directory. It does not end the pairing on the peer: the peer keeps its own key
 and its own record, and the peer's operator ends their side. Revoke each pairing
 before uninstalling if the far side should learn about it, because a plugin the

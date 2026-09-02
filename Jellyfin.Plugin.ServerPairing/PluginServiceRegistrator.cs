@@ -2,6 +2,7 @@ using System;
 using Jellyfin.Plugin.ServerPairing.Api;
 using Jellyfin.Plugin.ServerPairing.Configuration;
 using Jellyfin.Plugin.ServerPairing.KeyStore;
+using Jellyfin.Plugin.ServerPairing.Mapping;
 using Jellyfin.Plugin.ServerPairing.Protocol;
 using MediaBrowser.Common.Configuration;
 using MediaBrowser.Controller;
@@ -133,16 +134,45 @@ public class PluginServiceRegistrator : IPluginServiceRegistrator
         // enrolment window is open, so the registration is load-bearing rather than ahead of its
         // callers.
         //
-        // What is unchanged is the reason the state machine is not registered beside it.
-        // PairingStateMachine takes this and an IUserMappingStore, and the second has no
-        // implementation in this assembly: a registration that cannot be satisfied is a plugin
-        // that fails to load rather than one missing a feature. The mapping store is issue #36 and
-        // the day it lands is the day the state machine can be registered beside these two. Until
-        // then nothing on a server writes a record, so the read above answers an empty list on
-        // every server, which is stated at the action rather than left for a reader to infer.
+        // THIS COMMENT ALSO SAID THE STATE MACHINE COULD NOT BE REGISTERED BESIDE IT, because
+        // PairingStateMachine takes this and an IUserMappingStore and the second had no
+        // implementation in this assembly. It has one now and both are registered below.
+        //
+        // What is unchanged is that nothing on a server writes a record, because nothing joins an
+        // enrolment to the state machine, which is issue #18. So the read above answers an empty
+        // list on every server, which is stated at the action rather than left for a reader to
+        // infer.
         serviceCollection.AddSingleton<IPairingRecordStore>(services =>
             new FilePairingRecordStore(
                 RecordStorePath.FileFor(services.GetRequiredService<IApplicationPaths>())));
+
+        // The mapping table, over the third file in the same directory. It is a third file rather
+        // than a member of either of the other two because the three answer different questions
+        // and refuse separately: a key store that refuses is not a reason an administrator cannot
+        // be shown which users are mapped, and a mapping carries no key material for the two to
+        // share a refusal over.
+        //
+        // It is out of the plugin configuration for the reason IUserMappingStore states: the
+        // configuration is a file an operator edits by hand and the host rewrites as plaintext
+        // XML and serves back to the dashboard, and a table deciding where one person's data goes
+        // does not belong in it.
+        serviceCollection.AddSingleton<IUserMappingStore>(services =>
+            new FileUserMappingStore(
+                MappingStorePath.FileFor(services.GetRequiredService<IApplicationPaths>())));
+
+        // The one type that owns what state a pairing is in, which could not be registered at all
+        // until the mapping store above existed. It is registered here rather than constructed by
+        // whoever needs it, because it sweeps the mapping table when a pairing ends and a second
+        // instance over a second mapping store would sweep a table nobody is reading.
+        //
+        // WHAT RESOLVES IT TODAY IS NOTHING, and that is stated rather than implied: no plane and
+        // no page reaches it yet, and what would put a record into it is the enrolment join in
+        // issue #18. What the registration buys before then is that the container can build it,
+        // which ServiceRegistrationTests asserts, so the day something does resolve it is not the
+        // day a server finds out it cannot be built.
+        serviceCollection.AddSingleton(services => new PairingStateMachine(
+            services.GetRequiredService<IPairingRecordStore>(),
+            services.GetRequiredService<IUserMappingStore>()));
 
         // The one thing that runs on its own rather than answering a caller. It reads the
         // store once at startup and says what survived, because a store outside the plugin

@@ -45,12 +45,12 @@ public sealed class StoreFormatRefusedException : Exception
     /// <param name="found">The format the file declares.</param>
     /// <param name="understood">The highest format this build understands.</param>
     /// <param name="file">The file that was read.</param>
-    /// <param name="store">What the store is called, which is one of the two names on
+    /// <param name="store">What the store is called, which is one of the names on
     /// <see cref="StoreDamagedException"/>.</param>
     /// <remarks>
-    /// The name is a parameter for the reason the neighbouring type gives: the two stores are
-    /// refused by one rule and read by two files, and a sentence naming the wrong file sends an
-    /// operator to look at a file that is fine.
+    /// The name is a parameter for the reason the neighbouring type gives: the stores under that
+    /// directory are refused by one rule and read out of a file each, and a sentence naming the
+    /// wrong file sends an operator to look at a file that is fine.
     /// </remarks>
     public StoreFormatRefusedException(int found, int understood, string file, string store)
         : base(string.Format(

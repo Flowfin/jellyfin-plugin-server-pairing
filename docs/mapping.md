@@ -56,10 +56,43 @@ The short form is that the configuration is a file an operator edits by hand and
 the host rewrites as plaintext XML, and a table deciding where one person's data
 goes does not belong in it.
 
-The store is an interface, so the model is provable before anything durable
-exists:
+The store is an interface, so the model was provable before anything durable
+existed:
 
     git grep -n 'interface IUserMappingStore' -- Jellyfin.Plugin.ServerPairing/Mapping/
+
+**THIS SECTION SAID THE ONLY IMPLEMENTATION WAS THE ONE THE SUITE SUBSTITUTES.**
+There is a file now, in the same directory as the key store and the pairing
+records and under the same permissions:
+
+    git grep -n 'public const string FileName' -- Jellyfin.Plugin.ServerPairing/Mapping/MappingStorePath.cs
+
+It is a third file rather than a member of either of the other two because the
+three refuse separately. A key store that refuses is not a reason an
+administrator cannot be shown which users are mapped, and a mapping carries no
+key material for the two to share a refusal over.
+
+Every operation reads the file, changes what it holds and writes it back, so
+nothing is cached to go stale against a file somebody replaced; every write goes
+through the atomic write the key store uses, so a reader sees the table as it was
+or as it is and never as it is halfway through a write; and the lock that
+serialises the operations is per instance, which is why the server gets exactly
+one of these and a second process is out of reach entirely.
+
+**A file that is there and is not a mapping store is refused rather than answered
+as an empty table**, which is the key store's answer read one file over. An empty
+table is what a fresh installation has, so an administrator meeting one makes the
+mappings again on top of rows that are still on the disk. A row this build could
+not turn into a mapping — a blank pairing, a blank user on either side, a blank
+actor, or no display name member at all — is damage of the same kind and is
+refused with the rest of the document, because a table quietly one row shorter
+than its file sends one person's data nowhere or to somebody else.
+
+The file carries a format number, and there is no format 0 for the reason the
+pairing record store gives: this store has never shipped without an envelope, so
+a file carrying no number was not written by this plugin. A number higher than
+this build reads is a rolled-back plugin rather than damage, and the two are
+separate refusals because what an operator does about them is separate.
 
 Every operation on it is keyed by pairing first, and there is deliberately no way
 to ask it for every mapping it holds regardless of pairing. A caller that wants
@@ -198,9 +231,10 @@ counted as many changes by whoever reads the log.
 
 ## What this document does not cover
 
-**Where the table is written.** The store is an interface and the only
-implementation is the one the suite substitutes. A file on disk, with the atomic
-write and the permissions the key store already has, is not built.
+**Anything writing through a surface.** The file above exists and nothing on a
+server puts a row in it, because no endpoint and no page reaches the decision
+surface. That is issue #40, behind the dashboard page in #49, and it is the
+sentence below rather than a second one.
 
 **The administration surface.** Nothing renders this table, nothing lists it, and
 no endpoint reaches it. That is issue #40, behind the dashboard page in #49.
