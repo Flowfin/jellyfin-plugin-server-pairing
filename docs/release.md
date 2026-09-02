@@ -123,9 +123,9 @@ number.
 One leg of the hygiene check reads those two markers on the way in:
 
     git grep -n 'marked_change' origin/master -- .github/pr-hygiene.sh
-    origin/master:.github/pr-hygiene.sh:195:marked_change() {
-    origin/master:.github/pr-hygiene.sh:218:marked_change protocol "$protocol_paths"
-    origin/master:.github/pr-hygiene.sh:219:marked_change contract "$contract_paths"
+    origin/master:.github/pr-hygiene.sh:225:marked_change() {
+    origin/master:.github/pr-hygiene.sh:254:marked_change protocol "$protocol_paths"
+    origin/master:.github/pr-hygiene.sh:255:marked_change contract "$contract_paths"
 
 It refuses a pull request that touches the protocol or the contract and adds no
 line carrying the marker for what it touched. That bound now stands in front of a
@@ -136,6 +136,13 @@ why item 1 reads the set rather than keeping a copy of it.
 What the leg still cannot do is read the entry being released. It asks whether a
 marked line was added, never whether that line says what the change did, so the
 entry in front of a release is still read by a person.
+
+A pull request may also declare in its body that a change inside those paths
+moves nothing a peer or a consumer can see, and pass with no line at all. That
+widens what reaches a release without an entry, and it does not widen what a
+release owes: an entry is read for what the release changed rather than for what
+the guard accepted, and a declaration is a sentence in a pull request that no
+release note is assembled from.
 
 `build.yaml` carries a `changelog` field and it holds the first release entry
 rather than the placeholder it used to:

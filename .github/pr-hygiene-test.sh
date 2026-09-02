@@ -260,8 +260,27 @@ expect "a protocol change carrying the other marker is refused" \
 expect "a protocol change with a marked changelog line passes" \
     0 "the protocol changed and CHANGELOG.md gained a [protocol] line" "Closes #76." User OWNER "$protocol_marked"
 
+# The declaration route. It widens what passes, so the cases that matter are the
+# three that still refuse: without them the route is a way past the rule rather
+# than a way of saying the paths over-refused.
+declared=$(printf 'Closes #314.\n\nNo protocol change: the loop is rewritten and no byte on the wire moves.\n')
+declared_bare=$(printf 'Closes #314.\n\nNo protocol change:\n')
+declared_midline=$(printf 'Closes #314.\n\nThis pull request is not saying No protocol change: it changes the wire.\n')
+
+expect "a protocol source change the body declares passes" \
+    0 "the body declares no protocol change" "$declared" User OWNER "$protocol_source"
+
+expect "a declaration carrying no reason is refused" \
+    1 "the protocol changed and CHANGELOG.md gained no [protocol] line" "$declared_bare" User OWNER "$protocol_source"
+
+expect "a declaration that is not at the start of a line is refused" \
+    1 "the protocol changed and CHANGELOG.md gained no [protocol] line" "$declared_midline" User OWNER "$protocol_source"
+
 expect "a contract change with no changelog line is refused" \
     1 "the contract changed and CHANGELOG.md gained no [contract] line" "Closes #76." User OWNER "$contract_doc"
+
+expect "declaring one kind does nothing for the other" \
+    1 "the contract changed and CHANGELOG.md gained no [contract] line" "$declared" User OWNER "$contract_doc"
 
 expect "a contract change with a marked changelog line passes" \
     0 "the contract changed and CHANGELOG.md gained a [contract] line" "Closes #76." User OWNER "$contract_marked"

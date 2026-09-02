@@ -104,6 +104,23 @@ meant to stop a pull request rather than earn a note:
   [`docs/versioning.md`](docs/versioning.md) states what each kind does to the
   version number
 
+What that fourth rule reads is a set of paths, and the paths are a proxy for the
+subject. A change inside them that alters nothing a peer or a consumer can
+observe earns no changelog line, because a change nobody outside this repository
+can see does not belong in `CHANGELOG.md` at all. Say so on a line of its own in
+the body:
+
+```
+No protocol change: the loop is rewritten to close a static-analysis alert and
+no byte on the wire moves.
+```
+
+`No contract change:` is the same for the other kind. A reason is required, the
+line has to start the line, and declaring one kind does nothing for the other.
+Nothing verifies the declaration, exactly as nothing verifies that a `[protocol]`
+line says what the change did. What it buys is that an untrue one stays in the
+pull request instead of landing in the file operators read.
+
 Three more belong in the body and are judged by a reader rather than by a
 machine:
 
