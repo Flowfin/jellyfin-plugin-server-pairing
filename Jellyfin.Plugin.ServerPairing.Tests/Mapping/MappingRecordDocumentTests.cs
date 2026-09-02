@@ -6,6 +6,7 @@ using System.Linq;
 using System.Reflection;
 using Jellyfin.Plugin.ServerPairing.Mapping;
 using Jellyfin.Plugin.ServerPairing.Protocol;
+using Microsoft.Extensions.Logging.Abstractions;
 using Xunit;
 
 namespace Jellyfin.Plugin.ServerPairing.Tests.Mapping;
@@ -148,7 +149,7 @@ public class MappingRecordDocumentTests
     {
         var mappings = new InMemoryUserMappings();
         var machine = new PairingStateMachine(new Records(), mappings);
-        var subject = new UserMappings(mappings, machine);
+        var subject = new UserMappings(mappings, machine, NullLogger<UserMappings>.Instance);
 
         machine.Apply(PairingId, LocalEvent.WindowOpened, Administrator, At);
         machine.Receive(PairingId, PairingMessage.Hello, OfferedKey.NotApplicable, Peer, At);

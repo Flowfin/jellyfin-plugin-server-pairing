@@ -1,6 +1,7 @@
 using System;
 using Jellyfin.Plugin.ServerPairing.Mapping;
 using Jellyfin.Plugin.ServerPairing.Protocol;
+using Microsoft.Extensions.Logging.Abstractions;
 using Xunit;
 
 namespace Jellyfin.Plugin.ServerPairing.Tests.Mapping;
@@ -142,7 +143,7 @@ public class MappingConflictRuleTests
             MappingOutcome.LocalUserAlreadyMapped,
             subject.Map(PairingId, LocalUser, AnotherPeerUser, "Bea", SecondAdministrator, Later));
 
-        subject.Unmap(PairingId, LocalUser);
+        subject.Unmap(PairingId, LocalUser, SecondAdministrator);
 
         Assert.Equal(
             MappingOutcome.Mapped,
@@ -161,7 +162,7 @@ public class MappingConflictRuleTests
     {
         var mappings = new InMemoryUserMappings();
         var machine = new PairingStateMachine(new InMemoryRecords(), mappings);
-        var subject = new UserMappings(mappings, machine);
+        var subject = new UserMappings(mappings, machine, NullLogger<UserMappings>.Instance);
 
         Open(machine, PairingId);
         Open(machine, AnotherPairing);
@@ -184,7 +185,7 @@ public class MappingConflictRuleTests
     {
         var mappings = new InMemoryUserMappings();
         var machine = new PairingStateMachine(new InMemoryRecords(), mappings);
-        var subject = new UserMappings(mappings, machine);
+        var subject = new UserMappings(mappings, machine, NullLogger<UserMappings>.Instance);
 
         Open(machine, PairingId);
         Open(machine, AnotherPairing);
@@ -205,7 +206,7 @@ public class MappingConflictRuleTests
 
         Open(machine, PairingId);
 
-        return (mappings, machine, new UserMappings(mappings, machine));
+        return (mappings, machine, new UserMappings(mappings, machine, NullLogger<UserMappings>.Instance));
     }
 
     private static void Open(PairingStateMachine machine, string pairingId)

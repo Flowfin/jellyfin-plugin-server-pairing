@@ -212,6 +212,15 @@ rather than what reaches a log on a running server. And it says nothing whatever
 about the second list below: no check in this tree refuses a call site that
 writes key material, a signature, or a peer's user identity.
 
+ONE ENTRY IS JUDGED FURTHER THAN THAT, AND ONE IS NOT ALL OF THEM. The mapping
+row's level, and the absence from it of the local and the peer user identity, are
+asserted by `MappingAuditTests` over the text the entry actually produces. That
+is one row out of the table, asserted by driving the call rather than by reading
+the source, and it leaves every sentence above exactly as true of the others as
+it was. It is written here so that a reader does not take the paragraph above for
+a statement that nothing anywhere is checked, and it is not a step towards the
+run the section below asks for.
+
 The test this section asks for is a different and larger thing, and it does not
 exist. It drives a full enrolment, a rotation and a revocation at Debug against a
 capturing logger and looks for the secrets the run generated, and there is still

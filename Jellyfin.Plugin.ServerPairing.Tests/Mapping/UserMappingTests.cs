@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using Jellyfin.Plugin.ServerPairing.Mapping;
 using Jellyfin.Plugin.ServerPairing.Protocol;
+using Microsoft.Extensions.Logging.Abstractions;
 using Xunit;
 
 namespace Jellyfin.Plugin.ServerPairing.Tests.Mapping;
@@ -34,7 +35,7 @@ public class UserMappingTests
     public void AMappingCannotExistWithoutAPairing()
     {
         var mappings = new InMemoryUserMappings();
-        var subject = new UserMappings(mappings, MachineWith(mappings));
+        var subject = new UserMappings(mappings, MachineWith(mappings), NullLogger<UserMappings>.Instance);
 
         Assert.Equal(
             MappingOutcome.NoSuchPairing,
@@ -53,7 +54,7 @@ public class UserMappingTests
     {
         var mappings = new InMemoryUserMappings();
         var machine = MachineWith(mappings);
-        var subject = new UserMappings(mappings, machine);
+        var subject = new UserMappings(mappings, machine, NullLogger<UserMappings>.Instance);
 
         Open(machine);
         machine.Apply(PairingId, LocalEvent.AdministratorRevoked, Administrator, At);
@@ -77,7 +78,7 @@ public class UserMappingTests
     {
         var mappings = new InMemoryUserMappings();
         var machine = MachineWith(mappings);
-        var subject = new UserMappings(mappings, machine);
+        var subject = new UserMappings(mappings, machine, NullLogger<UserMappings>.Instance);
 
         Open(machine);
         Assert.Equal(MappingOutcome.Mapped, subject.Map(PairingId, LocalUser, PeerUser, "Anna", Administrator, At));
@@ -101,7 +102,7 @@ public class UserMappingTests
     {
         var mappings = new InMemoryUserMappings();
         var machine = MachineWith(mappings);
-        var subject = new UserMappings(mappings, machine);
+        var subject = new UserMappings(mappings, machine, NullLogger<UserMappings>.Instance);
 
         Open(machine);
         Assert.Equal(MappingOutcome.Mapped, subject.Map(PairingId, LocalUser, PeerUser, "Anna", Administrator, At));
@@ -123,7 +124,7 @@ public class UserMappingTests
     {
         var mappings = new InMemoryUserMappings();
         var machine = MachineWith(mappings);
-        var subject = new UserMappings(mappings, machine);
+        var subject = new UserMappings(mappings, machine, NullLogger<UserMappings>.Instance);
 
         Open(machine);
         Open(machine, AnotherPairing);
@@ -146,14 +147,14 @@ public class UserMappingTests
     {
         var mappings = new InMemoryUserMappings();
         var machine = MachineWith(mappings);
-        var subject = new UserMappings(mappings, machine);
+        var subject = new UserMappings(mappings, machine, NullLogger<UserMappings>.Instance);
 
         Open(machine);
         subject.Map(PairingId, LocalUser, PeerUser, "Anna Example", Administrator, At);
 
         Assert.Equal("Anna Example", subject.Of(PairingId, LocalUser)!.PeerDisplayName);
 
-        subject.Unmap(PairingId, LocalUser);
+        subject.Unmap(PairingId, LocalUser, Administrator);
 
         Assert.Null(subject.Of(PairingId, LocalUser));
         Assert.DoesNotContain(
@@ -197,7 +198,7 @@ public class UserMappingTests
     {
         var mappings = new InMemoryUserMappings();
         var machine = MachineWith(mappings);
-        var subject = new UserMappings(mappings, machine);
+        var subject = new UserMappings(mappings, machine, NullLogger<UserMappings>.Instance);
 
         Open(machine);
         subject.Map(PairingId, LocalUser, PeerUser, "Anna", Administrator, At);
@@ -219,7 +220,7 @@ public class UserMappingTests
     {
         var mappings = new InMemoryUserMappings();
         var machine = MachineWith(mappings);
-        var subject = new UserMappings(mappings, machine);
+        var subject = new UserMappings(mappings, machine, NullLogger<UserMappings>.Instance);
 
         Open(machine);
         subject.Map(PairingId, "local-user-2", "peer-user-2", "Anna", Administrator, At);
