@@ -58,8 +58,11 @@ public class CatchAllSiteTests
     /// Api/PeerPlaneController.cs: every escaping fault is answered with the refusal every
     /// caller gets, so a fault on the pairing plane tells a peer no more than a refusal does.
     ///
-    /// Api/AdministrativePlaneController.cs: every escaping fault is answered as the one
-    /// administrative problem that names what failed and carries nothing of the fault.
+    /// Api/AdministrativePlaneController.cs: every escaping fault is answered as the
+    /// administrative problem that names what failed and carries nothing of the fault. Two of
+    /// them, one per store the plane reads: a key store that will not parse and a record store
+    /// that will not parse are two files and two answers, and a single catch over both would
+    /// name whichever store the code happened to reach first.
     ///
     /// KeyStore/StoreAtStartup.cs: a store that cannot be read at startup must not take the
     /// server down with it, so the read is reported and the host is left running.
@@ -71,7 +74,7 @@ public class CatchAllSiteTests
     private static readonly Dictionary<string, int> DeclaredSites = new(StringComparer.Ordinal)
     {
         ["Api/PeerPlaneController.cs"] = 1,
-        ["Api/AdministrativePlaneController.cs"] = 1,
+        ["Api/AdministrativePlaneController.cs"] = 2,
         ["KeyStore/StoreAtStartup.cs"] = 1,
         ["KeyStore/AtomicWrite.cs"] = 1,
     };

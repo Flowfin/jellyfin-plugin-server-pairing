@@ -54,6 +54,14 @@ there is no page and no endpoint an administrator can open an enrolment from.
 Two servers cannot be paired with this version. The `changelog` field in
 `build.yaml` and `build.net10.0.yaml` carries that paragraph in the same words.
 
+- The plugin's configuration page now says whether an enrolment window is open on
+  this server, and an administrative endpoint answers the same question for
+  anything else that asks. A window an operator opened and forgot is the failure
+  the enrolment bounds exist against, and until now the only place a server said
+  one had been opened was a log line written once at the moment it opened. What
+  this version answers is empty on every server, because nothing yet joins the
+  window to the record it would be reported from, and the page says an operator
+  has no window open rather than saying nothing.
 - [protocol] A request that arrives with a correct signature is now judged for
   freshness before this server acts on it. One whose timestamp is further from this
   server's clock than the tolerated skew is answered `clock`, one carrying a nonce

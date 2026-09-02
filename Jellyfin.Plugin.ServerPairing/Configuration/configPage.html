@@ -8,6 +8,7 @@
     <div id="ServerPairingConfigPage" data-role="page" class="page type-interior pluginConfigurationPage" data-require="emby-input,emby-button,emby-select,emby-checkbox">
         <div data-role="content">
             <div class="content-primary">
+                <div id="EnrolmentWindowState" class="fieldDescription" data-role="enrolment-window-state"></div>
                 <form id="ServerPairingConfigForm">
                     <div class="selectContainer">
                         <label class="selectLabel" for="Options">Several Options</label>
@@ -45,8 +46,49 @@
                 pluginUniqueId: '130cc961-461b-49fd-8a3e-f9eb46db0716'
             };
 
+            // While an enrolment window is open the plugin says so, because a window somebody
+            // opened and forgot is the failure the enrolment bounds are there for. The answer
+            // is read from the plugin's own endpoint on every pageshow rather than baked into
+            // the served markup, so what is rendered is the state now and not the state when
+            // the page was built.
+            //
+            // Every value out of that answer reaches the page through textContent. A pairing
+            // identifier is this server's own and a timestamp is a timestamp, so neither is a
+            // peer-controlled string today; the rule is that a value from an endpoint is text
+            // and never markup, and it is written at the first value rather than at the first
+            // hostile one.
+            function renderEnrolmentWindows(open) {
+                var line = document.querySelector('#EnrolmentWindowState');
+
+                while (line.firstChild) {
+                    line.removeChild(line.firstChild);
+                }
+
+                if (!open || open.length === 0) {
+                    line.textContent = 'No enrolment window is open.';
+                    return;
+                }
+
+                line.textContent = open.length === 1
+                    ? 'An enrolment window is open. While it is open this server will answer the address it was opened against.'
+                    : open.length + ' enrolment windows are open. While they are open this server will answer the addresses they were opened against.';
+
+                var list = document.createElement('ul');
+
+                open.forEach(function (window) {
+                    var item = document.createElement('li');
+                    item.textContent = window.pairingId + ' opened at ' + window.openedAt;
+                    list.appendChild(item);
+                });
+
+                line.appendChild(list);
+            }
+
             document.querySelector('#ServerPairingConfigPage')
                 .addEventListener('pageshow', function() {
+                    ApiClient.getJSON(ApiClient.getUrl('ServerPairing/Administration/windows'))
+                        .then(renderEnrolmentWindows);
+
                     Dashboard.showLoadingMsg();
                     ApiClient.getPluginConfiguration(ServerPairingConfig.pluginUniqueId).then(function (config) {
                         document.querySelector('#Options').value = config.Options;

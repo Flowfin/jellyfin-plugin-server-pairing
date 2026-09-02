@@ -371,6 +371,8 @@ public class PairingStateMachineTests
         private readonly Dictionary<string, PairingRecord> _held =
             new Dictionary<string, PairingRecord>(StringComparer.Ordinal);
 
+        public IReadOnlyList<string> Pairings() => new List<string>(_held.Keys);
+
         public int Reads { get; private set; }
 
         public int Writes { get; private set; }

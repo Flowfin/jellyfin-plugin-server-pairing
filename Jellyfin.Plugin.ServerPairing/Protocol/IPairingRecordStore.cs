@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+
 namespace Jellyfin.Plugin.ServerPairing.Protocol;
 
 /// <summary>
@@ -18,6 +20,24 @@ namespace Jellyfin.Plugin.ServerPairing.Protocol;
 /// </remarks>
 public interface IPairingRecordStore
 {
+    /// <summary>
+    /// Every pairing this store holds a record for.
+    /// </summary>
+    /// <returns>The identifiers, in no particular order.</returns>
+    /// <remarks>
+    /// The state machine needs one record at a time and never this, so the walk was declared on
+    /// the shipped store and kept off this interface until something outside the state machine
+    /// asked for it. An administrative read is that caller: a plane resolves this interface and
+    /// cannot ask a concrete file store for a walk without being built against the file rather
+    /// than against the contract.
+    /// <para>
+    /// It answers identifiers and nothing else, which is the same bound
+    /// <see cref="KeyStore.IPairingKeyStore.Pairings"/> carries: a caller that only wants to
+    /// display something is handed no record and no key material by asking what is held.
+    /// </para>
+    /// </remarks>
+    IReadOnlyList<string> Pairings();
+
     /// <summary>
     /// The record held for a pairing.
     /// </summary>

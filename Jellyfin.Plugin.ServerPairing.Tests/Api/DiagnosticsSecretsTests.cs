@@ -160,6 +160,7 @@ public class DiagnosticsSecretsTests
     {
         var controller = new AdministrativePlaneController(
             side.Keys,
+            new Tests.Protocol.InMemoryPairingRecords(),
             side.Refusals,
             side.Arrivals,
             NullLogger<AdministrativePlaneController>.Instance);

@@ -394,6 +394,8 @@ public class UserMappingTests
 
     private sealed class NoRecords : IPairingRecordStore
     {
+        public IReadOnlyList<string> Pairings() => Array.Empty<string>();
+
         public PairingRecord? Read(string pairingId) => null;
 
         public void Write(PairingRecord record)
@@ -409,6 +411,8 @@ public class UserMappingTests
     {
         private readonly Dictionary<string, PairingRecord> _held =
             new Dictionary<string, PairingRecord>(StringComparer.Ordinal);
+
+        public IReadOnlyList<string> Pairings() => new List<string>(_held.Keys);
 
         public PairingRecord? Read(string pairingId)
             => _held.TryGetValue(pairingId, out var record) ? record : null;
