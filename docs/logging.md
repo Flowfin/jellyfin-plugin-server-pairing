@@ -137,8 +137,8 @@ are both in the tree:
 What is missing is the logging itself, and it is less missing than it was. This
 paragraph said nothing in the plugin took a logger and that a capturing logger
 would be handed a run that writes nothing, then that two types take one, then
-that four do. Five do. Which rows of the table each of them writes is under the
-reading rather than counted here.
+that four do, then that five do. Six do. Which rows of the table each of them
+writes is under the reading rather than counted here.
 
     git grep -nE "ILogger|_logger" origin/master -- Jellyfin.Plugin.ServerPairing
     origin/master:Jellyfin.Plugin.ServerPairing/Api/AdministrativePlaneController.cs:60:    private readonly ILogger<AdministrativePlaneController> _logger;
@@ -165,6 +165,8 @@ reading rather than counted here.
     origin/master:Jellyfin.Plugin.ServerPairing/KeyStore/StoreAtStartup.cs:82:            if (_logger.IsEnabled(LogLevel.Information))
     origin/master:Jellyfin.Plugin.ServerPairing/KeyStore/StoreAtStartup.cs:86:                    _logger.LogInformation(
     origin/master:Jellyfin.Plugin.ServerPairing/KeyStore/StoreAtStartup.cs:96:            _logger.LogError(fault, "The key store could not be read at startup, so what it holds is unknown and no pairing will work. The server is left running.");
+    origin/master:Jellyfin.Plugin.ServerPairing/Mapping/UserMappings.cs:37:    private readonly ILogger<UserMappings> _log;
+    origin/master:Jellyfin.Plugin.ServerPairing/Mapping/UserMappings.cs:53:    public UserMappings(IUserMappingStore mappings, PairingStateMachine pairings, ILogger<UserMappings> log)
     origin/master:Jellyfin.Plugin.ServerPairing/PluginServiceRegistrator.cs:124:                services.GetRequiredService<ILogger<FilePairingKeyStore>>()));
 
 THIS BLOCK WENT STALE TWICE AND NO RUN ON THIS REPOSITORY SAW EITHER TIME. It
