@@ -169,7 +169,8 @@ A version raised in one commit and described in another leaves a published
 version whose entry has to be reconstructed from a list of commits, which is the
 reconstruction nobody does. [`.github/pr-hygiene.sh`](../.github/pr-hygiene.sh)
 refuses a manifest version change that arrives with no changelog entry, and
-refuses a protocol or contract change that arrives with no line marked for it.
+refuses a protocol or contract change that arrives with no line marked for it
+and no declaration in its body that nothing a peer or a consumer can see moved.
 
 ## What this document does not decide
 

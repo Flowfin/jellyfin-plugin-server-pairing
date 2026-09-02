@@ -29,6 +29,13 @@ Those two markers are read by a machine and not only by a person.
 touches the protocol or the consumer contract and adds no line carrying the
 marker for what it touched.
 
+What it reads is a set of paths, and a change inside them that moves nothing a
+peer or a consumer can see has no line to add here, by the rule at the top of
+this file. Such a change says so in its own body instead, on a line reading
+`No protocol change:` or `No contract change:` with the reason, which is where a
+claim that cannot be verified belongs rather than in this file.
+[`CONTRIBUTING.md`](CONTRIBUTING.md) carries the wording.
+
 Anything else is an ordinary line with no marker.
 
 ## 0.1.0.0

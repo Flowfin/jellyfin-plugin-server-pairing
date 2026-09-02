@@ -189,6 +189,36 @@ fi
 # exist in the tree yet: the consumer contract is M6 and this is the guard
 # waiting for it. A contract that lands somewhere else walks past this, so the
 # issue that creates it moves this list in the same change.
+#
+# THE PATHS ARE A PROXY FOR THE SUBJECT AND THEY OVER-REFUSE. The subject is a
+# change to what the two servers say to each other, or to what a consumer
+# compiles against. The proxy is a directory. A change inside that directory
+# that alters nothing a peer or a consumer can observe - a loop rewritten to
+# close a static-analysis alert, a comment, a rename of something private -
+# earns no changelog line, because CHANGELOG.md's own first rule is that a
+# change nobody outside this repository can see does not belong in it.
+#
+# Before the declaration below there were two ways past that, and both were
+# worse than the rule. Write a [protocol] line the change does not carry, which
+# puts a false claim in the file operators read on the far side of a pairing and
+# is the one place a false claim costs most. Or leave the change unmade, which
+# is what happened: issue #314's repair sat unmade because the alert it closes
+# is in Protocol/ and the repair earns no line.
+#
+# So a pull request may declare instead, on a line of its own in the body:
+#
+#     No protocol change: <why the change inside those paths changes no wire>
+#
+# NOTHING HERE VERIFIES THAT DECLARATION. It is a claim a reader judges, exactly
+# as a [protocol] line is a claim a reader judges - this check asks whether a
+# marked line was added and never whether it says what the change did. What the
+# declaration buys is not a stronger check. It is that the untrue version of it
+# stays in the pull request, where it is read once and thrown away, instead of
+# landing in CHANGELOG.md, where it is read for as long as the entry stands.
+#
+# The reason is required and the kind is not interchangeable: a declaration
+# naming one kind does nothing for the other, so a change touching both
+# declares both or carries the line for what it did change.
 protocol_paths='^Jellyfin\.Plugin\.ServerPairing/Protocol/'
 contract_paths='^docs/consumer-interface\.md$|^Jellyfin\.Plugin\.ServerPairing/Contract/'
 
@@ -211,7 +241,13 @@ marked_change() {
         return
     fi
 
-    echo "FAIL  the ${kind} changed and CHANGELOG.md gained no [${kind}] line"
+    if declared=$(printf '%s\n' "$PR_BODY" | grep -E "^No ${kind} change:[[:space:]]*[^[:space:]]"); then
+        echo "ok    the ${kind} paths changed and the body declares no ${kind} change"
+        printf '%s\n' "$declared" | sed 's/^/      /'
+        return
+    fi
+
+    echo "FAIL  the ${kind} changed and CHANGELOG.md gained no [${kind}] line, and the body declares no \"No ${kind} change:\" with a reason"
     fail=1
 }
 
