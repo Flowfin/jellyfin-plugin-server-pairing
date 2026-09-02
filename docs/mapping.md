@@ -161,6 +161,41 @@ nothing rather than a guess, which is the fail-closed direction; the alternative
 is deciding from a name which peer user somebody is, which is the failure at the
 top of this document.
 
+## The trail a change leaves
+
+Every mapping made and every mapping removed writes one entry, and both go
+through `UserMappings` and through nothing else, so the entry cannot be skipped
+by a caller that forgot to write one. The row is
+[`docs/logging.md`](logging.md)'s, and it carries three things: the pairing, the
+administrator who made the change, and which way the mapping moved.
+
+**Which way it moved is all the entry says about the change.** That is the answer
+taken on issue #40 on 2026-08-31 rather than a shape chosen while building it.
+The identities on either side of a mapping are the first item on the never-log
+list, in any form, and the audit is the record an operator keeps longest and
+pastes into a forum thread. So the log answers that a mapping moved, who moved it
+and which way, and the mapping table answers which peer user a local user is
+mapped to, live, to an operator entitled to ask.
+
+What that costs is worth reading rather than implying: an operator whose user's
+history went to the wrong account cannot reconstruct the old mapping from the
+log. They can see that it changed, when, and who changed it, which is what lets
+the change be noticed at all.
+
+**A removal names who removed it.** `UserMappings.Unmap` takes the administrator
+for the same reason `Map` does. It took none until this rule landed, so half of
+every trail was a change nobody was named for.
+
+**Removing a mapping that is not there writes nothing**, and neither does a
+mapping this table refuses. An entry per call rather than per change would let
+anything reaching this surface grow an operator's log without a mapping ever
+moving.
+
+**A pairing ending writes none of these.** The sweep is the relationship ending
+rather than an administrator changing a mapping, and a revocation has its own row
+at its own level. One revocation reported as many mapping changes would be
+counted as many changes by whoever reads the log.
+
 ## What this document does not cover
 
 **Where the table is written.** The store is an interface and the only

@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Jellyfin.Plugin.ServerPairing.Protocol;
+using Microsoft.Extensions.Logging;
 
 namespace Jellyfin.Plugin.ServerPairing.Mapping;
 
@@ -20,21 +21,40 @@ namespace Jellyfin.Plugin.ServerPairing.Mapping;
 /// store, so this type asks the one thing that owns what state a pairing is in rather than
 /// deciding for itself.
 /// </para>
+/// <para>
+/// THE AUDIT ENTRY IS WRITTEN HERE BECAUSE EVERY CHANGE PASSES HERE. A mapping is made and
+/// removed through this type and through nothing else, which the suite refuses a second route
+/// against, so an entry written at this one place cannot be skipped by a caller that forgot.
+/// An entry written by an administration surface instead would cover the changes that surface
+/// made and no others, and the surface does not exist yet, which would leave the trail owed
+/// by whatever is built next.
+/// </para>
 /// </remarks>
 public sealed class UserMappings
 {
     private readonly IUserMappingStore _mappings;
     private readonly PairingStateMachine _pairings;
+    private readonly ILogger<UserMappings> _log;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="UserMappings"/> class.
     /// </summary>
     /// <param name="mappings">Where the mappings are kept.</param>
     /// <param name="pairings">What owns the state of a pairing.</param>
-    public UserMappings(IUserMappingStore mappings, PairingStateMachine pairings)
+    /// <param name="log">Where the audit entry for a change goes.</param>
+    /// <exception cref="ArgumentNullException">Any argument is null.</exception>
+    /// <remarks>
+    /// The log is required rather than optional, for the reason the mapping store is required
+    /// on <see cref="PairingStateMachine"/>: an overload without it would build a type that
+    /// changes the table an administrator is answerable for and records none of it, silently,
+    /// and a caller reaching that overload would have to notice an absence rather than a
+    /// failure.
+    /// </remarks>
+    public UserMappings(IUserMappingStore mappings, PairingStateMachine pairings, ILogger<UserMappings> log)
     {
         _mappings = mappings ?? throw new ArgumentNullException(nameof(mappings));
         _pairings = pairings ?? throw new ArgumentNullException(nameof(pairings));
+        _log = log ?? throw new ArgumentNullException(nameof(log));
     }
 
     /// <summary>
@@ -100,6 +120,8 @@ public sealed class UserMappings
 
         _mappings.Put(new UserMapping(pairingId, localUserId, peerUserId, peerDisplayName, administrator, at));
 
+        Record(pairingId, administrator, MappingDirection.Mapped);
+
         return MappingOutcome.Mapped;
     }
 
@@ -108,7 +130,52 @@ public sealed class UserMappings
     /// </summary>
     /// <param name="pairingId">The pairing identifier.</param>
     /// <param name="localUserId">The user on this server.</param>
-    public void Unmap(string pairingId, string localUserId) => _mappings.Remove(pairingId, localUserId);
+    /// <param name="administrator">The administrator removing it.</param>
+    /// <returns>True where a mapping was there and is now gone, false where there was none.</returns>
+    /// <exception cref="ArgumentNullException">The pairing, the user or the administrator is null.</exception>
+    /// <remarks>
+    /// The administrator is required here for the same reason it is required on
+    /// <see cref="Map"/>. This method took none until issue #40's answer landed, so the one
+    /// field every reading of the audit entry agreed on could not be written for a removal at
+    /// all, and half of every trail was a change nobody was named for.
+    /// <para>
+    /// WHAT IT DOES NOT TAKE IS AN INSTANT, AND THE NOTE ON #40 THAT ASKED FOR ONE IS ANSWERED
+    /// RATHER THAN FOLLOWED. <see cref="Map"/> takes one because the mapping it writes carries
+    /// it; a removal writes no record, and the only place a removal's moment could go is the
+    /// audit entry, whose fields are fixed by the row in <c>docs/logging.md</c> and which says
+    /// of itself that it adds no field that table does not name. When a change happened is the
+    /// log line's own timestamp, which every entry carries and no row lists.
+    /// </para>
+    /// <para>
+    /// Removing a mapping that is not there writes nothing and says so in the return. An entry
+    /// per call rather than per change would let anything that can reach this make an
+    /// administrator's log grow without a mapping ever moving, and a trail that records
+    /// non-events is one a reader stops trusting.
+    /// </para>
+    /// <para>
+    /// A pairing ending sweeps its mappings and writes none of these. That removal is not an
+    /// administrator changing a mapping, it is the relationship ending, which
+    /// <c>docs/logging.md</c> gives its own row and its own level; an entry per swept mapping
+    /// would report one revocation as many mapping changes, none of them decided by anybody.
+    /// </para>
+    /// </remarks>
+    public bool Unmap(string pairingId, string localUserId, string administrator)
+    {
+        ArgumentNullException.ThrowIfNull(pairingId);
+        ArgumentNullException.ThrowIfNull(localUserId);
+        ArgumentNullException.ThrowIfNull(administrator);
+
+        if (Of(pairingId, localUserId) is null)
+        {
+            return false;
+        }
+
+        _mappings.Remove(pairingId, localUserId);
+
+        Record(pairingId, administrator, MappingDirection.Unmapped);
+
+        return true;
+    }
 
     /// <summary>
     /// The mappings held for a pairing.
@@ -147,4 +214,36 @@ public sealed class UserMappings
     public UserMapping? From(string pairingId, string peerUserId)
         => _mappings.For(pairingId)
             .FirstOrDefault(mapping => string.Equals(mapping.PeerUserId, peerUserId, StringComparison.Ordinal));
+
+    /// <summary>
+    /// Writes the audit entry for a mapping that moved.
+    /// </summary>
+    /// <param name="pairingId">The pairing the mapping belongs to.</param>
+    /// <param name="administrator">The administrator who moved it.</param>
+    /// <param name="direction">Which way it moved.</param>
+    /// <remarks>
+    /// ONE CALL SITE FOR BOTH DIRECTIONS, so the sentence an operator finds in a log cannot
+    /// drift between adding and removing and so the guard that ties call sites to rows of
+    /// <c>docs/logging.md</c> has one message to hold rather than two that have to be kept
+    /// saying the same thing.
+    /// <para>
+    /// NEITHER IDENTIFIER IS WRITTEN, AND THAT IS THE POINT OF THE ENTRY RATHER THAN A LIMIT ON
+    /// IT. The peer user identity is the first thing on the never-log list, in any form, and
+    /// the local one is not a field the row names. What is held longest would otherwise be the
+    /// record carrying exactly the data the rules forbid. An operator asking which peer user a
+    /// local user is mapped to reads the mapping table, live, and is entitled to; the log
+    /// answers that a mapping moved, who moved it and which way.
+    /// </para>
+    /// </remarks>
+    private void Record(string pairingId, string administrator, MappingDirection direction)
+    {
+        if (_log.IsEnabled(LogLevel.Information))
+        {
+            _log.LogInformation(
+                "A mapping was added, changed or removed by an administrator. Pairing: {PairingId}, administrator: {Administrator}, direction: {Direction}",
+                pairingId,
+                administrator,
+                direction);
+        }
+    }
 }

@@ -137,8 +137,8 @@ are both in the tree:
 What is missing is the logging itself, and it is less missing than it was. This
 paragraph said nothing in the plugin took a logger and that a capturing logger
 would be handed a run that writes nothing, then that two types take one, then
-that four do. Five do. Which rows of the table each of them writes is under the
-reading rather than counted here.
+that four do, then that five do. Six do. Which rows of the table each of them
+writes is under the reading rather than counted here.
 
     git grep -nE "ILogger|_logger" origin/master -- Jellyfin.Plugin.ServerPairing
     origin/master:Jellyfin.Plugin.ServerPairing/Api/AdministrativePlaneController.cs:60:    private readonly ILogger<AdministrativePlaneController> _logger;
@@ -165,6 +165,8 @@ reading rather than counted here.
     origin/master:Jellyfin.Plugin.ServerPairing/KeyStore/StoreAtStartup.cs:82:            if (_logger.IsEnabled(LogLevel.Information))
     origin/master:Jellyfin.Plugin.ServerPairing/KeyStore/StoreAtStartup.cs:86:                    _logger.LogInformation(
     origin/master:Jellyfin.Plugin.ServerPairing/KeyStore/StoreAtStartup.cs:96:            _logger.LogError(fault, "The key store could not be read at startup, so what it holds is unknown and no pairing will work. The server is left running.");
+    origin/master:Jellyfin.Plugin.ServerPairing/Mapping/UserMappings.cs:37:    private readonly ILogger<UserMappings> _log;
+    origin/master:Jellyfin.Plugin.ServerPairing/Mapping/UserMappings.cs:53:    public UserMappings(IUserMappingStore mappings, PairingStateMachine pairings, ILogger<UserMappings> log)
     origin/master:Jellyfin.Plugin.ServerPairing/PluginServiceRegistrator.cs:124:                services.GetRequiredService<ILogger<FilePairingKeyStore>>()));
 
 THIS BLOCK WENT STALE TWICE AND NO RUN ON THIS REPOSITORY SAW EITHER TIME. It
@@ -211,6 +213,15 @@ not name, passes it. It reads the message a call site opens with in the source
 rather than what reaches a log on a running server. And it says nothing whatever
 about the second list below: no check in this tree refuses a call site that
 writes key material, a signature, or a peer's user identity.
+
+ONE ENTRY IS JUDGED FURTHER THAN THAT, AND ONE IS NOT ALL OF THEM. The mapping
+row's level, and the absence from it of the local and the peer user identity, are
+asserted by `MappingAuditTests` over the text the entry actually produces. That
+is one row out of the table, asserted by driving the call rather than by reading
+the source, and it leaves every sentence above exactly as true of the others as
+it was. It is written here so that a reader does not take the paragraph above for
+a statement that nothing anywhere is checked, and it is not a step towards the
+run the section below asks for.
 
 The test this section asks for is a different and larger thing, and it does not
 exist. It drives a full enrolment, a rotation and a revocation at Debug against a

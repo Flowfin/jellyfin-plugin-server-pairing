@@ -81,6 +81,8 @@ public class LoggedEventTableTests
             "The key store was carried up from an older format",
         ["This plugin started against a key store that already holds this pairing."] =
             "The plugin started against a store that already holds a pairing",
+        ["A mapping was added, changed or removed by an administrator."] =
+            "A mapping was added, changed or removed",
     };
 
     /// <summary>
