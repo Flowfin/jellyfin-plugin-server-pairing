@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
@@ -261,12 +262,15 @@ public sealed class FilePairingRecordStore : IPairingRecordStore
         // damage rather than a record with a surprising value. Reading it would put a pairing
         // into whatever the default of the enumeration is, which is Absent, and a revoked pairing
         // silently reading as absent is the one outcome the kept record exists to prevent.
-        foreach (var stored in read.Values)
+        //
+        // One question over the sequence rather than a loop that throws inside itself. The loop
+        // this replaces walked the values and refused the first bad one, which is a filter
+        // followed by a single action, and it read as a missed Where to static analysis for
+        // exactly that reason. The damage is a property of the document rather than of the
+        // record that happens to carry it, so asking once and throwing once says what is meant.
+        if (read.Values.Any(stored => stored is null || !Enum.IsDefined(stored.State) || !Enum.IsDefined(stored.CameFrom)))
         {
-            if (stored is null || !Enum.IsDefined(stored.State) || !Enum.IsDefined(stored.CameFrom))
-            {
-                throw StoreDamagedException.For(_file, StoreDamagedException.RecordStoreName);
-            }
+            throw StoreDamagedException.For(_file, StoreDamagedException.RecordStoreName);
         }
 
         return new Dictionary<string, StoredRecord>(read, StringComparer.Ordinal);
