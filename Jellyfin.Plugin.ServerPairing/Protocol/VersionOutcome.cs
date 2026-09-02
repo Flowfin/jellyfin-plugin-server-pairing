@@ -5,8 +5,12 @@ namespace Jellyfin.Plugin.ServerPairing.Protocol;
 /// </summary>
 /// <remarks>
 /// Which code each of these becomes on the wire is fixed by the error taxonomy in
-/// <c>docs/protocol.md</c> rather than here, and nothing in this tree performs that mapping,
-/// because there is no endpoint that would. The taxonomy gives no version in common the
+/// <c>docs/protocol.md</c> rather than here, and nothing in this tree performs that mapping.
+/// THIS SENTENCE GAVE THE REASON AS THERE BEING NO ENDPOINT THAT WOULD, and the five peer
+/// paths are served. What is absent is the negotiation on them: nothing on either plane
+/// selects a version, so a <c>hello</c> reaching this server produces no
+/// <see cref="VersionOutcome"/> for anything to map. A reader of the old sentence waits for an
+/// endpoint that is already there. The taxonomy gives no version in common the
 /// <c>version</c> code, and gives it only to a caller inside an open enrolment window or one
 /// holding a verifying key. To anyone else it is the one undistinguished refusal, like
 /// everything else.
