@@ -206,6 +206,12 @@ nothing on the wire separates a rewound peer from an attacker. So **a peer that
 was restored behind this server's back is not detectable from here**, stated as
 undetectable rather than covered by a mechanism that implies otherwise.
 
+That sentence is held in place by `KeyStoreDocumentTests` in the test project,
+which reads this section and refuses its absence, and refuses the loss of the
+clause naming it undetectable rather than covered. An admission that something is
+not seen from here is the one kind of sentence a later edit removes without
+anybody noticing, and it is the one kind that has to survive.
+
 What stands in one direction only is the peer's own state, and it is a property of
 the specification rather than of anything running: `Revoked` is terminal in the
 state machine, so a peer that holds a pairing revoked answers nothing under it and
