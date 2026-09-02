@@ -24,11 +24,19 @@ namespace Jellyfin.Plugin.ServerPairing.Tests.Protocol;
 /// <see cref="PeerPlane"/>, because what is under test is the join rather than any one of
 /// them.
 /// <para>
-/// WHAT IS STIPULATED HERE IS THE REVOCATION ITSELF. No operation in this plugin composes the
-/// destruction with the transition into <c>Revoked</c>: there is no record store
-/// implementation for <see cref="PairingStateMachine"/> to write through, and nothing outbound
-/// to attempt the courtesy notification with. So these cases destroy the key directly and
-/// assert what a peer meets afterwards, which is the half of issue #24 the tree can carry.
+/// WHAT IS STIPULATED HERE IS THE REVOCATION ITSELF, AND SOMETHING PERFORMS ONE NOW. This
+/// paragraph said no operation in this plugin composes the destruction with the transition into
+/// <c>Revoked</c>, because <see cref="PairingStateMachine"/> had no record store implementation
+/// to write through. <see cref="FilePairingRecordStore"/> landed and
+/// <see cref="Revocation"/> is that composition, with its own cases in
+/// <see cref="AdministrativeRevocationTests"/>. These cases still destroy the key directly and
+/// on purpose: what they are about is what a peer meets afterwards, and reaching that through
+/// the operation would put a second thing between the fixture and the assertion.
+/// </para>
+/// <para>
+/// What has not changed is the courtesy notification. There is still nothing outbound to
+/// attempt one with, for the reason issue #24 records: a message this server sends needs the
+/// peer's address and the version the pairing settled on, and neither is on the record.
 /// </para>
 /// <para>
 /// Nothing here waits for real time. Every read on the store takes the instant it is judged
