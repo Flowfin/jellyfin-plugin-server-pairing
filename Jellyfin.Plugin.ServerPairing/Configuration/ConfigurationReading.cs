@@ -264,9 +264,13 @@ public sealed class ConfigurationReading
     /// <remarks>
     /// NOTHING IN THIS PLUGIN CALLS THIS YET, and that is a bound rather than an oversight. A
     /// window is opened by an administrator and by nobody else, so the thing that builds one is
-    /// the administrative surface, which is issue #49 and does not exist. Until it does, the
-    /// only caller is the test that proves the lifetime reaches the window, and the setting is
-    /// a number the server refuses out of range and hands to nothing.
+    /// an action on the administrative plane. THIS REMARK SAID THAT PLANE IS ISSUE #49 AND DOES
+    /// NOT EXIST. It exists, with two actions on it, and neither opens a window; #49 is the page
+    /// an operator would reach it through rather than the surface itself. The bound is unmoved
+    /// by the correction and what a reader waits for is not: an action rather than a plane to
+    /// put one on. Until there is one, the only caller is the test that proves the lifetime
+    /// reaches the window, and the setting is a number the server refuses out of range and hands
+    /// to nothing.
     /// </remarks>
     public EnrolmentWindow NewEnrolmentWindow(IPairedPeers paired)
         => new EnrolmentWindow(paired, EnrolmentWindowSeconds);
