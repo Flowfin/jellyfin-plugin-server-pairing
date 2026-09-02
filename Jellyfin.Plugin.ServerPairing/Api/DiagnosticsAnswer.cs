@@ -19,7 +19,12 @@ namespace Jellyfin.Plugin.ServerPairing.Api;
 /// <para>
 /// WHAT IS NOT HERE IS THE LARGER HALF OF WHAT ISSUE #51 ASKS FOR, and it is absent because it
 /// has no producer rather than because it was left out. The state of each pairing and when it
-/// last succeeded needs a record store, of which this tree has no implementation. The version
+/// last succeeded needs a record store. THIS SENTENCE SAID THIS TREE HAS NO IMPLEMENTATION OF
+/// ONE, and <see cref="Protocol.FilePairingRecordStore"/> ships and is registered; what has no
+/// implementation is the reading, because nothing on either plane resolves that store. The
+/// member is still absent for want of a producer, and the producer it wants is a join rather
+/// than a store somebody has yet to write, which is the half a reader of the old sentence would
+/// have gone looking for. The version
 /// this server speaks and the version a peer speaks needs a peer that has ever answered. The
 /// last error per pairing needs a pairing. The matching counters issue #39 asks for need a
 /// matcher that counts, and it is a pure function that counts nothing. Each of those is a

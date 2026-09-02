@@ -163,11 +163,21 @@ public sealed class PeerPlane
     /// THIS PARAGRAPH SAID EVERY ANSWER TODAY IS <see cref="RefusalCode.Refused"/>. A verified
     /// request that is stale, replayed or arriving with no room left to remember its nonce is
     /// answered with its own code. What is unchanged is the answer to everything before
-    /// verification, and the answer to a request that is verified and fresh: no record store
-    /// exists, so every pairing is <see cref="PairingState.Absent"/>, and the <c>Absent</c> row
-    /// of that table is the undistinguished refusal for all five messages.
+    /// verification, and the answer to a request that is verified and fresh: every pairing is
+    /// <see cref="PairingState.Absent"/> here, and the <c>Absent</c> row of that table is the
+    /// undistinguished refusal for all five messages.
     /// <c>PeerPlaneTests.TheAbsentRowRefusesEveryMessage</c> is the assertion that ties this
     /// answer to the table instead of to this sentence.
+    /// <para>
+    /// THAT SENTENCE SAID NO RECORD STORE EXISTS, AND ONE DOES.
+    /// <see cref="Protocol.FilePairingRecordStore"/> ships and is registered in
+    /// <see cref="PluginServiceRegistrator"/>. What this plane holds is the reason instead:
+    /// nothing in this directory takes an <see cref="Protocol.IPairingRecordStore"/> or a
+    /// <see cref="Protocol.PairingStateMachine"/>, so no request that arrives here can be on a
+    /// pairing in any state but <c>Absent</c>. The answer is unmoved by the correction and the
+    /// repair is not: a reader of the old sentence would look for a store to build, and what is
+    /// missing is the join between this plane and the one that exists.
+    /// </para>
     /// <para>
     /// THAT IS NOW TRUE OF THE ANSWER AND NOT OF THE VERIFICATION, which is a distinction a
     /// reader of this paragraph could previously not make. The key store is read on this path,

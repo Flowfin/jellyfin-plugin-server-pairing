@@ -20,9 +20,13 @@ namespace Jellyfin.Plugin.ServerPairing.Api;
 /// <para>
 /// The <c>Absent</c> row of the transition table is still the undistinguished refusal for all
 /// five messages, so a request that is fresh and verified is answered <see cref="Refused"/>
-/// while no record store exists. THIS SENTENCE SAID NO KEY STORE EXISTS EITHER, and one does
-/// and is read on that path, which is issue #287. The rest are named here so the taxonomy has
-/// one expression in code rather than a partial one that grows a second.
+/// while nothing on this plane reads a pairing record. THIS SENTENCE SAID NO KEY STORE EXISTS
+/// EITHER, and one does and is read on that path, which is issue #287. IT THEN WENT ON SAYING
+/// NO RECORD STORE EXISTS, AND THAT HALF WAS WRONG IN THE SAME WAY AND FOR LONGER:
+/// <see cref="Protocol.FilePairingRecordStore"/> ships and is registered, and what is absent is
+/// a reader for it in this directory. One line drifted twice about two stores, which is why the
+/// correction names the reader rather than the store. The rest are named here so the taxonomy
+/// has one expression in code rather than a partial one that grows a second.
 /// </para>
 /// </remarks>
 public enum RefusalCode
