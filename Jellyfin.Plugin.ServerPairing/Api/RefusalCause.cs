@@ -75,9 +75,10 @@ public enum RefusalCause
 
     /// <summary>
     /// The signature verified and the message is not accepted in the state the pairing is in.
-    /// On a server today every pairing is <see cref="Protocol.PairingState.Absent"/>, because
-    /// no record store exists, so this is what a peer holding a good key meets. That the code
-    /// answered for it is <see cref="RefusalCode.Refused"/> rather than
+    /// On a server today every pairing is <see cref="Protocol.PairingState.Absent"/> on this
+    /// plane, so this is what a peer holding a good key meets. THIS SENTENCE GAVE THE REASON AS
+    /// NO RECORD STORE EXISTING, and one does: what nothing in this directory does is read it.
+    /// That the code answered for it is <see cref="RefusalCode.Refused"/> rather than
     /// <see cref="RefusalCode.State"/> is issue #287 and is not decided here.
     /// </summary>
     NotAcceptedInThisState = 5,
