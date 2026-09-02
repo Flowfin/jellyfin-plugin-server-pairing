@@ -216,7 +216,7 @@ THE KEY SOURCE THE PLANE IS GIVEN HOLDS NO KEYS. The source reads the key store
 now, which is issue #287:
 
     git grep -n 'new StoreBackedKeys' origin/master -- Jellyfin.Plugin.ServerPairing/PluginServiceRegistrator.cs
-    origin/master:Jellyfin.Plugin.ServerPairing/PluginServiceRegistrator.cs:66:            new StoreBackedKeys(services.GetRequiredService<IPairingKeyStore>()));
+    origin/master:Jellyfin.Plugin.ServerPairing/PluginServiceRegistrator.cs:67:            new StoreBackedKeys(services.GetRequiredService<IPairingKeyStore>()));
 
 What no route does is put a key in that store. There is no enrolment, so nothing
 generates a long-term key pair for one:

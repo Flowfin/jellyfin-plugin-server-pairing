@@ -117,7 +117,7 @@ which is issue #287:
 
 ```
 git grep -n 'new StoreBackedKeys' origin/master -- Jellyfin.Plugin.ServerPairing/PluginServiceRegistrator.cs
-origin/master:Jellyfin.Plugin.ServerPairing/PluginServiceRegistrator.cs:66:            new StoreBackedKeys(services.GetRequiredService<IPairingKeyStore>()));
+origin/master:Jellyfin.Plugin.ServerPairing/PluginServiceRegistrator.cs:67:            new StoreBackedKeys(services.GetRequiredService<IPairingKeyStore>()));
 ```
 
 What holds instead is that the store an adversary would have to be in is empty on
@@ -839,7 +839,7 @@ server's key store, which is issue #287:
 
 ```
 git grep -n 'new StoreBackedKeys' origin/master -- Jellyfin.Plugin.ServerPairing/PluginServiceRegistrator.cs
-origin/master:Jellyfin.Plugin.ServerPairing/PluginServiceRegistrator.cs:66:            new StoreBackedKeys(services.GetRequiredService<IPairingKeyStore>()));
+origin/master:Jellyfin.Plugin.ServerPairing/PluginServiceRegistrator.cs:67:            new StoreBackedKeys(services.GetRequiredService<IPairingKeyStore>()));
 ```
 
 **THE REACH THAT BUYS AN ADVERSARY IS A LOOKUP AND NOT A KEY**, and the two are

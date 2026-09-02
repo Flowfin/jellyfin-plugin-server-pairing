@@ -38,17 +38,25 @@ setting to get wrong:
 assertion, and it compares against the two paths the host reports rather than
 against a string written twice.
 
-**THE DIRECTORY IS NO LONGER THIS STORE'S ALONE.** The pairing record store
-writes a second file beside this one, under the same directory and the same
-permissions, and issue #311 is where that landed. It holds what state each
-pairing is in and how it got there and no key material of any kind, so nothing in
-the rest of this document changes; what does change is that a reader listing that
-directory will find two files rather than one, and that an operator moving this
-plugin's state moves both. The two are separate files on purpose: a key store
-that refuses is not a reason an operator cannot be told what state a pairing is
-in.
+**THE DIRECTORY IS NO LONGER THIS STORE'S ALONE, AND THIS PARAGRAPH SAID A READER
+WOULD FIND TWO FILES.** There are three. The pairing record store writes one
+beside this one, in issue #311, and the mapping store writes another, in issue
+#36. Both are under the same directory and the same permissions, and neither
+holds key material of any kind, so nothing in the rest of this document changes;
+what does change is the count a reader listing that directory meets, and that an
+operator moving this plugin's state moves all three. They are separate files on
+purpose: a key store that refuses is not a reason an operator cannot be told what
+state a pairing is in, nor a reason an administrator cannot be shown which users
+are mapped.
 
-    git grep -n 'public const string FileName' -- Jellyfin.Plugin.ServerPairing/Protocol/RecordStorePath.cs
+    git grep -n 'public const string FileName' -- Jellyfin.Plugin.ServerPairing/Protocol/RecordStorePath.cs Jellyfin.Plugin.ServerPairing/Mapping/MappingStorePath.cs
+
+**One of the two holds personal data and this one does not.** A mapping carries
+the peer's display name for a user, which names a person, and
+[`data.md`](data.md) is where that field is argued. What it buys this document is
+nothing and what it costs is a sentence: the permissions below are the reason
+that file is not readable by another user on the host either, so they are no
+longer only about key material.
 
 ## What the store holds
 
