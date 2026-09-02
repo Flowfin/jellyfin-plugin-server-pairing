@@ -170,7 +170,7 @@ writes is under the reading rather than counted here.
     origin/master:Jellyfin.Plugin.ServerPairing/KeyStore/StoreAtStartup.cs:96:            _logger.LogError(fault, "The key store could not be read at startup, so what it holds is unknown and no pairing will work. The server is left running.");
     origin/master:Jellyfin.Plugin.ServerPairing/Mapping/UserMappings.cs:37:    private readonly ILogger<UserMappings> _log;
     origin/master:Jellyfin.Plugin.ServerPairing/Mapping/UserMappings.cs:53:    public UserMappings(IUserMappingStore mappings, PairingStateMachine pairings, ILogger<UserMappings> log)
-    origin/master:Jellyfin.Plugin.ServerPairing/PluginServiceRegistrator.cs:124:                services.GetRequiredService<ILogger<FilePairingKeyStore>>()));
+    origin/master:Jellyfin.Plugin.ServerPairing/PluginServiceRegistrator.cs:125:                services.GetRequiredService<ILogger<FilePairingKeyStore>>()));
 
 THIS BLOCK WENT STALE TWICE AND NO RUN ON THIS REPOSITORY SAW EITHER TIME. It
 pasted two types, then four, and the command returns five; the registration line
