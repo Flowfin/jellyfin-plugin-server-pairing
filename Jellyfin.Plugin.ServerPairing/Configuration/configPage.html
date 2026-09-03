@@ -39,6 +39,7 @@
                         </button>
                     </div>
                 </form>
+                <div id="MappingTables" data-role="mapping-tables"></div>
             </div>
         </div>
         <script type="text/javascript">
@@ -84,10 +85,173 @@
                 line.appendChild(list);
             }
 
+            // The mapping table of every pairing this server holds a key for, and the one thing
+            // an administrator can change here, which is removing a row from it.
+            //
+            // What the operator reads before removing is not written in this file. The sentence
+            // lives in DestructiveWording and nowhere else, the suite refuses markup that carries
+            // a copy, and the operator guide is held equal to the register. So the page asks the
+            // plugin for the wording on every show and renders what it answered, in the same view
+            // as the button and never in a tooltip, which is the rule issue #49 states for every
+            // destructive action. Every value out of every answer reaches the page through
+            // textContent, for the reason written above renderEnrolmentWindows: a peer's display
+            // name is in this table and is a peer-controlled string.
+            function clearChildren(element) {
+                while (element.firstChild) {
+                    element.removeChild(element.firstChild);
+                }
+            }
+
+            function paragraph(text) {
+                var line = document.createElement('p');
+                line.className = 'fieldDescription';
+                line.textContent = text;
+                return line;
+            }
+
+            function cell(row, text) {
+                var column = document.createElement('td');
+                column.textContent = text;
+                row.appendChild(column);
+                return column;
+            }
+
+            function describeFailure(failure) {
+                var status = failure && failure.status ? 'status ' + failure.status : 'no answer';
+
+                if (failure && typeof failure.json === 'function') {
+                    return failure.json().then(function (body) {
+                        return body && body.problem ? body.problem : status;
+                    }, function () {
+                        return status;
+                    });
+                }
+
+                return Promise.resolve(status);
+            }
+
+            function mappingsPath(pairingId) {
+                return 'ServerPairing/Administration/pairings/' + encodeURIComponent(pairingId) + '/mappings';
+            }
+
+            function removeMapping(section, pairingId, localUserId, wording) {
+                return ApiClient.ajax({
+                    type: 'DELETE',
+                    url: ApiClient.getUrl(mappingsPath(pairingId) + '/' + encodeURIComponent(localUserId))
+                }).then(function () {
+                    return loadMappingTable(section, pairingId, wording);
+                }, function (failure) {
+                    return describeFailure(failure).then(function (reason) {
+                        section.appendChild(paragraph('The mapping was not removed (' + reason + ').'));
+                    });
+                });
+            }
+
+            function renderMappingTable(section, pairingId, table, wording) {
+                clearChildren(section);
+
+                var heading = document.createElement('h3');
+                heading.textContent = 'Pairing ' + pairingId;
+                section.appendChild(heading);
+
+                if (table.mappings.length === 0) {
+                    section.appendChild(paragraph('No user is mapped under this pairing.'));
+                } else {
+                    // The consequence of removing is in the same view as every remove button,
+                    // read from the register rather than written here.
+                    section.appendChild(paragraph(wording.destructive.RemoveMapping));
+
+                    var grid = document.createElement('table');
+                    var head = document.createElement('tr');
+                    cell(head, 'This server');
+                    cell(head, 'The other server');
+                    cell(head, '');
+                    grid.appendChild(head);
+
+                    table.mappings.forEach(function (mapping) {
+                        var row = document.createElement('tr');
+                        cell(row, mapping.localUserShownAs);
+                        cell(row, mapping.peerUserShownAs);
+
+                        var remove = document.createElement('button');
+                        remove.type = 'button';
+                        remove.className = 'raised emby-button';
+                        remove.textContent = 'Remove';
+                        remove.addEventListener('click', function () {
+                            removeMapping(section, pairingId, mapping.localUserId, wording);
+                        });
+                        cell(row, '').appendChild(remove);
+
+                        grid.appendChild(row);
+                    });
+
+                    section.appendChild(grid);
+                }
+
+                if (table.unmappedLocalUsers.length > 0) {
+                    section.appendChild(paragraph('Not mapped under this pairing, so nothing moves for them:'));
+
+                    var list = document.createElement('ul');
+
+                    table.unmappedLocalUsers.forEach(function (user) {
+                        var item = document.createElement('li');
+                        item.textContent = user.localUserName;
+                        list.appendChild(item);
+                    });
+
+                    section.appendChild(list);
+                }
+            }
+
+            function loadMappingTable(section, pairingId, wording) {
+                return ApiClient.getJSON(ApiClient.getUrl(mappingsPath(pairingId))).then(function (table) {
+                    renderMappingTable(section, pairingId, table, wording);
+                }, function (failure) {
+                    return describeFailure(failure).then(function (reason) {
+                        clearChildren(section);
+                        section.appendChild(paragraph('Pairing ' + pairingId + ': the mapping table could not be read (' + reason + ').'));
+                    });
+                });
+            }
+
+            function renderMappingTables(pairings, wording) {
+                var host = document.querySelector('#MappingTables');
+
+                clearChildren(host);
+
+                if (!pairings || pairings.length === 0) {
+                    host.appendChild(paragraph('No mapping table is held, because this server holds no pairing.'));
+                    return;
+                }
+
+                pairings.forEach(function (pairingId) {
+                    var section = document.createElement('div');
+                    host.appendChild(section);
+                    loadMappingTable(section, pairingId, wording);
+                });
+            }
+
+            function loadMappingTables() {
+                return Promise.all([
+                    ApiClient.getJSON(ApiClient.getUrl('ServerPairing/Administration/wording')),
+                    ApiClient.getJSON(ApiClient.getUrl('ServerPairing/Administration/pairings'))
+                ]).then(function (answers) {
+                    renderMappingTables(answers[1], answers[0]);
+                }, function (failure) {
+                    return describeFailure(failure).then(function (reason) {
+                        var host = document.querySelector('#MappingTables');
+                        clearChildren(host);
+                        host.appendChild(paragraph('The mapping tables could not be read (' + reason + ').'));
+                    });
+                });
+            }
+
             document.querySelector('#ServerPairingConfigPage')
                 .addEventListener('pageshow', function() {
                     ApiClient.getJSON(ApiClient.getUrl('ServerPairing/Administration/windows'))
                         .then(renderEnrolmentWindows);
+
+                    loadMappingTables();
 
                     Dashboard.showLoadingMsg();
                     ApiClient.getPluginConfiguration(ServerPairingConfig.pluginUniqueId).then(function (config) {
