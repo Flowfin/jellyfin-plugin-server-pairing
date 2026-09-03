@@ -40,6 +40,7 @@
                     </div>
                 </form>
                 <div id="MappingTables" data-role="mapping-tables"></div>
+                <div id="Diagnostics" data-role="diagnostics"></div>
             </div>
         </div>
         <script type="text/javascript">
@@ -255,12 +256,69 @@
                 });
             }
 
+            // The diagnostics payload, rendered so an operator reads it here rather than calling
+            // the endpoint by hand, which is the fourth condition of issue #51. The members are
+            // walked rather than named, because the payload gains a member whenever something
+            // starts producing one and a page naming members would silently omit the next; what
+            // is rendered is every member the plugin answered with, numbers and maps of numbers.
+            // The same payload is offered verbatim for pasting into a support thread, through
+            // textContent like everything else on this page.
+            function renderDiagnosticsMember(list, name, value) {
+                var item = document.createElement('li');
+
+                if (value !== null && typeof value === 'object') {
+                    item.textContent = name;
+                    var inner = document.createElement('ul');
+                    Object.keys(value).forEach(function (key) {
+                        renderDiagnosticsMember(inner, key, value[key]);
+                    });
+                    item.appendChild(inner);
+                } else {
+                    item.textContent = name + ': ' + value;
+                }
+
+                list.appendChild(item);
+            }
+
+            function renderDiagnostics(payload) {
+                var host = document.querySelector('#Diagnostics');
+
+                clearChildren(host);
+
+                var heading = document.createElement('h3');
+                heading.textContent = 'Diagnostics';
+                host.appendChild(heading);
+
+                host.appendChild(paragraph('What the pairing plane has refused since this server started, by code and by cause, and how many identifiers the arrival limit is counting. It names no pairing, no address and no person, so it can be pasted into a support thread as it is.'));
+
+                var list = document.createElement('ul');
+                Object.keys(payload).forEach(function (name) {
+                    renderDiagnosticsMember(list, name, payload[name]);
+                });
+                host.appendChild(list);
+
+                var verbatim = document.createElement('pre');
+                verbatim.textContent = JSON.stringify(payload, null, 2);
+                host.appendChild(verbatim);
+            }
+
+            function loadDiagnostics() {
+                return ApiClient.getJSON(ApiClient.getUrl('ServerPairing/Administration/diagnostics')).then(renderDiagnostics, function (failure) {
+                    return describeFailure(failure).then(function (reason) {
+                        var host = document.querySelector('#Diagnostics');
+                        clearChildren(host);
+                        host.appendChild(paragraph('The diagnostics could not be read (' + reason + ').'));
+                    });
+                });
+            }
+
             document.querySelector('#ServerPairingConfigPage')
                 .addEventListener('pageshow', function() {
                     ApiClient.getJSON(ApiClient.getUrl('ServerPairing/Administration/windows'))
                         .then(renderEnrolmentWindows);
 
                     loadMappingTables();
+                    loadDiagnostics();
 
                     Dashboard.showLoadingMsg();
                     ApiClient.getPluginConfiguration(ServerPairingConfig.pluginUniqueId).then(function (config) {
