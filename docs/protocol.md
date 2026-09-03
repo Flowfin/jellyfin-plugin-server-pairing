@@ -41,7 +41,7 @@ now, which is issue #287:
 
 ```
 git grep -n 'new StoreBackedKeys' origin/master -- Jellyfin.Plugin.ServerPairing/PluginServiceRegistrator.cs
-origin/master:Jellyfin.Plugin.ServerPairing/PluginServiceRegistrator.cs:67:            new StoreBackedKeys(services.GetRequiredService<IPairingKeyStore>()));
+origin/master:Jellyfin.Plugin.ServerPairing/PluginServiceRegistrator.cs:68:            new StoreBackedKeys(services.GetRequiredService<IPairingKeyStore>()));
 ```
 
 What makes the sentence still right is one step further back. No route puts a key

@@ -6,6 +6,7 @@ using Jellyfin.Plugin.ServerPairing.Mapping;
 using Jellyfin.Plugin.ServerPairing.Protocol;
 using MediaBrowser.Common.Configuration;
 using MediaBrowser.Controller;
+using MediaBrowser.Controller.Library;
 using MediaBrowser.Controller.Plugins;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -165,11 +166,11 @@ public class PluginServiceRegistrator : IPluginServiceRegistrator
         // whoever needs it, because it sweeps the mapping table when a pairing ends and a second
         // instance over a second mapping store would sweep a table nobody is reading.
         //
-        // WHAT RESOLVES IT TODAY IS NOTHING, and that is stated rather than implied: no plane and
-        // no page reaches it yet, and what would put a record into it is the enrolment join in
-        // issue #18. What the registration buys before then is that the container can build it,
-        // which ServiceRegistrationTests asserts, so the day something does resolve it is not the
-        // day a server finds out it cannot be built.
+        // THIS COMMENT SAID NOTHING RESOLVED IT. UserMappings below resolves it now, for the
+        // mapping the administrative plane removes, so the registration is load-bearing. What
+        // is unchanged is that no plane and no page applies an event to it, and what would put a
+        // record into it is the enrolment join in issue #18; ServiceRegistrationTests is still
+        // what says the container can build it.
         serviceCollection.AddSingleton(services => new PairingStateMachine(
             services.GetRequiredService<IPairingRecordStore>(),
             services.GetRequiredService<IUserMappingStore>()));
@@ -183,6 +184,25 @@ public class PluginServiceRegistrator : IPluginServiceRegistrator
         serviceCollection.AddSingleton(services => new HeldAboutUser(
             services.GetRequiredService<IUserMappingStore>(),
             services.GetRequiredService<ILogger<HeldAboutUser>>()));
+
+        // The users this server has, read from the host's user manager through the one type
+        // that touches the host's user entity. The administrative plane reads it to say which
+        // local users are unmapped under a pairing, and nothing decides a mapping from it: the
+        // rule that a mapping is an administrator's decision is asserted over the plugin source,
+        // and a list of local users is an input that rule refuses to match against anything.
+        serviceCollection.AddSingleton<ILocalUsers>(services =>
+            new HostLocalUsers(services.GetRequiredService<IUserManager>()));
+
+        // The one way a mapping is made or removed, over the state machine above, which is how a
+        // mapping under a pairing that is over or absent is refused. THIS TYPE HAD NO PRODUCTION
+        // CALLER UNTIL THE ADMINISTRATIVE PLANE REMOVED A MAPPING THROUGH IT, and that is the
+        // half of issue #40 it carries: the plane lists a pairing's table and removes a row from
+        // it. Nothing adds a row through it on a server yet, because adding one means choosing a
+        // peer user from a list fetched from the peer, and nothing in this plugin fetches one.
+        serviceCollection.AddSingleton(services => new UserMappings(
+            services.GetRequiredService<IUserMappingStore>(),
+            services.GetRequiredService<PairingStateMachine>(),
+            services.GetRequiredService<ILogger<UserMappings>>()));
 
         // The one thing that runs on its own rather than answering a caller. It reads the
         // store once at startup and says what survived, because a store outside the plugin

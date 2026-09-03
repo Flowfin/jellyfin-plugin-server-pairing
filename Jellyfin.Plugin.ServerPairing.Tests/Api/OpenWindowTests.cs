@@ -179,6 +179,8 @@ public class OpenWindowTests
             new RefusalCounters(),
             new ArrivalLimit(),
             new HeldAboutUser(new InMemoryUserMappings(), NullLogger<HeldAboutUser>.Instance),
+            new UserMappings(new InMemoryUserMappings(), new PairingStateMachine(new InMemoryPairingRecords(), new InMemoryUserMappings()), NullLogger<UserMappings>.Instance),
+            new InMemoryLocalUsers(),
             NullLogger<AdministrativePlaneController>.Instance);
 
     /// <summary>

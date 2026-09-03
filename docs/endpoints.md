@@ -22,10 +22,12 @@ describing them once they exist.
 | `AdministrativePlaneController.Diagnostics` | `GET` | `/ServerPairing/Administration/diagnostics` | administrative | `elevation` | the host's elevation policy |
 | `AdministrativePlaneController.Windows` | `GET` | `/ServerPairing/Administration/windows` | administrative | `elevation` | the host's elevation policy |
 | `AdministrativePlaneController.HeldAbout` | `GET` | `/ServerPairing/Administration/users/{localUserId}` | administrative | `elevation` | the host's elevation policy |
+| `AdministrativePlaneController.Mappings` | `GET` | `/ServerPairing/Administration/pairings/{pairingId}/mappings` | administrative | `elevation` | the host's elevation policy |
+| `AdministrativePlaneController.Unmap` | `DELETE` | `/ServerPairing/Administration/pairings/{pairingId}/mappings/{localUserId}` | administrative | `elevation` | the host's elevation policy |
 
-Ten rows. Six are the peer plane, which is the paths the specification fixes.
+Twelve rows. Six are the peer plane, which is the paths the specification fixes.
 THIS PARAGRAPH SAID THE ADMINISTRATIVE PLANE HAS NO ENDPOINT AND THEREFORE NO
-ROW; it has four. The first is issue #289, and the plane is what that issue is
+ROW; it has six. The first is issue #289, and the plane is what that issue is
 about rather than the action on it: what it answers is the identifiers of the
 pairings this server holds a key for, and nothing else. The second is the
 diagnostics read, which is issue #51, and what it answers is how many requests
@@ -61,6 +63,32 @@ event once per pairing and there is no contract to raise it through until issue
 #43 lands; [`data.md`](data.md) says what it will cover and that it does not
 exist.
 
+The fifth and sixth are a pairing's mapping table, which is the half of issue
+#40 that needs nothing from the peer. The listing answers every mapping under
+one pairing with the local user as the host names them, the opaque peer
+identifier and the cached peer display name, and beside each name the value a
+page shows: the name where there is one and the identifier where there is not,
+so an unset cache is never an empty cell. It answers the local users who are
+unmapped under that pairing too, read from the host's user manager at the
+moment of the call and kept nowhere, so an operator wondering why somebody is
+not syncing does not work it out by subtraction. A pairing nothing is held for
+is not found rather than listed empty, because an empty table with every user
+unmapped invites mapping under a pairing that does not exist. The listing writes
+no audit entry: it is the dashboard reading the table, which
+[`logging.md`](logging.md) names as where an operator entitled to the answer
+reads who is mapped to whom. The removal takes one mapping under one pairing
+out of the table at an administrator's decision, goes through the one type every
+mapping change passes so the audit entry naming who removed it cannot be
+skipped, and refuses a principal naming nobody before the store is touched. IT
+IS THE FIRST ACTION ON THIS PLANE THAT CHANGES STATE, and it is not the removal
+half of #60: that one takes a person out of every pairing and tells every
+consumer, and this one takes one row out of one table and tells nobody, because
+nothing has moved under a mapping yet and the wording an operator confirms says
+what already arrived stays where it arrived. NOTHING ADDS A MAPPING. Adding one
+means choosing a peer user from a list fetched from the peer, which is a
+protocol operation this plugin does not make yet, so the table these two actions
+read and shrink is empty on every server until that lands.
+
 That second row is narrower than the issue it comes from. A state per pairing,
 the protocol version each side speaks and a last error per pairing are all things
 #51 asks the payload to carry, and none of them has anything in this tree that
@@ -72,8 +100,9 @@ The rest of the administrative actions are still issues rather than actions, and
 a row for one of them would describe something no request can reach: OPENING an
 enrolment window is #18, which the row above does not do - it says whether one is
 open and provides no way to open one - confirming a ceremony is #19, revoking is
-#24, editing mappings is #40, removing what is held about one user is the other
-half of #60 and the pairing states the page renders are #49. Each of them lands
+#24, adding a mapping is the rest of #40 behind a peer user list nothing fetches
+yet, removing what is held about one user is the other half of #60 and the
+pairing states the page renders are #49. Each of them lands
 on the plane above rather than bringing a controller of its own.
 
 ### What the two authorization words mean
@@ -89,9 +118,9 @@ else.
 
 `elevation` is the action carrying `Authorize` naming the host's
 `RequiresElevation` policy, which is the constant read out of the server source
-in the section below. FOUR ROWS CARRY IT AND THIS SENTENCE SAID THREE DID, having
-said two and one before that; the count moves with the plane and is derived by the
-suite rather than trusted from here. What
+in the section below. SIX ROWS CARRY IT AND THIS SENTENCE SAID FOUR DID, having
+said three, two and one before that; the count moves with the plane and is derived
+by the suite rather than trusted from here. What
 decides such a request is the host's elevation policy together with the
 endpoint's own repeat of the check, which is the third bullet under `What this
 plugin does about it`.
@@ -452,9 +481,15 @@ GitHub API and not on a running server, and no test drives any of it. That half
 is prose and stays prose.
 
 Issue #53's third condition asks that a test assert every state-changing
-endpoint refuses a request lacking whatever this document names. It is not met,
-and no administrative row above meets it: all three of those actions are reads
-and change nothing, so the set the condition quantifies over is still empty.
+endpoint refuses a request lacking whatever this document names. It is not met.
+THIS PARAGRAPH SAID THE SET IT QUANTIFIES OVER WAS EMPTY BECAUSE EVERY
+ADMINISTRATIVE ACTION WAS A READ, AND ONE IS NOT NOW: the removal of a mapping
+changes state, so the set has one member. What the suite asserts about it is
+that a principal naming no administrator is refused before the store is touched,
+and that is this plugin's own check rather than the host's credential. Whether
+the host refuses a request lacking its token is the elevation policy, which
+nothing here measures for the reason under the table, so the condition has a
+subject now and is still not met.
 `PeerPlaneTests` does assert that a request without a verifying signature is
 refused and that its body is not handed on, but every answer this plane gives
 today is the same refusal whatever arrives, so that assertion cannot be

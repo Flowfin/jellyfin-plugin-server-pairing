@@ -64,7 +64,9 @@ public class CatchAllSiteTests
     /// that will not parse are two files and two answers, and a single catch over both would
     /// name whichever store the code happened to reach first. The report of what is held about
     /// one user reads the record store and then the mapping store, and carries one per store for
-    /// the same reason.
+    /// the same reason. THIS PARAGRAPH SAID FOUR AND THERE ARE SEVEN: the listing of a pairing's
+    /// mapping table reads the record store and then the mapping store and carries one per store,
+    /// and the removal of a mapping reads and writes the mapping store alone and carries one.
     ///
     /// KeyStore/StoreAtStartup.cs: a store that cannot be read at startup must not take the
     /// server down with it, so the read is reported and the host is left running.
@@ -76,7 +78,7 @@ public class CatchAllSiteTests
     private static readonly Dictionary<string, int> DeclaredSites = new(StringComparer.Ordinal)
     {
         ["Api/PeerPlaneController.cs"] = 1,
-        ["Api/AdministrativePlaneController.cs"] = 4,
+        ["Api/AdministrativePlaneController.cs"] = 7,
         ["KeyStore/StoreAtStartup.cs"] = 1,
         ["KeyStore/AtomicWrite.cs"] = 1,
     };

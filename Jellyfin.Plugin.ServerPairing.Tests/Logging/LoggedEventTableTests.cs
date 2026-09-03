@@ -90,7 +90,13 @@ public class LoggedEventTableTests
         ["The pairing record store could not be read for an administrator, so what is held about a user is unknown."] =
             "The pairing record store could not be read",
         ["The mapping store could not be read for an administrator, so what is held about a user is unknown."] =
-            "The mapping store could not be read",
+            "The mapping store could not be read or written",
+        ["The pairing record store could not be read for an administrator, so whether a pairing holds a mapping table is unknown."] =
+            "The pairing record store could not be read",
+        ["The mapping store could not be read or written for an administrator, so what a pairing's table holds is unknown."] =
+            "The mapping store could not be read or written",
+        ["The mapping store could not be read or written for an administrator, so whether a mapping was removed is unknown."] =
+            "The mapping store could not be read or written",
     };
 
     /// <summary>

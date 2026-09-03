@@ -5,6 +5,7 @@ using Jellyfin.Plugin.ServerPairing.Configuration;
 using Jellyfin.Plugin.ServerPairing.Protocol;
 using MediaBrowser.Common.Configuration;
 using MediaBrowser.Controller;
+using MediaBrowser.Controller.Library;
 using MediaBrowser.Controller.Plugins;
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
@@ -68,6 +69,11 @@ public class ServiceRegistrationTests
         // logging services is the generic host's own behaviour rather than something read out
         // of the server's tree.
         services.AddLogging();
+
+        // The third thing the server supplies: its own user manager, which the plugin reads the
+        // local user set from and never writes. The substitute answers no users, which is enough
+        // for the container to build what reads it.
+        services.AddSingleton(Substitute.For<IUserManager>());
 
         new PluginServiceRegistrator().RegisterServices(services, Substitute.For<IServerApplicationHost>());
 

@@ -166,6 +166,8 @@ public class DiagnosticsSecretsTests
             side.Refusals,
             side.Arrivals,
             new HeldAboutUser(new InMemoryUserMappings(), NullLogger<HeldAboutUser>.Instance),
+            new UserMappings(new InMemoryUserMappings(), new Jellyfin.Plugin.ServerPairing.Protocol.PairingStateMachine(new Tests.Protocol.InMemoryPairingRecords(), new InMemoryUserMappings()), NullLogger<UserMappings>.Instance),
+            new InMemoryLocalUsers(),
             NullLogger<AdministrativePlaneController>.Instance);
 
         var answered = Assert.IsType<ContentResult>(controller.Diagnostics());

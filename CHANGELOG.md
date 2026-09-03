@@ -59,6 +59,15 @@ Two servers cannot be paired with this version. The `changelog` field in
   mapping for that user across every pairing, the cached peer display name marked
   as a cache. Nothing removes what it reports yet, and what the peer server holds
   about that user is the peer operator's to remove either way.
+- An administrator can list a pairing's mapping table, at
+  `/ServerPairing/Administration/pairings/{pairingId}/mappings`, and is answered
+  with every mapping under it, the cached peer display name marked as a cache and
+  shown as the identifier where the cache is empty, and every local user who is
+  unmapped under it. A mapping can be removed at the same path with the local
+  user appended, and the removal is audited under the administrator the host
+  authenticated. Nothing adds a mapping yet, because adding one means choosing a
+  peer user from a list fetched from the peer and nothing fetches one, so the
+  table is empty on every server until that lands.
 - [protocol] `unpair` is a sixth message on the pairing plane, at
   `/ServerPairing/unpair`, carrying nothing beyond the envelope and answered
   empty. A peer whose operator is finished with a pairing sends it before ending
