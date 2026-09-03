@@ -24,10 +24,11 @@ describing them once they exist.
 | `AdministrativePlaneController.HeldAbout` | `GET` | `/ServerPairing/Administration/users/{localUserId}` | administrative | `elevation` | the host's elevation policy |
 | `AdministrativePlaneController.Mappings` | `GET` | `/ServerPairing/Administration/pairings/{pairingId}/mappings` | administrative | `elevation` | the host's elevation policy |
 | `AdministrativePlaneController.Unmap` | `DELETE` | `/ServerPairing/Administration/pairings/{pairingId}/mappings/{localUserId}` | administrative | `elevation` | the host's elevation policy |
+| `AdministrativePlaneController.Wording` | `GET` | `/ServerPairing/Administration/wording` | administrative | `elevation` | the host's elevation policy |
 
-Twelve rows. Six are the peer plane, which is the paths the specification fixes.
+Thirteen rows. Six are the peer plane, which is the paths the specification fixes.
 THIS PARAGRAPH SAID THE ADMINISTRATIVE PLANE HAS NO ENDPOINT AND THEREFORE NO
-ROW; it has six. The first is issue #289, and the plane is what that issue is
+ROW; it has seven. The first is issue #289, and the plane is what that issue is
 about rather than the action on it: what it answers is the identifiers of the
 pairings this server holds a key for, and nothing else. The second is the
 diagnostics read, which is issue #51, and what it answers is how many requests
@@ -88,6 +89,16 @@ what already arrived stays where it arrived. NOTHING ADDS A MAPPING. Adding one
 means choosing a peer user from a list fetched from the peer, which is a
 protocol operation this plugin does not make yet, so the table these two actions
 read and shrink is empty on every server until that lands.
+
+The seventh is the wording an operator reads on the page, served out of the two
+registers that hold every such sentence. The page shows the sentence about
+removing a mapping in the same view as the action that removes one, and it may
+not carry the sentence itself: `CeremonyWordingTests` refuses markup carrying
+one, because a pasted copy drifts from the register the operator guide is held
+equal to. So the page asks this action on every show and renders what it
+answered, and the answer is built by reflection over the registers rather than
+by a list, so a sentence added to a register reaches the page without the
+action moving. It reads no store and changes nothing.
 
 That second row is narrower than the issue it comes from. A state per pairing,
 the protocol version each side speaks and a last error per pairing are all things

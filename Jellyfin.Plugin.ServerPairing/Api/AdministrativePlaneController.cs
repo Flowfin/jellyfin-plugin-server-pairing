@@ -505,6 +505,32 @@ public sealed class AdministrativePlaneController : ControllerBase
     }
 
     /// <summary>
+    /// The sentences an operator reads on the page, served out of the registers that hold them.
+    /// </summary>
+    /// <returns>Both registers, each sentence under the name of its constant.</returns>
+    /// <remarks>
+    /// The page shows <c>DestructiveWording.RemoveMapping</c> in the same view as the action
+    /// that removes a mapping, and it may not carry the sentence itself: the suite refuses
+    /// markup that carries one, because a pasted copy drifts from the register the operator
+    /// guide is held equal to. So the page asks here on every show, and what it renders is the
+    /// constant as it stands at that moment. <see cref="WordingAnswer"/> builds the answer by
+    /// reflection over the registers, so nothing here is a second copy either.
+    /// <para>
+    /// It reads no store and changes nothing, so there is no file to fail to read, no named
+    /// problem to answer with and no catch. It is not the state-changing endpoint issue #53's
+    /// third condition asks for.
+    /// </para>
+    /// </remarks>
+    [HttpGet("wording")]
+    public IActionResult Wording()
+        => new ContentResult
+        {
+            StatusCode = 200,
+            ContentType = "application/json",
+            Content = WordingAnswer.Body(),
+        };
+
+    /// <summary>
     /// The answer a named problem is carried in.
     /// </summary>
     /// <param name="problem">The problem.</param>

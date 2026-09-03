@@ -54,6 +54,14 @@ there is no page and no endpoint an administrator can open an enrolment from.
 Two servers cannot be paired with this version. The `changelog` field in
 `build.yaml` and `build.net10.0.yaml` carries that paragraph in the same words.
 
+- The configuration page shows every pairing's mapping table, read from the
+  listing below on every show, and offers the one change an administrator can
+  make there, which is removing a row. What removing costs is on the page in the
+  same view as the button, read from the plugin at
+  `/ServerPairing/Administration/wording` rather than written into the page, so
+  the sentence an operator reads is the one the operator guide quotes. The rest
+  of the page is still the template's example fields, and no state of a pairing
+  is rendered yet, because nothing puts a pairing into one.
 - An administrator can ask what this plugin holds about one local user, at
   `/ServerPairing/Administration/users/{localUserId}`, and is answered with every
   mapping for that user across every pairing, the cached peer display name marked
