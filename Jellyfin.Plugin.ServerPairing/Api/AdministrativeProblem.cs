@@ -12,14 +12,16 @@ namespace Jellyfin.Plugin.ServerPairing.Api;
 /// <para>
 /// The vocabulary grows with the actions rather than being written ahead of them: a member
 /// nothing produces is a problem no operator can meet and no case can drive. THIS PARAGRAPH SAID
-/// THERE IS ONE MEMBER BECAUSE ONE ACTION EXISTS; there are two, and the second arrived with the
-/// read of the open enrolment windows.
+/// THERE IS ONE MEMBER BECAUSE ONE ACTION EXISTS, and then that there are two. There are four.
+/// The second arrived with the read of the open enrolment windows, and the third and fourth with
+/// the report of what is held about one user, which reads a third store and writes an audit
+/// entry that has to name somebody.
 /// </para>
 /// <para>
-/// The two stores get a member each rather than sharing one. They are two files answering two
-/// questions, which is why the plugin writes them separately: a key store that will not read is
-/// not a reason an operator cannot be told what state a pairing is in, and an answer naming one
-/// store when the other is the broken one sends them to the wrong file.
+/// The three stores get a member each rather than sharing one. They are three files answering
+/// three questions, which is why the plugin writes them separately: a key store that will not
+/// read is not a reason an operator cannot be told what state a pairing is in, and an answer
+/// naming one store when another is the broken one sends them to the wrong file.
 /// </para>
 /// </remarks>
 public enum AdministrativeProblem
@@ -45,4 +47,25 @@ public enum AdministrativeProblem
     /// every reason the store would not read.
     /// </summary>
     RecordStoreUnreadable = 1,
+
+    /// <summary>
+    /// The mapping store could not be read, so what is held about a user is unknown. What makes
+    /// that store unreadable is decided where the store is, in the same two ways as the record
+    /// store: a file that is there and is not a mapping store is refused as damaged, and a file
+    /// declaring a format this build has no rung for is refused separately. This member is only
+    /// the answer an administrator gets instead of a fault, and it is the same answer for every
+    /// reason the store would not read.
+    /// </summary>
+    MappingStoreUnreadable = 2,
+
+    /// <summary>
+    /// The principal the host authenticated carries no identifier this plugin can write an
+    /// audit entry under, so an action that has to name who asked refuses rather than record
+    /// the act under nobody. On a host behaving as <c>docs/endpoints.md</c> reads it, every
+    /// request that passes the elevation policy carries the identifier, so what this names is
+    /// the host having changed under the plugin rather than a case an operator will meet. It is
+    /// the one problem on this plane that is not about a store, and it exists so that a report
+    /// of what is held about a person is never made without a record of who asked.
+    /// </summary>
+    AdministratorUnidentified = 3,
 }

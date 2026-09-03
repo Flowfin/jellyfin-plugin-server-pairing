@@ -174,6 +174,16 @@ public class PluginServiceRegistrator : IPluginServiceRegistrator
             services.GetRequiredService<IPairingRecordStore>(),
             services.GetRequiredService<IUserMappingStore>()));
 
+        // The report of what is held about one user, which is the read half of issue #60 and is
+        // resolved by the administrative plane. It takes the mapping store and a logger and
+        // nothing else: the pairings it looks under are handed in by the action, from the record
+        // store, so that the choice of enumeration is made where the case refusing the other one
+        // can see it. The removal half is not registered because it is not built, and the
+        // action says why.
+        serviceCollection.AddSingleton(services => new HeldAboutUser(
+            services.GetRequiredService<IUserMappingStore>(),
+            services.GetRequiredService<ILogger<HeldAboutUser>>()));
+
         // The one thing that runs on its own rather than answering a caller. It reads the
         // store once at startup and says what survived, because a store outside the plugin
         // directory outlives an uninstall and a reinstall comes up paired with whatever it was

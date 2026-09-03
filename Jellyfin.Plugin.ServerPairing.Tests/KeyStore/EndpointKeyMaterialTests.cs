@@ -79,12 +79,19 @@ public class EndpointKeyMaterialTests
     /// covers the specification and covers whatever else is served, and the second half is the
     /// one that catches an action reaching the server with no HTTP attribute for this walk to
     /// find it by.
+    /// <para>
+    /// Both sides are reduced to the last segment of their template, because a template may
+    /// carry more than one: the report of what is held about a user is routed at
+    /// <c>users/{localUserId}</c>, and comparing the attribute's whole template against the
+    /// discovery's last segment reddened on it for no reason the floor is about.
+    /// </para>
     /// </remarks>
     [Fact]
     public void TheWalkReachesEveryEndpointThisPluginServes()
     {
         var routed = Endpoints()
-            .SelectMany(action => action.GetCustomAttributes<HttpMethodAttribute>().Select(http => http.Template))
+            .SelectMany(action => action.GetCustomAttributes<HttpMethodAttribute>()
+                .Select(http => (http.Template ?? string.Empty).Split('/')[^1]))
             .OrderBy(template => template, StringComparer.Ordinal)
             .ToArray();
 

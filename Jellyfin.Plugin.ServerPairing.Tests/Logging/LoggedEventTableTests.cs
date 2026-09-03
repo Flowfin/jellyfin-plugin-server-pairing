@@ -85,6 +85,12 @@ public class LoggedEventTableTests
             "The plugin started against a store that already holds a pairing",
         ["A mapping was added, changed or removed by an administrator."] =
             "A mapping was added, changed or removed",
+        ["What is held about one user was reported to an administrator."] =
+            "What is held about one user was reported",
+        ["The pairing record store could not be read for an administrator, so what is held about a user is unknown."] =
+            "The pairing record store could not be read",
+        ["The mapping store could not be read for an administrator, so what is held about a user is unknown."] =
+            "The mapping store could not be read",
     };
 
     /// <summary>

@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Text.Json;
 using Jellyfin.Plugin.ServerPairing.KeyStore;
+using Jellyfin.Plugin.ServerPairing.Mapping;
 using Jellyfin.Plugin.ServerPairing.Protocol;
 using MediaBrowser.Common.Api;
 using Microsoft.AspNetCore.Authorization;
@@ -39,8 +40,9 @@ namespace Jellyfin.Plugin.ServerPairing.Api;
 /// <para>
 /// The actions of this plan land here rather than each bringing a controller: opening an
 /// enrolment window and confirming a ceremony are issues #18 and #19, revoking is #24, editing
-/// mappings is #40 and the pairing states the page renders are #49. What this type owns is the
-/// plane, which is the elevation policy, the answer shape and the rows in the endpoint table.
+/// mappings is #40, the pairing states the page renders are #49, and reporting what is held
+/// about one user is here while removing it is the other half of #60. What this type owns is
+/// the plane, which is the elevation policy, the answer shape and the rows in the endpoint table.
 /// </para>
 /// <para>
 /// THE DIAGNOSTICS PAYLOAD WAS IN THAT LIST AND IS AN ACTION NOW, WHICH IS SMALLER THAN ISSUE
@@ -60,6 +62,7 @@ public sealed class AdministrativePlaneController : ControllerBase
     private readonly IPairingRecordStore _records;
     private readonly RefusalCounters _refusals;
     private readonly ArrivalLimit _arrivals;
+    private readonly HeldAboutUser _held;
     private readonly ILogger<AdministrativePlaneController> _logger;
 
     /// <summary>
@@ -69,18 +72,21 @@ public sealed class AdministrativePlaneController : ControllerBase
     /// <param name="records">What state each pairing this server holds is in.</param>
     /// <param name="refusals">What the peer plane has refused, and why.</param>
     /// <param name="arrivals">How much of the peer plane each claimed identifier has used.</param>
+    /// <param name="held">What this plugin holds about one user, and the audit entry saying it was asked.</param>
     /// <param name="logger">Where the detail of an unreadable store goes.</param>
     public AdministrativePlaneController(
         IPairingKeyStore keys,
         IPairingRecordStore records,
         RefusalCounters refusals,
         ArrivalLimit arrivals,
+        HeldAboutUser held,
         ILogger<AdministrativePlaneController> logger)
     {
         _keys = keys ?? throw new ArgumentNullException(nameof(keys));
         _records = records ?? throw new ArgumentNullException(nameof(records));
         _refusals = refusals ?? throw new ArgumentNullException(nameof(refusals));
         _arrivals = arrivals ?? throw new ArgumentNullException(nameof(arrivals));
+        _held = held ?? throw new ArgumentNullException(nameof(held));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -237,4 +243,112 @@ public sealed class AdministrativePlaneController : ControllerBase
             Content = JsonSerializer.Serialize(DiagnosticsAnswer.Of(_refusals, _arrivals)),
         };
     }
+
+    /// <summary>
+    /// What this plugin holds about one local user, across every pairing.
+    /// </summary>
+    /// <param name="localUserId">The user on this server the report is about.</param>
+    /// <returns>
+    /// One entry per mapping held for that user, empty where they are mapped nowhere, or the
+    /// named problem where a store could not be read or the caller could not be named.
+    /// </returns>
+    /// <remarks>
+    /// This is the report half of issue #60. An operator running a server for a household may be
+    /// asked by one of its users what is held about them, and this is what lets them answer
+    /// without reading a file by hand. <c>docs/data.md</c> fixes what the report covers and
+    /// <see cref="HeldMapping"/> is that scope as a shape.
+    /// <para>
+    /// IT WALKS THE RECORD STORE AND NOT THE KEY STORE, AND THAT IS THE DECISION THIS ACTION
+    /// CARRIES. The mapping store is readable per pairing, so a report for a person is a walk
+    /// over pairings, and <see cref="Pairings"/> hands back the key store's enumeration, which is
+    /// every pairing holding key material. A pairing that has not finished enrolling holds no key
+    /// and may hold a mapping, so a report walked over that enumeration answers nothing for a
+    /// user mapped only under such a pairing and looks exactly like a report for a user mapped
+    /// nowhere, which is the failure #60's own notes name. The record store enumerates every
+    /// pairing a record exists for, which is every pairing a mapping may be made under, and a
+    /// case in the suite refuses the narrower walk.
+    /// </para>
+    /// <para>
+    /// Who asked is read from the principal the host authenticated, by
+    /// <see cref="RequestingAdministrator"/>, and where that names nobody the report is refused
+    /// rather than audited under nobody. It is a read and changes nothing, so it is not the
+    /// state-changing endpoint issue #53's third condition asks for; the one thing it writes is
+    /// the audit entry <see cref="HeldAboutUser"/> owns.
+    /// </para>
+    /// <para>
+    /// THE REMOVAL HALF OF #60 IS NOT HERE. Nothing on this plane removes a user from every
+    /// pairing, because that removal has to raise the consumer event once per pairing and there
+    /// is no contract to raise it through until issue #43 lands. A removal that took the mapping
+    /// and told no consumer would read as total while leaving the rows it exists to remove, so it
+    /// is absent rather than half-built, and <c>docs/data.md</c> says so beside what it covers.
+    /// </para>
+    /// <para>
+    /// Two catches rather than one, for the reason the two above carry two: the record store and
+    /// the mapping store are two files, and a single catch over both would name whichever the
+    /// code happened to reach first, sending an operator to the wrong one.
+    /// </para>
+    /// </remarks>
+    [HttpGet("users/{localUserId}")]
+    public IActionResult HeldAbout(string localUserId)
+    {
+        var administrator = RequestingAdministrator.Of(User);
+
+        if (administrator is null)
+        {
+            return Named(AdministrativeProblem.AdministratorUnidentified);
+        }
+
+        IReadOnlyList<string> pairings;
+
+        try
+        {
+            pairings = _records.Pairings();
+        }
+#pragma warning disable CA1031 // Every escaping exception is the failure this catch exists for, so the type cannot be narrowed without reopening it.
+        catch (Exception fault)
+#pragma warning restore CA1031
+        {
+            _logger.LogError(fault, "The pairing record store could not be read for an administrator, so what is held about a user is unknown. The answer names the problem and carries nothing of the fault.");
+
+            return Named(AdministrativeProblem.RecordStoreUnreadable);
+        }
+
+        try
+        {
+            var held = new List<HeldMapping>();
+
+            foreach (var mapping in _held.Report(pairings, localUserId, administrator))
+            {
+                held.Add(new HeldMapping(mapping.PairingId, mapping.LocalUserId, mapping.PeerUserId, mapping.PeerDisplayName));
+            }
+
+            return new ContentResult
+            {
+                StatusCode = 200,
+                ContentType = "application/json",
+                Content = JsonSerializer.Serialize(held),
+            };
+        }
+#pragma warning disable CA1031 // Every escaping exception is the failure this catch exists for, so the type cannot be narrowed without reopening it.
+        catch (Exception fault)
+#pragma warning restore CA1031
+        {
+            _logger.LogError(fault, "The mapping store could not be read for an administrator, so what is held about a user is unknown. The answer names the problem and carries nothing of the fault.");
+
+            return Named(AdministrativeProblem.MappingStoreUnreadable);
+        }
+    }
+
+    /// <summary>
+    /// The answer a named problem is carried in.
+    /// </summary>
+    /// <param name="problem">The problem.</param>
+    /// <returns>The answer, at the status every named problem on this plane carries.</returns>
+    private static ContentResult Named(AdministrativeProblem problem)
+        => new ContentResult
+        {
+            StatusCode = AdministrativeAnswer.ProblemStatus,
+            ContentType = "application/json",
+            Content = AdministrativeAnswer.Body(problem),
+        };
 }

@@ -5,7 +5,9 @@ using System.Linq;
 using System.Text.Json;
 using Jellyfin.Plugin.ServerPairing.Api;
 using Jellyfin.Plugin.ServerPairing.KeyStore;
+using Jellyfin.Plugin.ServerPairing.Mapping;
 using Jellyfin.Plugin.ServerPairing.Protocol;
+using Jellyfin.Plugin.ServerPairing.Tests.Mapping;
 using Jellyfin.Plugin.ServerPairing.Tests.Protocol;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -176,6 +178,7 @@ public class OpenWindowTests
             records,
             new RefusalCounters(),
             new ArrivalLimit(),
+            new HeldAboutUser(new InMemoryUserMappings(), NullLogger<HeldAboutUser>.Instance),
             NullLogger<AdministrativePlaneController>.Instance);
 
     /// <summary>
