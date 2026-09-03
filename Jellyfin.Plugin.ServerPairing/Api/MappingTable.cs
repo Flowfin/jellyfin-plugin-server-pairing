@@ -68,12 +68,17 @@ public sealed record MappingTable(
         {
             mapped.Add(mapping.LocalUserId);
 
-            var localName = nameOf.TryGetValue(mapping.LocalUserId, out var name) ? name : string.Empty;
+            // A local user the host no longer has is the third rule of issue #37: detected and
+            // reported, never repaired by guessing. The report is the flag and not the empty
+            // name, so a page never has to read an absence as a problem.
+            var exists = nameOf.TryGetValue(mapping.LocalUserId, out var name);
+            var localName = exists ? name! : string.Empty;
 
             mappings.Add(new ListedMapping(
                 mapping.LocalUserId,
                 localName,
                 ShownAs(localName, mapping.LocalUserId),
+                exists,
                 mapping.PeerUserId,
                 mapping.PeerDisplayName,
                 ShownAs(mapping.PeerDisplayName, mapping.PeerUserId)));
