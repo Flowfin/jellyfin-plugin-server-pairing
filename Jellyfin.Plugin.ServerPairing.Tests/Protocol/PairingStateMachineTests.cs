@@ -69,7 +69,7 @@ public class PairingStateMachineTests
         var events = Enum.GetValues<LocalEvent>().Length;
 
         Assert.Equal(8, states);
-        Assert.Equal(5, messages);
+        Assert.Equal(6, messages);
         Assert.Equal(5, events);
 
         // Three states hold a recorded peer key, and a hello reaching one of them has two
@@ -223,6 +223,37 @@ public class PairingStateMachineTests
         Assert.Equal(nameof(PairingMessage.Revoke), record.Cause);
         Assert.Equal(Peer, record.Actor);
         Assert.Equal(At, record.At);
+    }
+
+    /// <summary>
+    /// An arriving unpair ends the pairing exactly as an arriving revoke does, and the one
+    /// thing that separates the two on this side is the cause the record carries. A machine
+    /// that recorded both under one cause would leave an operator unable to tell a peer that
+    /// unpaired from a peer that revoked, which is the distinction issue #56 exists to keep.
+    /// </summary>
+    [Fact]
+    public void AnArrivingUnpairEndsThePairingAndTheRecordSaysUnpairRatherThanRevoke()
+    {
+        var machine = new PairingStateMachine(new InMemoryRecords(), new InMemoryUserMappings());
+
+        machine.Apply(PairingId, LocalEvent.WindowOpened, Administrator, At);
+        machine.Receive(PairingId, PairingMessage.Hello, OfferedKey.NotApplicable, Peer, At);
+        machine.Apply(PairingId, LocalEvent.FingerprintConfirmed, Administrator, At);
+        machine.Receive(PairingId, PairingMessage.Confirm, OfferedKey.NotApplicable, Peer, At);
+        Assert.Equal(PairingState.Active, machine.StateOf(PairingId));
+
+        var transition = machine.Receive(PairingId, PairingMessage.Unpair, OfferedKey.NotApplicable, Peer, At);
+
+        Assert.Equal(TransitionOutcome.Answered, transition.Outcome);
+        Assert.Equal(PairingState.Revoked, machine.StateOf(PairingId));
+
+        var record = machine.RecordOf(PairingId);
+
+        Assert.NotNull(record);
+        Assert.Equal(PairingState.Active, record!.CameFrom);
+        Assert.Equal(nameof(PairingMessage.Unpair), record.Cause);
+        Assert.NotEqual(nameof(PairingMessage.Revoke), record.Cause);
+        Assert.Equal(Peer, record.Actor);
     }
 
     /// <summary>

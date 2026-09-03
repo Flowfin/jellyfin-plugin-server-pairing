@@ -206,7 +206,7 @@ internal sealed class PairedInstance : IDisposable
     /// <summary>
     /// Signs a message with the key this side holds for a pairing and puts it on the wire.
     /// </summary>
-    /// <param name="message">Which of the five messages this is.</param>
+    /// <param name="message">Which of the six messages this is.</param>
     /// <param name="pairingId">The pairing it is sent under.</param>
     /// <param name="body">The body bytes.</param>
     /// <param name="cancellationToken">The caller's cancellation token.</param>

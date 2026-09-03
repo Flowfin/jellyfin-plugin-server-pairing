@@ -1,7 +1,7 @@
 namespace Jellyfin.Plugin.ServerPairing.Protocol;
 
 /// <summary>
-/// The five request types the pairing plane carries.
+/// The six request types the pairing plane carries.
 /// </summary>
 /// <remarks>
 /// The list and the path each one arrives on are <c>docs/protocol.md</c>. This enumeration
@@ -38,4 +38,18 @@ public enum PairingMessage
     /// Traffic for a consumer. Opaque to this layer.
     /// </summary>
     Exchange = 4,
+
+    /// <summary>
+    /// The peer's operator has finished with the pairing and asks this side to end it too.
+    /// Accepted in exactly the states <see cref="Revoke"/> is accepted in, and for the same
+    /// reason: from <see cref="PairingState.Pending"/> onwards this side holds the peer's key
+    /// and can verify the request, and in <see cref="PairingState.Offered"/> it cannot. The
+    /// receiving side completes its own side and asks its operator for nothing, because the
+    /// pairing is already gone from the other end. What separates the two here is the cause
+    /// written on the record, which names the message, so an operator can tell a peer that
+    /// unpaired from a peer that revoked. What separates them on the sending side is the
+    /// order, which issue #56 fixes: unpairing asks the peer first and revoking asks the peer
+    /// for nothing.
+    /// </summary>
+    Unpair = 5,
 }

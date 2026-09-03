@@ -72,7 +72,7 @@ public class EndpointKeyMaterialTests
     /// walk found every path this plugin serves, on both planes.
     /// </summary>
     /// <remarks>
-    /// Two derived sets rather than one written down. The specification's five paths are what
+    /// Two derived sets rather than one written down. The specification's six paths are what
     /// the peer plane owes and are read out of <see cref="PeerPlane.PathFor"/>; everything the
     /// host would route is read out of its own action discovery, which is what widens with a
     /// second plane without anybody editing a list here. The two together say that the walk
@@ -254,6 +254,7 @@ public class EndpointKeyMaterialTests
         PairingMessage.Rotate => controller.Rotate(),
         PairingMessage.Revoke => controller.Revoke(),
         PairingMessage.Exchange => controller.Exchange(),
+        PairingMessage.Unpair => controller.Unpair(),
         _ => throw new ArgumentOutOfRangeException(nameof(message)),
     };
 

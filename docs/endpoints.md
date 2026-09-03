@@ -17,11 +17,12 @@ describing them once they exist.
 | `PeerPlaneController.Rotate` | `POST` | `/ServerPairing/rotate` | peer | `anonymous` | the pairing signature |
 | `PeerPlaneController.Revoke` | `POST` | `/ServerPairing/revoke` | peer | `anonymous` | the pairing signature |
 | `PeerPlaneController.Exchange` | `POST` | `/ServerPairing/exchange` | peer | `anonymous` | the pairing signature |
+| `PeerPlaneController.Unpair` | `POST` | `/ServerPairing/unpair` | peer | `anonymous` | the pairing signature |
 | `AdministrativePlaneController.Pairings` | `GET` | `/ServerPairing/Administration/pairings` | administrative | `elevation` | the host's elevation policy |
 | `AdministrativePlaneController.Diagnostics` | `GET` | `/ServerPairing/Administration/diagnostics` | administrative | `elevation` | the host's elevation policy |
 | `AdministrativePlaneController.Windows` | `GET` | `/ServerPairing/Administration/windows` | administrative | `elevation` | the host's elevation policy |
 
-Eight rows. Five are the peer plane, which is the paths the specification fixes.
+Nine rows. Six are the peer plane, which is the paths the specification fixes.
 THIS PARAGRAPH SAID THE ADMINISTRATIVE PLANE HAS NO ENDPOINT AND THEREFORE NO
 ROW; it has three. The first is issue #289, and the plane is what that issue is
 about rather than the action on it: what it answers is the identifiers of the

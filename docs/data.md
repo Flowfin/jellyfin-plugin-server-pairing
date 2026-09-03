@@ -69,6 +69,13 @@ and a field added there without a row here is a defect in this file.
 
 Nothing beyond the envelope crosses. That is the point of it.
 
+### In `unpair`
+
+Nothing beyond the envelope crosses, as in `revoke`. What separates the two is the
+order on the sending side and the cause written on the record, which
+[`protocol.md`](protocol.md) states at the transition table, and neither of those
+is a byte on the wire.
+
 ### In `exchange`
 
 This is where the personal data is, and this document cannot yet list its fields.

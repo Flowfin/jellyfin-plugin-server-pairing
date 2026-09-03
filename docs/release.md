@@ -149,7 +149,7 @@ rather than the placeholder it used to:
 
     git show origin/master:build.yaml | grep -n -A2 'changelog'
     28:changelog: >
-    29-  The first release. A server that installs it answers on the five pairing paths
+    29-  The first release. A server that installs it answers on the six pairing paths
     30-  the specification fixes and refuses every request that reaches them. Nothing
 
 `build.net10.0.yaml` carries the same field with the same words, and both take

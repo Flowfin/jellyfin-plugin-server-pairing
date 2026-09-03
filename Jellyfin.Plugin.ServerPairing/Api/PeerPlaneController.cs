@@ -12,7 +12,7 @@ using Microsoft.Extensions.Logging;
 namespace Jellyfin.Plugin.ServerPairing.Api;
 
 /// <summary>
-/// The five peer paths the specification fixes, served against the host's own routing.
+/// The six peer paths the specification fixes, served against the host's own routing.
 /// </summary>
 /// <remarks>
 /// This type reads the request and writes the answer. What an arriving request means is
@@ -107,6 +107,13 @@ public sealed class PeerPlaneController : ControllerBase
     /// <returns>The answer.</returns>
     [HttpPost("exchange")]
     public Task<IActionResult> Exchange() => Serve(PairingMessage.Exchange);
+
+    /// <summary>
+    /// The peer's operator has finished with the pairing and asks this side to end it too.
+    /// </summary>
+    /// <returns>The answer.</returns>
+    [HttpPost("unpair")]
+    public Task<IActionResult> Unpair() => Serve(PairingMessage.Unpair);
 
     /// <summary>
     /// Reads a body without reading past a limit.

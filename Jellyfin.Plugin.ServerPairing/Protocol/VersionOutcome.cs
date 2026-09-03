@@ -6,7 +6,7 @@ namespace Jellyfin.Plugin.ServerPairing.Protocol;
 /// <remarks>
 /// Which code each of these becomes on the wire is fixed by the error taxonomy in
 /// <c>docs/protocol.md</c> rather than here, and nothing in this tree performs that mapping.
-/// THIS SENTENCE GAVE THE REASON AS THERE BEING NO ENDPOINT THAT WOULD, and the five peer
+/// THIS SENTENCE GAVE THE REASON AS THERE BEING NO ENDPOINT THAT WOULD, and the six peer
 /// paths are served. What is absent is the negotiation on them: nothing on either plane
 /// selects a version, so a <c>hello</c> reaching this server produces no
 /// <see cref="VersionOutcome"/> for anything to map. A reader of the old sentence waits for an
