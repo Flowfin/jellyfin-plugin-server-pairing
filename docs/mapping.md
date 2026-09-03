@@ -244,6 +244,9 @@ behaviour of a sync path, and no sync path exists in this plugin. Nothing here i
 in [`docs/logging.md`](logging.md)'s table yet, and the assertion that the skip is
 visible is not written, because there is nothing to skip.
 
-**Removing what is held about one person.** Reporting and removing everything
-held for a user is issue #60, and it needs this table plus a surface to ask
-through.
+**Removing what is held about one person.** Reporting everything held for a user
+is an action on the administrative plane, in [`docs/endpoints.md`](endpoints.md),
+and it walks the pairing record store rather than the key store so that a mapping
+under a pairing that has not finished enrolling is in the answer. Removing it is
+the other half of issue #60 and is not built, for the reason
+[`docs/data.md`](data.md) gives beside what it will cover.

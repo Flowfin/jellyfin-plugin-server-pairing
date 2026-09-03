@@ -21,10 +21,11 @@ describing them once they exist.
 | `AdministrativePlaneController.Pairings` | `GET` | `/ServerPairing/Administration/pairings` | administrative | `elevation` | the host's elevation policy |
 | `AdministrativePlaneController.Diagnostics` | `GET` | `/ServerPairing/Administration/diagnostics` | administrative | `elevation` | the host's elevation policy |
 | `AdministrativePlaneController.Windows` | `GET` | `/ServerPairing/Administration/windows` | administrative | `elevation` | the host's elevation policy |
+| `AdministrativePlaneController.HeldAbout` | `GET` | `/ServerPairing/Administration/users/{localUserId}` | administrative | `elevation` | the host's elevation policy |
 
-Nine rows. Six are the peer plane, which is the paths the specification fixes.
+Ten rows. Six are the peer plane, which is the paths the specification fixes.
 THIS PARAGRAPH SAID THE ADMINISTRATIVE PLANE HAS NO ENDPOINT AND THEREFORE NO
-ROW; it has three. The first is issue #289, and the plane is what that issue is
+ROW; it has four. The first is issue #289, and the plane is what that issue is
 about rather than the action on it: what it answers is the identifiers of the
 pairings this server holds a key for, and nothing else. The second is the
 diagnostics read, which is issue #51, and what it answers is how many requests
@@ -44,6 +45,22 @@ registered on a server at all, so this action answers an empty list on every
 server today. That is stated here and at the action rather than left for an
 operator to read an empty answer as a server with no window open.
 
+The fourth is what this plugin holds about one local user, which is the report
+half of issue #60: every mapping held for that user across every pairing, each
+with the pairing it belongs to, the opaque peer identifier and the cached peer
+display name, said in the output to be a cache by the name of the member that
+carries it. It walks the pairing record store and not the key store, because a
+pairing that has not finished enrolling holds no key and may hold a mapping, and
+a report walked over the key store would answer nothing for such a user and look
+exactly like a report for a user mapped nowhere; the case named after that walk
+in the suite refuses the narrower one. It writes one audit entry naming who asked
+and neither user, which is the row [`logging.md`](logging.md) gives it, and it
+changes nothing. THE REMOVAL HALF OF #60 IS NOT BUILT. Nothing on this plane
+removes a user from every pairing, because that removal has to raise the consumer
+event once per pairing and there is no contract to raise it through until issue
+#43 lands; [`data.md`](data.md) says what it will cover and that it does not
+exist.
+
 That second row is narrower than the issue it comes from. A state per pairing,
 the protocol version each side speaks and a last error per pairing are all things
 #51 asks the payload to carry, and none of them has anything in this tree that
@@ -55,9 +72,9 @@ The rest of the administrative actions are still issues rather than actions, and
 a row for one of them would describe something no request can reach: OPENING an
 enrolment window is #18, which the row above does not do - it says whether one is
 open and provides no way to open one - confirming a ceremony is #19, revoking is
-#24, editing mappings is #40 and the pairing states the page renders are #49.
-Each of them lands on the plane above rather than bringing a controller of its
-own.
+#24, editing mappings is #40, removing what is held about one user is the other
+half of #60 and the pairing states the page renders are #49. Each of them lands
+on the plane above rather than bringing a controller of its own.
 
 ### What the two authorization words mean
 
@@ -72,9 +89,9 @@ else.
 
 `elevation` is the action carrying `Authorize` naming the host's
 `RequiresElevation` policy, which is the constant read out of the server source
-in the section below. THREE ROWS CARRY IT AND THIS SENTENCE SAID TWO DID, having
-said one before that; the count moves with the plane and is derived by the suite
-rather than trusted from here. What
+in the section below. FOUR ROWS CARRY IT AND THIS SENTENCE SAID THREE DID, having
+said two and one before that; the count moves with the plane and is derived by the
+suite rather than trusted from here. What
 decides such a request is the host's elevation policy together with the
 endpoint's own repeat of the check, which is the third bullet under `What this
 plugin does about it`.

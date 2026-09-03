@@ -24,8 +24,10 @@ says why underneath the table.
 | A request was refused | Warning | pairing id where one is known, the refusal category, the peer address |
 | A refusal rate crossed its threshold | Warning | pairing id, the count and the window it was counted over |
 | A mapping was added, changed or removed | Information | pairing id, the administrator who did it, which direction |
+| What is held about one user was reported | Information | the administrator who asked, how many pairings were looked under, how many mappings were found |
 | The key store could not be read or written | Error | the operation, the reason, no path contents |
 | The pairing record store could not be read | Error | the operation, the reason, no path contents, no pairing identifier |
+| The mapping store could not be read | Error | the operation, the reason, no path contents, no pairing identifier |
 | A request on the pairing plane faulted | Error | which of the six messages it arrived on, and the fault the runtime raised, with no pairing identifier |
 | The plugin started against a store that already holds a pairing | Information | pairing id, one entry per pairing found |
 | The key store was carried up from an older format | Information | the format it was in, the format it is now, and the name of the copy left beside it |
@@ -35,11 +37,11 @@ says why underneath the table.
 Debug adds timing and state machine transitions for the same events. It adds no
 field that is not in the table above.
 
-Six rows carry no pairing identifier and each has its own reason. **This
-paragraph said five**, and before that three, and before that it said the fault
-row was the only one, which was wrong about the table it sits under from the day
-the store rows landed. Every count is corrected here rather than by adding an
-identifier those rows have no way to know.
+Eight rows carry no pairing identifier and each has its own reason. **This
+paragraph said six**, and before that five, and three, and before that it said
+the fault row was the only one, which was wrong about the table it sits under
+from the day the store rows landed. Every count is corrected here rather than by
+adding an identifier those rows have no way to know.
 
 The fault row leaves it out deliberately. A fault is reachable before the request
 has been read, so at that moment the only identifier available is the one the
@@ -48,11 +50,12 @@ assumed hostile. Writing it would let a stranger choose which pairing an
 operator's error line appears to be about. What the entry names instead is the
 path the request arrived on, which is this server's own fact.
 
-The three store rows leave it out because none of them is about a pairing. A
+The four store rows leave it out because none of them is about a pairing. A
 store that cannot be read holds no identifier anybody can name, and that is true
-of both stores: the record store is the one that would carry an identifier, and a
-walk that threw is a walk that reached none. A store being carried up from an
-older format is one event about one file however many pairings are in it.
+of all three stores: the record store is the one that would carry an identifier,
+the mapping store is keyed by one, and a walk that threw is a walk that reached
+none. A store being carried up from an older format is one event about one file
+however many pairings are in it.
 The migration row names the file rather than its contents on purpose: what is
 inside is key material, and a row naming contents would put every key the store
 holds into the log.
@@ -63,6 +66,14 @@ about this server rather than about a relationship, and an acknowledged cleartex
 address weakens every pairing this server will ever have rather than one of them.
 Both name the setting instead, which is what an operator has to open to change
 it.
+
+The report row leaves it out because a report of what is held about a person
+crosses every pairing at once and is about the person rather than about any one
+of them. It names the administrator who asked and how far the report looked, and
+neither user: the peer identity is on the list below, and the local identifier
+is not a field the mapping-change row above names either. So the trail says that
+the question was asked, by whom and when, and the mapping table is where somebody
+entitled to the answer reads it.
 
 The fault text is the runtime's and not this plugin's, which is where the list
 below meets its one soft edge. Nothing on this plane parses a body today, so no
@@ -109,6 +120,7 @@ From the log alone, and with nothing else to hand, an operator can answer:
 - when a key was rotated, and which side started it
 - when a pairing was revoked, and which side revoked it
 - how many requests were refused, over what window, and in which category
+- when an administrator asked what is held about a user, and which administrator
 
 Each of those is answerable from the table above. That is the reason the table
 is shaped the way it is, rather than being a list of whatever happened to be
@@ -143,11 +155,13 @@ that four do, then that five do. Six do. Which rows of the table each of them
 writes is under the reading rather than counted here.
 
     git grep -nE "ILogger|_logger" origin/master -- Jellyfin.Plugin.ServerPairing
-    origin/master:Jellyfin.Plugin.ServerPairing/Api/AdministrativePlaneController.cs:63:    private readonly ILogger<AdministrativePlaneController> _logger;
-    origin/master:Jellyfin.Plugin.ServerPairing/Api/AdministrativePlaneController.cs:78:        ILogger<AdministrativePlaneController> logger)
-    origin/master:Jellyfin.Plugin.ServerPairing/Api/AdministrativePlaneController.cs:84:        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-    origin/master:Jellyfin.Plugin.ServerPairing/Api/AdministrativePlaneController.cs:124:            _logger.LogError(fault, "The key store could not be read for an administrator, so what this server holds is unknown. The answer names the problem and carries nothing of the fault.");
-    origin/master:Jellyfin.Plugin.ServerPairing/Api/AdministrativePlaneController.cs:194:            _logger.LogError(fault, "The pairing record store could not be read for an administrator, so whether a window is open is unknown. The answer names the problem and carries nothing of the fault.");
+    origin/master:Jellyfin.Plugin.ServerPairing/Api/AdministrativePlaneController.cs:66:    private readonly ILogger<AdministrativePlaneController> _logger;
+    origin/master:Jellyfin.Plugin.ServerPairing/Api/AdministrativePlaneController.cs:83:        ILogger<AdministrativePlaneController> logger)
+    origin/master:Jellyfin.Plugin.ServerPairing/Api/AdministrativePlaneController.cs:90:        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+    origin/master:Jellyfin.Plugin.ServerPairing/Api/AdministrativePlaneController.cs:130:            _logger.LogError(fault, "The key store could not be read for an administrator, so what this server holds is unknown. The answer names the problem and carries nothing of the fault.");
+    origin/master:Jellyfin.Plugin.ServerPairing/Api/AdministrativePlaneController.cs:200:            _logger.LogError(fault, "The pairing record store could not be read for an administrator, so whether a window is open is unknown. The answer names the problem and carries nothing of the fault.");
+    origin/master:Jellyfin.Plugin.ServerPairing/Api/AdministrativePlaneController.cs:311:            _logger.LogError(fault, "The pairing record store could not be read for an administrator, so what is held about a user is unknown. The answer names the problem and carries nothing of the fault.");
+    origin/master:Jellyfin.Plugin.ServerPairing/Api/AdministrativePlaneController.cs:336:            _logger.LogError(fault, "The mapping store could not be read for an administrator, so what is held about a user is unknown. The answer names the problem and carries nothing of the fault.");
     origin/master:Jellyfin.Plugin.ServerPairing/Api/PeerPlaneController.cs:39:    private readonly ILogger<PeerPlaneController> _logger;
     origin/master:Jellyfin.Plugin.ServerPairing/Api/PeerPlaneController.cs:69:    public PeerPlaneController(PeerPlane plane, TimeProvider time, ILogger<PeerPlaneController> logger)
     origin/master:Jellyfin.Plugin.ServerPairing/Api/PeerPlaneController.cs:73:        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
@@ -168,12 +182,15 @@ writes is under the reading rather than counted here.
     origin/master:Jellyfin.Plugin.ServerPairing/KeyStore/StoreAtStartup.cs:82:            if (_logger.IsEnabled(LogLevel.Information))
     origin/master:Jellyfin.Plugin.ServerPairing/KeyStore/StoreAtStartup.cs:86:                    _logger.LogInformation(
     origin/master:Jellyfin.Plugin.ServerPairing/KeyStore/StoreAtStartup.cs:96:            _logger.LogError(fault, "The key store could not be read at startup, so what it holds is unknown and no pairing will work. The server is left running.");
+    origin/master:Jellyfin.Plugin.ServerPairing/Mapping/HeldAboutUser.cs:39:    private readonly ILogger<HeldAboutUser> _log;
+    origin/master:Jellyfin.Plugin.ServerPairing/Mapping/HeldAboutUser.cs:52:    public HeldAboutUser(IUserMappingStore mappings, ILogger<HeldAboutUser> log)
     origin/master:Jellyfin.Plugin.ServerPairing/Mapping/UserMappings.cs:37:    private readonly ILogger<UserMappings> _log;
     origin/master:Jellyfin.Plugin.ServerPairing/Mapping/UserMappings.cs:53:    public UserMappings(IUserMappingStore mappings, PairingStateMachine pairings, ILogger<UserMappings> log)
     origin/master:Jellyfin.Plugin.ServerPairing/PluginServiceRegistrator.cs:125:                services.GetRequiredService<ILogger<FilePairingKeyStore>>()));
+    origin/master:Jellyfin.Plugin.ServerPairing/PluginServiceRegistrator.cs:185:            services.GetRequiredService<ILogger<HeldAboutUser>>()));
 
 THIS BLOCK WENT STALE TWICE AND NO RUN ON THIS REPOSITORY SAW EITHER TIME. It
-pasted two types, then four, and the command returns five; the registration line
+pasted two types, then four, then five, and the command returns 7 that hold a logger; the registration line
 moved from 103 to 113 underneath it as well. What let that happen is the reading
 rather than the check. `sh .github/reading-check.sh` walks a command naming
 `origin/master`, and this one named a working tree, so it sat outside the walk on

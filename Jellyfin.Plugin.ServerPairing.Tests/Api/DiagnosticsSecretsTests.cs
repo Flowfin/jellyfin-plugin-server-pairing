@@ -1,8 +1,10 @@
 using System;
 using System.Threading.Tasks;
 using Jellyfin.Plugin.ServerPairing.Api;
+using Jellyfin.Plugin.ServerPairing.Mapping;
 using Jellyfin.Plugin.ServerPairing.Protocol;
 using Jellyfin.Plugin.ServerPairing.Tests.Harness;
+using Jellyfin.Plugin.ServerPairing.Tests.Mapping;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging.Abstractions;
 using Xunit;
@@ -163,6 +165,7 @@ public class DiagnosticsSecretsTests
             new Tests.Protocol.InMemoryPairingRecords(),
             side.Refusals,
             side.Arrivals,
+            new HeldAboutUser(new InMemoryUserMappings(), NullLogger<HeldAboutUser>.Instance),
             NullLogger<AdministrativePlaneController>.Instance);
 
         var answered = Assert.IsType<ContentResult>(controller.Diagnostics());

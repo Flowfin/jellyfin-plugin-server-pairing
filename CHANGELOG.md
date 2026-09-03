@@ -54,6 +54,11 @@ there is no page and no endpoint an administrator can open an enrolment from.
 Two servers cannot be paired with this version. The `changelog` field in
 `build.yaml` and `build.net10.0.yaml` carries that paragraph in the same words.
 
+- An administrator can ask what this plugin holds about one local user, at
+  `/ServerPairing/Administration/users/{localUserId}`, and is answered with every
+  mapping for that user across every pairing, the cached peer display name marked
+  as a cache. Nothing removes what it reports yet, and what the peer server holds
+  about that user is the peer operator's to remove either way.
 - [protocol] `unpair` is a sixth message on the pairing plane, at
   `/ServerPairing/unpair`, carrying nothing beyond the envelope and answered
   empty. A peer whose operator is finished with a pairing sends it before ending

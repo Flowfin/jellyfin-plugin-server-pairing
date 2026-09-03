@@ -270,9 +270,11 @@ and what deleting it costs. It is not answered by this document.
 The section above removes what moved through a pairing. An operator asked by one
 person in a household what is held about them, and to remove it, is asking a
 narrower question that crosses every pairing at once. Issue #60 owes the two
-administrative operations that answer it. Neither exists, and this section states
-what they cover so that the code obeys it rather than the scope being read back
-off the code afterwards.
+administrative operations that answer it. The report exists, on the
+administrative plane in [`endpoints.md`](endpoints.md), and was built against
+this section; the removal does not exist. This section states what both cover so
+that the code obeys it rather than the scope being read back off the code
+afterwards.
 
 Nothing in this plugin holds a person's name. What the report covers, for one
 local user, on every pairing that user is mapped on, is what the sections above
@@ -301,6 +303,13 @@ What the removal covers, once per pairing the user is mapped on:
 
 There is no operator choice at removal time and no confirmation offering to stop
 the transfer and leave the rows in place, for the reason the section above gives.
+
+NONE OF THE REMOVAL IS BUILT, and what holds it is the second bullet. There is no
+consumer contract for the event to be raised through, which is issue #43, and a
+removal that took the mapping and its cache and told no consumer would read to
+the operator as total while leaving in place the rows it exists to remove. So the
+removal is absent rather than half-built, and the report is the whole of what an
+operator can do here today.
 
 What only the peer operator can do is the half this plugin cannot reach, and it
 is the same asymmetry as revocation, one level down from a pairing to a person. A
