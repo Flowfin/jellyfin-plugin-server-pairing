@@ -66,6 +66,7 @@ public class MappingTableTests
         Assert.Contains(table.Mappings, entry => entry.LocalUserId == Anna && entry.LocalUserName == "anna" && entry.PeerUserId == PeerUser && entry.CachedPeerDisplayName == DisplayName);
         Assert.Contains(table.Mappings, entry => entry.LocalUserId == Carl && entry.LocalUserName == "carl" && entry.PeerUserId == "peer-user-9");
         Assert.DoesNotContain(table.Mappings, entry => entry.LocalUserId == Bea);
+        Assert.All(table.Mappings, entry => Assert.True(entry.LocalUserExists));
     }
 
     /// <summary>
@@ -152,7 +153,58 @@ public class MappingTableTests
         Assert.Equal(Gone, entry.LocalUserId);
         Assert.Equal(string.Empty, entry.LocalUserName);
         Assert.Equal(Gone, entry.LocalUserShownAs);
+        Assert.False(entry.LocalUserExists);
         Assert.DoesNotContain(table.UnmappedLocalUsers, user => user.LocalUserId == Gone);
+    }
+
+    /// <summary>
+    /// The third done condition of issue #37, named for it: a mapping to a deleted user
+    /// surfaces as a reported problem rather than as an exception or a silent skip. The report
+    /// is the flag, false for that mapping and true for every mapping whose user the host still
+    /// has, so a page never has to read an empty name as the problem; and the listing answers
+    /// rather than throwing, with the other mapping under the same pairing still listed.
+    /// </summary>
+    [Fact]
+    public void AMappingToADeletedUserSurfacesAsAReportedProblemRatherThanAnExceptionOrASilentSkip()
+    {
+        var (records, mappings, users) = TwoPairingsAndThreeUsers();
+
+        mappings.Put(new UserMapping(Pairing, Anna, PeerUser, DisplayName, "an-administrator", At));
+        mappings.Put(new UserMapping(Pairing, Gone, OtherPeerUser, "Gone Example", "an-administrator", At));
+
+        var table = Listed(Controller(records, mappings, users), Pairing);
+
+        Assert.Equal(2, table.Mappings.Count);
+        Assert.Contains(table.Mappings, entry => entry.LocalUserId == Gone && !entry.LocalUserExists);
+        Assert.Contains(table.Mappings, entry => entry.LocalUserId == Anna && entry.LocalUserExists);
+    }
+
+    /// <summary>
+    /// The fifth rule of issue #37, named for it: deleting a local user does not silently delete
+    /// the mapping. Nothing tells this plugin when a user goes, so what is asserted is what that
+    /// leaves: the mapping is in the store before and after the host's user set loses the user,
+    /// and the listing taken afterwards reports it rather than dropping it.
+    /// </summary>
+    [Fact]
+    public void DeletingALocalUserDoesNotSilentlyDeleteTheMapping()
+    {
+        var (records, mappings, users) = TwoPairingsAndThreeUsers();
+
+        mappings.Put(new UserMapping(Pairing, Anna, PeerUser, DisplayName, "an-administrator", At));
+
+        var before = Listed(Controller(records, mappings, users), Pairing);
+        var listedBefore = Assert.Single(before.Mappings);
+
+        Assert.True(listedBefore.LocalUserExists);
+
+        var withoutAnna = new InMemoryLocalUsers().With(Bea, "bea").With(Carl, "carl");
+
+        var after = Listed(Controller(records, mappings, withoutAnna), Pairing);
+        var listedAfter = Assert.Single(after.Mappings);
+
+        Assert.Equal(Anna, listedAfter.LocalUserId);
+        Assert.False(listedAfter.LocalUserExists);
+        Assert.Single(mappings.For(Pairing));
     }
 
     /// <summary>
@@ -335,6 +387,7 @@ public class MappingTableTests
         Assert.Contains("\"cachedPeerDisplayName\":\"" + DisplayName + "\"", content, StringComparison.Ordinal);
         Assert.Contains("\"peerUserShownAs\":\"" + DisplayName + "\"", content, StringComparison.Ordinal);
         Assert.Contains("\"localUserShownAs\":\"anna\"", content, StringComparison.Ordinal);
+        Assert.Contains("\"localUserExists\":true", content, StringComparison.Ordinal);
         Assert.DoesNotContain("\"peerDisplayName\"", content, StringComparison.Ordinal);
     }
 

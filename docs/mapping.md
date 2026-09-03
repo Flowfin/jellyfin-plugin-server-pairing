@@ -173,9 +173,14 @@ PLUGIN HOLDS NO REFERENCE TO THE HOST'S USER MANAGER, AND IT HOLDS ONE NOW, FOR
 A READ. The listing on the administrative plane reads the host's user set to say
 who is unmapped, and it shows a mapping whose local user the host no longer has
 by its identifier with an empty name rather than dropping it, because a mapping
-an operator cannot see is one they cannot remove. The write path still takes no
-list of users on any call, so such a mapping is shown and is not refused. Issue
-#37 keeps that rule.
+an operator cannot see is one they cannot remove. THIS PARAGRAPH THEN SAID SUCH A
+MAPPING IS SHOWN AND NOT REFUSED, AND IT IS REPORTED NOW AS WELL AS SHOWN: the
+listing marks it, by a member that is false for it and for nothing else, and the
+page says beside it that this server no longer has the user. That is the rule
+issue #37 states, detected and reported and never repaired by guessing, as a
+property of the listing, and `MappingTableTests` asserts it in both directions.
+The write path still takes no list of users on any call, so such a mapping is
+not refused, and nothing removes it but an administrator.
 
 **A mapping whose peer user no longer exists on the peer.** That is detected on
 the next `exchange`, and `exchange` has no payload yet - the field table in
@@ -184,10 +189,14 @@ the next `exchange`, and `exchange` has no payload yet - the field table in
 **A local user being deleted.** The rule is that deleting one does not silently
 delete the mapping, because a silent deletion loses the audit trail of what used
 to be synced where. Nothing in this plugin is told when a user is deleted, so
-there is no moment at which it could do either thing.
+there is no moment at which it could do either thing, and that is what keeps the
+rule: the mapping stays in the store and the listing reports it, which
+`MappingTableTests` asserts by taking the user out of the host's set and reading
+the table again. What is not asserted is anything about the moment of deletion,
+because there is none here to assert against.
 
-Each of the three is a rule with no code path to sit on rather than a rule that
-was decided against, and none of them is asserted by a test, because a test over
+The second of the three is a rule with no code path to sit on rather than a rule
+that was decided against, and it is not asserted by a test, because a test over
 a path that does not exist passes and goes on passing after the path is written.
 
 ## An unmapped user is not synced

@@ -127,6 +127,22 @@ public class MappingTableOnThePageTests
     }
 
     /// <summary>
+    /// A mapping whose local user this server no longer has is said in words in the same row,
+    /// read off the flag the listing reports rather than off an empty name: the third rule of
+    /// issue #37 reaching the operator. The sentence is page text and not a register sentence,
+    /// so it is asserted here by its opening words rather than held equal to a constant.
+    /// </summary>
+    [Fact]
+    public void AMappingWhoseUserIsGoneIsSaidInWordsInTheSameRow()
+    {
+        var rendering = FunctionBody(Page(), "renderMappingTable");
+
+        Assert.Contains("mapping.localUserExists === false", rendering, StringComparison.Ordinal);
+        Assert.Contains("This server no longer has this user.", rendering, StringComparison.Ordinal);
+        Assert.DoesNotContain("localUserName === ''", rendering, StringComparison.Ordinal);
+    }
+
+    /// <summary>
     /// The floor under the cases above. Each reads one file and one function body out of it,
     /// so a moved page or a renamed function would make them read an empty string, which the
     /// negative assertion above passes on.

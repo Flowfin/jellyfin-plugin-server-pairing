@@ -170,7 +170,16 @@
 
                     table.mappings.forEach(function (mapping) {
                         var row = document.createElement('tr');
-                        cell(row, mapping.localUserShownAs);
+                        var local = cell(row, mapping.localUserShownAs);
+
+                        // A mapping whose user this server no longer has is reported by the
+                        // listing, by a flag rather than by an empty name, and is said here in
+                        // words rather than left as an identifier an operator has to recognise
+                        // as one. It is kept and offered for removal, never repaired by guessing.
+                        if (mapping.localUserExists === false) {
+                            local.appendChild(paragraph('This server no longer has this user. The mapping is kept and reported so it can be removed here rather than repaired by guessing.'));
+                        }
+
                         cell(row, mapping.peerUserShownAs);
 
                         var remove = document.createElement('button');

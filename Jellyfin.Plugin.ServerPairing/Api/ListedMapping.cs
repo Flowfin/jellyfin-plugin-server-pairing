@@ -24,7 +24,11 @@ namespace Jellyfin.Plugin.ServerPairing.Api;
 /// user by identifier, and the host may no longer have a user with that identifier, which
 /// <c>docs/mapping.md</c> says nothing refuses. Such a mapping is listed by its identifier
 /// with an empty name rather than dropped, because a mapping the operator cannot see is a
-/// mapping the operator cannot remove.
+/// mapping the operator cannot remove, and it is REPORTED rather than only shown:
+/// <see cref="LocalUserExists"/> is false for it and for nothing else, which is the third
+/// rule of issue #37 as a property of the listing. An empty name would carry the same fact,
+/// and it is not left to carry it, because a page reading an empty name as a problem is a
+/// page guessing, and the rule that fact serves is that nothing here is repaired by guessing.
 /// </para>
 /// <para>
 /// Who decided the mapping and when are on the record and are not here, for the reason they
@@ -35,6 +39,7 @@ namespace Jellyfin.Plugin.ServerPairing.Api;
 /// <param name="LocalUserId">The user on this server, as the mapping holds them.</param>
 /// <param name="LocalUserName">The username the host holds for that user, empty where the host no longer has them.</param>
 /// <param name="LocalUserShownAs">The name, or the identifier where the host holds no name.</param>
+/// <param name="LocalUserExists">Whether this server still has a user with that identifier; false is the reported problem.</param>
 /// <param name="PeerUserId">The opaque identifier of the user on the peer.</param>
 /// <param name="CachedPeerDisplayName">The peer's display name for that user as this server last cached it, empty where none was sent.</param>
 /// <param name="PeerUserShownAs">The cached name, or the identifier where the cache holds nothing.</param>
@@ -42,6 +47,7 @@ public sealed record ListedMapping(
     [property: JsonPropertyName("localUserId")] string LocalUserId,
     [property: JsonPropertyName("localUserName")] string LocalUserName,
     [property: JsonPropertyName("localUserShownAs")] string LocalUserShownAs,
+    [property: JsonPropertyName("localUserExists")] bool LocalUserExists,
     [property: JsonPropertyName("peerUserId")] string PeerUserId,
     [property: JsonPropertyName("cachedPeerDisplayName")] string CachedPeerDisplayName,
     [property: JsonPropertyName("peerUserShownAs")] string PeerUserShownAs);

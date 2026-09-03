@@ -71,7 +71,10 @@ Two servers cannot be paired with this version. The `changelog` field in
   `/ServerPairing/Administration/pairings/{pairingId}/mappings`, and is answered
   with every mapping under it, the cached peer display name marked as a cache and
   shown as the identifier where the cache is empty, and every local user who is
-  unmapped under it. A mapping can be removed at the same path with the local
+  unmapped under it. A mapping whose local user this server no longer has is
+  listed and marked as such rather than dropped, and the page says so beside it,
+  so a user deleted on this server leaves a reported mapping and never a silently
+  lost one. A mapping can be removed at the same path with the local
   user appended, and the removal is audited under the administrator the host
   authenticated. Nothing adds a mapping yet, because adding one means choosing a
   peer user from a list fetched from the peer and nothing fetches one, so the

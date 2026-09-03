@@ -69,7 +69,11 @@ The fifth and sixth are a pairing's mapping table, which is the half of issue
 one pairing with the local user as the host names them, the opaque peer
 identifier and the cached peer display name, and beside each name the value a
 page shows: the name where there is one and the identifier where there is not,
-so an unset cache is never an empty cell. It answers the local users who are
+so an unset cache is never an empty cell. A mapping whose local user this server
+no longer has is listed rather than dropped and is marked as such by a member
+that is false for it and for nothing else, which is the third rule of issue #37
+reported at the listing rather than left to a page to infer from an empty name.
+It answers the local users who are
 unmapped under that pairing too, read from the host's user manager at the
 moment of the call and kept nowhere, so an operator wondering why somebody is
 not syncing does not work it out by subtraction. A pairing nothing is held for
