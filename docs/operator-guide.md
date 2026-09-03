@@ -21,11 +21,16 @@ pair:
     git grep -lni 'ECDiffieHellman' origin/master -- Jellyfin.Plugin.ServerPairing ; echo "exit=$?"
     exit=1
 
-Nothing an administrator presses reaches this plugin either. It adds two route
-prefixes and every action behind them is a read:
+THIS PARAGRAPH SAID NOTHING AN ADMINISTRATOR PRESSES REACHES THIS PLUGIN AND THAT
+EVERY ACTION BEHIND ITS TWO ROUTE PREFIXES IS A READ. One thing does and one
+action is not: an administrator can remove a mapping from a pairing's table,
+and that is the whole of what an administrator can change here. Nothing opens a
+window, confirms a ceremony, revokes a pairing or adds a mapping, so every step
+below that changes something still waits:
 
     git grep -nE 'Http(Post|Put|Delete|Patch)' origin/master -- Jellyfin.Plugin.ServerPairing/Api/AdministrativePlaneController.cs ; echo "exit=$?"
-    exit=1
+    origin/master:Jellyfin.Plugin.ServerPairing/Api/AdministrativePlaneController.cs:479:    [HttpDelete("pairings/{pairingId}/mappings/{localUserId}")]
+    exit=0
 
 and the settings page is still the plugin template's example fields:
 

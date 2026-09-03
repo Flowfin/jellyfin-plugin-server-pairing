@@ -39,10 +39,13 @@ namespace Jellyfin.Plugin.ServerPairing.Api;
 /// </para>
 /// <para>
 /// The actions of this plan land here rather than each bringing a controller: opening an
-/// enrolment window and confirming a ceremony are issues #18 and #19, revoking is #24, editing
-/// mappings is #40, the pairing states the page renders are #49, and reporting what is held
-/// about one user is here while removing it is the other half of #60. What this type owns is
-/// the plane, which is the elevation policy, the answer shape and the rows in the endpoint table.
+/// enrolment window and confirming a ceremony are issues #18 and #19, revoking is #24, the
+/// pairing states the page renders are #49, and reporting what is held about one user is here
+/// while removing it is the other half of #60. Listing a pairing's mapping table and removing
+/// a row from it are here too, and are the half of issue #40 that needs nothing from the peer;
+/// adding a row means choosing a peer user from a list fetched from the peer, and nothing in
+/// this plugin fetches one. What this type owns is the plane, which is the elevation policy,
+/// the answer shape and the rows in the endpoint table.
 /// </para>
 /// <para>
 /// THE DIAGNOSTICS PAYLOAD WAS IN THAT LIST AND IS AN ACTION NOW, WHICH IS SMALLER THAN ISSUE
@@ -63,6 +66,8 @@ public sealed class AdministrativePlaneController : ControllerBase
     private readonly RefusalCounters _refusals;
     private readonly ArrivalLimit _arrivals;
     private readonly HeldAboutUser _held;
+    private readonly UserMappings _mappings;
+    private readonly ILocalUsers _localUsers;
     private readonly ILogger<AdministrativePlaneController> _logger;
 
     /// <summary>
@@ -73,6 +78,8 @@ public sealed class AdministrativePlaneController : ControllerBase
     /// <param name="refusals">What the peer plane has refused, and why.</param>
     /// <param name="arrivals">How much of the peer plane each claimed identifier has used.</param>
     /// <param name="held">What this plugin holds about one user, and the audit entry saying it was asked.</param>
+    /// <param name="mappings">The one way a mapping is read, made or removed, and the audit entry a change writes.</param>
+    /// <param name="localUsers">The users this server has, read from the host.</param>
     /// <param name="logger">Where the detail of an unreadable store goes.</param>
     public AdministrativePlaneController(
         IPairingKeyStore keys,
@@ -80,6 +87,8 @@ public sealed class AdministrativePlaneController : ControllerBase
         RefusalCounters refusals,
         ArrivalLimit arrivals,
         HeldAboutUser held,
+        UserMappings mappings,
+        ILocalUsers localUsers,
         ILogger<AdministrativePlaneController> logger)
     {
         _keys = keys ?? throw new ArgumentNullException(nameof(keys));
@@ -87,6 +96,8 @@ public sealed class AdministrativePlaneController : ControllerBase
         _refusals = refusals ?? throw new ArgumentNullException(nameof(refusals));
         _arrivals = arrivals ?? throw new ArgumentNullException(nameof(arrivals));
         _held = held ?? throw new ArgumentNullException(nameof(held));
+        _mappings = mappings ?? throw new ArgumentNullException(nameof(mappings));
+        _localUsers = localUsers ?? throw new ArgumentNullException(nameof(localUsers));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -281,6 +292,10 @@ public sealed class AdministrativePlaneController : ControllerBase
     /// is no contract to raise it through until issue #43 lands. A removal that took the mapping
     /// and told no consumer would read as total while leaving the rows it exists to remove, so it
     /// is absent rather than half-built, and <c>docs/data.md</c> says so beside what it covers.
+    /// <see cref="Unmap"/> is not that operation: it removes one mapping under one pairing at an
+    /// administrator's decision, which is what a pairing's table offers, and it tells no consumer
+    /// anything because nothing moved under a mapping yet and the wording an operator confirms
+    /// says what already arrived stays where it arrived.
     /// </para>
     /// <para>
     /// Two catches rather than one, for the reason the two above carry two: the record store and
@@ -337,6 +352,156 @@ public sealed class AdministrativePlaneController : ControllerBase
 
             return Named(AdministrativeProblem.MappingStoreUnreadable);
         }
+    }
+
+    /// <summary>
+    /// The mapping table of one pairing: every mapping under it, and every local user who has
+    /// none.
+    /// </summary>
+    /// <param name="pairingId">The pairing.</param>
+    /// <returns>
+    /// The table, not found where no record is held for that pairing, or the named problem where
+    /// a store could not be read.
+    /// </returns>
+    /// <remarks>
+    /// This is the listing half of issue #40, and the shape is <see cref="MappingTable"/>: the
+    /// local user and the cached peer display name per mapping, an unset cache shown as the
+    /// identifier rather than as an empty cell, and the local users who are unmapped, so an
+    /// operator wondering why somebody is not syncing does not work it out by subtraction.
+    /// <para>
+    /// A PAIRING NOTHING IS HELD FOR IS NOT FOUND RATHER THAN AN EMPTY TABLE WITH EVERY USER
+    /// UNMAPPED. <see cref="PairingState.Absent"/> is what an identifier nothing is held for reads
+    /// as, and a table for it would invite mapping under a pairing that does not exist, which
+    /// <see cref="UserMappings.Map"/> refuses anyway; the refusal is moved to the moment of the
+    /// listing so the page never offers it. A pairing in <see cref="PairingState.Revoked"/> keeps
+    /// its record and is listed, with an empty table, because the state machine swept its
+    /// mappings when it ended, and that is the answer rather than a fault.
+    /// </para>
+    /// <para>
+    /// It is a read and changes nothing, and it writes no audit entry. The report of what is
+    /// held about a person writes one because it is an act about a person; this is the dashboard
+    /// reading the table, which <c>docs/logging.md</c> names as where an operator entitled to the
+    /// answer reads who is mapped to whom.
+    /// </para>
+    /// <para>
+    /// The users this server has are read from the host through <see cref="ILocalUsers"/> and
+    /// are not behind a catch: what may throw there is the host's own user manager, and a fault
+    /// in the host's own service is the host's to answer for rather than something a sentence
+    /// naming one of this plugin's stores could describe.
+    /// </para>
+    /// </remarks>
+    [HttpGet("pairings/{pairingId}/mappings")]
+    public IActionResult Mappings(string pairingId)
+    {
+        PairingRecord? record;
+
+        try
+        {
+            record = _records.Read(pairingId);
+        }
+#pragma warning disable CA1031 // Every escaping exception is the failure this catch exists for, so the type cannot be narrowed without reopening it.
+        catch (Exception fault)
+#pragma warning restore CA1031
+        {
+            _logger.LogError(fault, "The pairing record store could not be read for an administrator, so whether a pairing holds a mapping table is unknown. The answer names the problem and carries nothing of the fault.");
+
+            return Named(AdministrativeProblem.RecordStoreUnreadable);
+        }
+
+        if (record is null)
+        {
+            return NotFound();
+        }
+
+        IReadOnlyList<UserMapping> held;
+
+        try
+        {
+            held = _mappings.For(pairingId);
+        }
+#pragma warning disable CA1031 // Every escaping exception is the failure this catch exists for, so the type cannot be narrowed without reopening it.
+        catch (Exception fault)
+#pragma warning restore CA1031
+        {
+            _logger.LogError(fault, "The mapping store could not be read or written for an administrator, so what a pairing's table holds is unknown. The answer names the problem and carries nothing of the fault.");
+
+            return Named(AdministrativeProblem.MappingStoreUnreadable);
+        }
+
+        return new ContentResult
+        {
+            StatusCode = 200,
+            ContentType = "application/json",
+            Content = JsonSerializer.Serialize(MappingTable.Of(pairingId, held, _localUsers.Users())),
+        };
+    }
+
+    /// <summary>
+    /// Removes the mapping held for one local user under one pairing, at an administrator's
+    /// decision.
+    /// </summary>
+    /// <param name="pairingId">The pairing.</param>
+    /// <param name="localUserId">The user on this server whose mapping goes.</param>
+    /// <returns>
+    /// No content where a mapping was there and is now gone, not found where there was none, or
+    /// the named problem where the store could not be read or written or the caller could not
+    /// be named.
+    /// </returns>
+    /// <remarks>
+    /// This is the removal half of issue #40, and it is the first action on this plane that
+    /// changes state. It goes through <see cref="UserMappings.Unmap"/> and through nothing else,
+    /// so the audit entry naming who removed it is written by the one type every change passes
+    /// and cannot be skipped here. Who removed it is the principal the host authenticated, read
+    /// by <see cref="RequestingAdministrator"/>, and where that names nobody the removal is
+    /// refused before the store is touched, because a change nobody is named for is the trail's
+    /// failure and not only the entry's.
+    /// <para>
+    /// WHAT THE OPERATOR IS TOLD BEFORE THEY DO THIS IS NOT HERE. Issue #40 asks that the
+    /// consequence for already-transferred data be stated at the moment of removal, and the
+    /// sentence is <c>DestructiveWording.RemoveMapping</c>, which the page shows and this action
+    /// does not carry: an answer carrying a sentence is a second copy of it, and the suite refuses
+    /// a sentence anywhere but the one place it lives. What this action does is the act the
+    /// sentence describes, and nothing more: the mapping and its display cache go, what already
+    /// arrived under it stays on the user it arrived on, and nothing here reaches it.
+    /// </para>
+    /// <para>
+    /// Removing a mapping that is not there is not found and writes nothing, which is the
+    /// property <see cref="UserMappings.Unmap"/> holds and this answer passes on: an entry per
+    /// call rather than per change would let anything reaching this path grow the log without a
+    /// mapping ever moving.
+    /// </para>
+    /// <para>
+    /// One catch, over a read and a write of one file, and it names the mapping store: the
+    /// removal touches no other store, so there is no second file an operator could be sent to
+    /// by mistake.
+    /// </para>
+    /// </remarks>
+    [HttpDelete("pairings/{pairingId}/mappings/{localUserId}")]
+    public IActionResult Unmap(string pairingId, string localUserId)
+    {
+        var administrator = RequestingAdministrator.Of(User);
+
+        if (administrator is null)
+        {
+            return Named(AdministrativeProblem.AdministratorUnidentified);
+        }
+
+        bool removed;
+
+        try
+        {
+            removed = _mappings.Unmap(pairingId, localUserId, administrator);
+        }
+#pragma warning disable CA1031 // Every escaping exception is the failure this catch exists for, so the type cannot be narrowed without reopening it.
+        catch (Exception fault)
+#pragma warning restore CA1031
+        {
+            _logger.LogError(fault, "The mapping store could not be read or written for an administrator, so whether a mapping was removed is unknown. The answer names the problem and carries nothing of the fault.");
+
+            return Named(AdministrativeProblem.MappingStoreUnreadable);
+        }
+
+        return removed ? NoContent() : NotFound();
     }
 
     /// <summary>

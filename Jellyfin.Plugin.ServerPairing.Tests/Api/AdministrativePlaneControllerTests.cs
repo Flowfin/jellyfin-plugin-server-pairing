@@ -261,6 +261,10 @@ public class AdministrativePlaneControllerTests
         paths.DataPath.Returns(Path.GetTempPath());
         services.AddSingleton(paths);
 
+        // And the host's user manager, which the plane reads the local user set from. The
+        // substitute answers no users, which is enough for the container to build the reader.
+        services.AddSingleton(Substitute.For<MediaBrowser.Controller.Library.IUserManager>());
+
         new PluginServiceRegistrator().RegisterServices(services, Substitute.For<IServerApplicationHost>());
 
         using var provider = services.BuildServiceProvider(new ServiceProviderOptions { ValidateScopes = true });
@@ -295,6 +299,8 @@ public class AdministrativePlaneControllerTests
             new RefusalCounters(),
             new ArrivalLimit(),
             new HeldAboutUser(new InMemoryUserMappings(), NullLogger<HeldAboutUser>.Instance),
+            new UserMappings(new InMemoryUserMappings(), new PairingStateMachine(new InMemoryPairingRecords(), new InMemoryUserMappings()), NullLogger<UserMappings>.Instance),
+            new InMemoryLocalUsers(),
             NullLogger<AdministrativePlaneController>.Instance);
 
     /// <summary>

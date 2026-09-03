@@ -362,6 +362,8 @@ public class HeldAboutUserTests
             new RefusalCounters(),
             new ArrivalLimit(),
             held,
+            new UserMappings(new InMemoryUserMappings(), new PairingStateMachine(new InMemoryPairingRecords(), new InMemoryUserMappings()), NullLogger<UserMappings>.Instance),
+            new InMemoryLocalUsers(),
             NullLogger<AdministrativePlaneController>.Instance)
         {
             ControllerContext = new ControllerContext { HttpContext = context },

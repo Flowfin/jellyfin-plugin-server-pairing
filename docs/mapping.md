@@ -168,11 +168,14 @@ quietly widen.
 
 ## What is not refused yet, and why
 
-**A mapping to a local user who no longer exists.** Nothing here knows which
-local users exist: this plugin holds no reference to the host's user manager and
-takes no list of users on any call. Detecting it is a read of that set, and the
-surface that would perform the read is the administration one. Issue #37 keeps
-that rule.
+**A mapping to a local user who no longer exists.** THIS PARAGRAPH SAID THIS
+PLUGIN HOLDS NO REFERENCE TO THE HOST'S USER MANAGER, AND IT HOLDS ONE NOW, FOR
+A READ. The listing on the administrative plane reads the host's user set to say
+who is unmapped, and it shows a mapping whose local user the host no longer has
+by its identifier with an empty name rather than dropping it, because a mapping
+an operator cannot see is one they cannot remove. The write path still takes no
+list of users on any call, so such a mapping is shown and is not refused. Issue
+#37 keeps that rule.
 
 **A mapping whose peer user no longer exists on the peer.** That is detected on
 the next `exchange`, and `exchange` has no payload yet - the field table in
@@ -231,13 +234,17 @@ counted as many changes by whoever reads the log.
 
 ## What this document does not cover
 
-**Anything writing through a surface.** The file above exists and nothing on a
-server puts a row in it, because no endpoint and no page reaches the decision
-surface. That is issue #40, behind the dashboard page in #49, and it is the
-sentence below rather than a second one.
+**Adding a mapping through a surface.** The file above exists and nothing on a
+server puts a row in it. An endpoint on the administrative plane lists a
+pairing's table and removes a row from it, in
+[`docs/endpoints.md`](endpoints.md), and nothing adds one: adding a row means
+choosing a peer user from a list fetched from the peer, which is a protocol
+operation this plugin does not make yet. That is the rest of issue #40, and the
+unmapped users the listing answers are the set an administrator will choose
+from rather than anything a suggestion was made over.
 
-**The administration surface.** Nothing renders this table, nothing lists it, and
-no endpoint reaches it. That is issue #40, behind the dashboard page in #49.
+**Rendering the table.** Nothing renders it. The listing answers the page in
+#49, and that page is not written.
 
 **The log line for a skipped user.** An unmapped user being skipped is a
 behaviour of a sync path, and no sync path exists in this plugin. Nothing here is
