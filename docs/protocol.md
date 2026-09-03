@@ -53,7 +53,7 @@ git grep -lni 'ECDiffieHellman' origin/master -- Jellyfin.Plugin.ServerPairing ;
 exit=1
 ```
 
-which is issue #18. So the five paths are served and every one of them refuses, for
+which is issue #18. So the six paths are served and every one of them refuses, for
 want of a key rather than for want of a lookup, and nothing has ever
 been signed by this plugin against a key it holds or accepted from a peer.
 Everything below about what happens after a signature verifies is therefore still
@@ -165,7 +165,7 @@ identifier.
 
 ## The messages
 
-Five request types. Every one is a `POST`, every one carries the authentication
+Six request types. Every one is a `POST`, every one carries the authentication
 headers below, and every one has exactly one response shape on success and the
 refusal shape on failure.
 
@@ -175,6 +175,7 @@ refusal shape on failure.
 | `confirm` | `/ServerPairing/confirm` | the fingerprint digest this side's operator compared | empty |
 | `rotate` | `/ServerPairing/rotate` | the replacement public key and the instant the old one stops verifying | the replacement public key of this side |
 | `revoke` | `/ServerPairing/revoke` | nothing beyond the envelope | empty |
+| `unpair` | `/ServerPairing/unpair` | nothing beyond the envelope | empty |
 | `exchange` | `/ServerPairing/exchange` | opaque to this layer; the consumer contract in M6 defines it | opaque to this layer |
 
 Paths are exact. A request whose path carries a trailing slash, a query string,
@@ -295,6 +296,8 @@ rather than as they would re-serialise.
 | `rotate` | response | `key` | public key, this side's replacement |
 | `revoke` | request | none | empty |
 | `revoke` | response | none | empty |
+| `unpair` | request | none | empty |
+| `unpair` | response | none | empty |
 | `exchange` | both | none named here | opaque to this layer; M6 fixes what is inside it and this document names none of it |
 | every type | refusal | `code` | one of the codes in the error taxonomy below |
 | every type | refusal, `version` only | `versionLow` | protocol version, the lowest this server speaks |
@@ -622,18 +625,18 @@ Rows are the state on the receiving side. Columns are the request that arrives.
 Every cell is defined, and a cell reading `refused` is a refusal with the
 undistinguished code, not undefined behaviour.
 
-| State | `hello` | `confirm` | `rotate` | `revoke` | `exchange` |
-| --- | --- | --- | --- | --- | --- |
-| `Absent` | `refused` | `refused` | `refused` | `refused` | `refused` |
-| `Offered` | record the peer key, answer with this side's key, go to `Pending` | `refused` | `refused` | `refused` | `refused` |
-| `Pending` | identical key: answer as before, stay. Different key: close the window, go to `Absent`, `refused` | go to `ConfirmedByPeer` | `state` | go to `Revoked` | `state` |
-| `ConfirmedHere` | identical key: answer as before, stay. Different key: close the window, go to `Absent`, `refused` | go to `Active` | `state` | go to `Revoked` | `state` |
-| `ConfirmedByPeer` | identical key: answer as before, stay. Different key: close the window, go to `Absent`, `refused` | stay, answer as before | `state` | go to `Revoked` | `state` |
-| `Active` | `refused` | stay, answer as before | accept the replacement key, go to `Rotating` | go to `Revoked` | answer it |
-| `Rotating` | `refused` | stay, answer as before | `state` | go to `Revoked` | answer it |
-| `Revoked` | `refused` | `refused` | `refused` | `refused` | `refused` |
+| State | `hello` | `confirm` | `rotate` | `revoke` | `unpair` | `exchange` |
+| --- | --- | --- | --- | --- | --- | --- |
+| `Absent` | `refused` | `refused` | `refused` | `refused` | `refused` | `refused` |
+| `Offered` | record the peer key, answer with this side's key, go to `Pending` | `refused` | `refused` | `refused` | `refused` | `refused` |
+| `Pending` | identical key: answer as before, stay. Different key: close the window, go to `Absent`, `refused` | go to `ConfirmedByPeer` | `state` | go to `Revoked` | go to `Revoked` | `state` |
+| `ConfirmedHere` | identical key: answer as before, stay. Different key: close the window, go to `Absent`, `refused` | go to `Active` | `state` | go to `Revoked` | go to `Revoked` | `state` |
+| `ConfirmedByPeer` | identical key: answer as before, stay. Different key: close the window, go to `Absent`, `refused` | stay, answer as before | `state` | go to `Revoked` | go to `Revoked` | `state` |
+| `Active` | `refused` | stay, answer as before | accept the replacement key, go to `Rotating` | go to `Revoked` | go to `Revoked` | answer it |
+| `Rotating` | `refused` | stay, answer as before | `state` | go to `Revoked` | go to `Revoked` | answer it |
+| `Revoked` | `refused` | `refused` | `refused` | `refused` | `refused` | `refused` |
 
-Four things in that table are worth saying in words, because a reader can find
+Five things in that table are worth saying in words, because a reader can find
 them in it but should not have to.
 
 A second `hello` carrying a different key closes the window and destroys the
@@ -660,6 +663,23 @@ local event below and is not affected.
 half-built states it is `state` rather than `refused`, because a caller that
 reaches those states has already verified, and telling a verified peer that the
 pairing is not finished tells it nothing it could not infer.
+
+`unpair` takes the same cells as `revoke`, and it is a second message rather than
+a second meaning of the first because of what happens on the sending side and in
+the record, neither of which this table holds. Revoking is the security action:
+it asks the peer for nothing and works against a peer that is hostile or gone.
+Unpairing is the ordinary one: two operators are finished, so the sending side
+asks the peer to end its side first and then ends its own, and it records whether
+the peer acknowledged. A receiver handed one envelope for both could not tell them
+apart, would record the wrong event, and could never say whether an
+acknowledgement was owed, which are the two things issue #56 exists to define. So
+a verified `unpair` completes the receiving side without that side's operator
+being asked, because the pairing is already gone from the other end and a half
+pairing is worse than acting, and the record it writes names `unpair` as the
+cause where a revocation names `revoke`. `Offered` refuses it for the reason it
+refuses `revoke`: no peer key has arrived there, so nothing could have signed it.
+What the sending side does, the audit entry, and the wording an operator is shown
+are issue #56's and are not decided by this table.
 
 ## Local events
 
@@ -697,7 +717,7 @@ to hold it under. The wire already says as much about the request that arrives i
 that state:
 
     git grep -n "^them. Its .X-Pairing-Id. is 32" origin/master -- docs/protocol.md
-    origin/master:docs/protocol.md:416:them. Its `X-Pairing-Id` is 32 `0` characters, which is what line 5 of its
+    origin/master:docs/protocol.md:419:them. Its `X-Pairing-Id` is 32 `0` characters, which is what line 5 of its
 
 **`OFFERED` IS WRITTEN, UNDER A PROVISIONAL IDENTIFIER.** Opening a window mints
 one and writes the record under it. The record moves to the derived identifier at
@@ -946,6 +966,18 @@ else.
 A request on an `Active` pairing carrying a version other than the selected one
 is `state`. A pairing is not renegotiated; two servers that want a different
 version rotate or re-pair.
+
+`unpair` is a message of version 1 rather than the first message of a version 2,
+and the reason is worth stating because [`versioning.md`](versioning.md) reads
+the other way at first sight. That document says a change to what a version
+already means is a removal wearing a smaller number, and the peer it protects is
+one that speaks the old version and was never upgraded. There is no such peer:
+no version of this plugin has been published, so no server anywhere speaks the
+version 1 that lacked `unpair`. That was read rather than recalled on the day the
+method was added, 2026-09-03, with `gh api
+repos/Flowfin/jellyfin-plugin-server-pairing/releases --jq length` answering `0`
+and the same call against `tags` answering `0`. The moment a release exists, that
+argument stops being available, and a method added after it is a version 2.
 
 A version this server does not know is not a version it guesses at. There is no
 best-effort parse of an unknown version and no forward compatibility rule beyond

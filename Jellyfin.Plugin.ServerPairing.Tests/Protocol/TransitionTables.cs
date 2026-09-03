@@ -71,6 +71,7 @@ internal static class TransitionTables
         cells.Add(Refused(PairingState.Offered, PairingMessage.Confirm));
         cells.Add(Refused(PairingState.Offered, PairingMessage.Rotate));
         cells.Add(Refused(PairingState.Offered, PairingMessage.Revoke));
+        cells.Add(Refused(PairingState.Offered, PairingMessage.Unpair));
         cells.Add(Refused(PairingState.Offered, PairingMessage.Exchange));
 
         // Row: Pending.
@@ -79,6 +80,7 @@ internal static class TransitionTables
         cells.Add(Accepted(PairingState.Pending, PairingMessage.Confirm, PairingState.ConfirmedByPeer));
         cells.Add(WrongState(PairingState.Pending, PairingMessage.Rotate));
         cells.Add(Accepted(PairingState.Pending, PairingMessage.Revoke, PairingState.Revoked));
+        cells.Add(Accepted(PairingState.Pending, PairingMessage.Unpair, PairingState.Revoked));
         cells.Add(WrongState(PairingState.Pending, PairingMessage.Exchange));
 
         // Row: ConfirmedHere.
@@ -87,6 +89,7 @@ internal static class TransitionTables
         cells.Add(Accepted(PairingState.ConfirmedHere, PairingMessage.Confirm, PairingState.Active));
         cells.Add(WrongState(PairingState.ConfirmedHere, PairingMessage.Rotate));
         cells.Add(Accepted(PairingState.ConfirmedHere, PairingMessage.Revoke, PairingState.Revoked));
+        cells.Add(Accepted(PairingState.ConfirmedHere, PairingMessage.Unpair, PairingState.Revoked));
         cells.Add(WrongState(PairingState.ConfirmedHere, PairingMessage.Exchange));
 
         // Row: ConfirmedByPeer. A repeated confirm is answered as before rather than refused,
@@ -96,6 +99,7 @@ internal static class TransitionTables
         cells.Add(Accepted(PairingState.ConfirmedByPeer, PairingMessage.Confirm, PairingState.ConfirmedByPeer));
         cells.Add(WrongState(PairingState.ConfirmedByPeer, PairingMessage.Rotate));
         cells.Add(Accepted(PairingState.ConfirmedByPeer, PairingMessage.Revoke, PairingState.Revoked));
+        cells.Add(Accepted(PairingState.ConfirmedByPeer, PairingMessage.Unpair, PairingState.Revoked));
         cells.Add(WrongState(PairingState.ConfirmedByPeer, PairingMessage.Exchange));
 
         // Row: Active.
@@ -103,6 +107,7 @@ internal static class TransitionTables
         cells.Add(Accepted(PairingState.Active, PairingMessage.Confirm, PairingState.Active));
         cells.Add(Accepted(PairingState.Active, PairingMessage.Rotate, PairingState.Rotating));
         cells.Add(Accepted(PairingState.Active, PairingMessage.Revoke, PairingState.Revoked));
+        cells.Add(Accepted(PairingState.Active, PairingMessage.Unpair, PairingState.Revoked));
         cells.Add(Accepted(PairingState.Active, PairingMessage.Exchange, PairingState.Active));
 
         // Row: Rotating. A second rotate inside an overlap is the state code rather than a
@@ -111,6 +116,7 @@ internal static class TransitionTables
         cells.Add(Accepted(PairingState.Rotating, PairingMessage.Confirm, PairingState.Rotating));
         cells.Add(WrongState(PairingState.Rotating, PairingMessage.Rotate));
         cells.Add(Accepted(PairingState.Rotating, PairingMessage.Revoke, PairingState.Revoked));
+        cells.Add(Accepted(PairingState.Rotating, PairingMessage.Unpair, PairingState.Revoked));
         cells.Add(Accepted(PairingState.Rotating, PairingMessage.Exchange, PairingState.Rotating));
 
         // Row: Revoked. Terminal, and a repeated revoke is refused rather than answered,

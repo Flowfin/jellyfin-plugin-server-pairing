@@ -57,7 +57,7 @@ public class PluginServiceRegistrator : IPluginServiceRegistrator
 
         // The inbound side. The controller is found by the host's own scan of this assembly
         // and is constructed from the container, so what it needs is registered here or the
-        // five paths answer with a server error instead of a refusal.
+        // six paths answer with a server error instead of a refusal.
         //
         // The key source reads the store registered below, so a pairing that has a key can be
         // verified. What has never put a key into that store is the enrolment, which is issue

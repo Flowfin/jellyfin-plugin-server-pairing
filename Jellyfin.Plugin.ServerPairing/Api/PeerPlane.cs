@@ -4,7 +4,7 @@ using Jellyfin.Plugin.ServerPairing.Protocol;
 namespace Jellyfin.Plugin.ServerPairing.Api;
 
 /// <summary>
-/// The five peer paths, and what happens to a request that arrives on one.
+/// The six peer paths, and what happens to a request that arrives on one.
 /// </summary>
 /// <remarks>
 /// This type holds the plane and the controller holds the host. Everything decidable about an
@@ -97,6 +97,7 @@ public sealed class PeerPlane
         PairingMessage.Rotate => Prefix + "/rotate",
         PairingMessage.Revoke => Prefix + "/revoke",
         PairingMessage.Exchange => Prefix + "/exchange",
+        PairingMessage.Unpair => Prefix + "/unpair",
         _ => throw new ArgumentOutOfRangeException(nameof(message)),
     };
 
@@ -109,7 +110,7 @@ public sealed class PeerPlane
     public static int BodyLimitFor(PairingMessage message) => message switch
     {
         PairingMessage.Exchange => ExchangeBodyLimit,
-        PairingMessage.Hello or PairingMessage.Confirm or PairingMessage.Rotate or PairingMessage.Revoke => BodyLimit,
+        PairingMessage.Hello or PairingMessage.Confirm or PairingMessage.Rotate or PairingMessage.Revoke or PairingMessage.Unpair => BodyLimit,
         _ => throw new ArgumentOutOfRangeException(nameof(message)),
     };
 
@@ -165,7 +166,7 @@ public sealed class PeerPlane
     /// answered with its own code. What is unchanged is the answer to everything before
     /// verification, and the answer to a request that is verified and fresh: every pairing is
     /// <see cref="PairingState.Absent"/> here, and the <c>Absent</c> row of that table is the
-    /// undistinguished refusal for all five messages.
+    /// undistinguished refusal for all six messages.
     /// <c>PeerPlaneTests.TheAbsentRowRefusesEveryMessage</c> is the assertion that ties this
     /// answer to the table instead of to this sentence.
     /// <para>

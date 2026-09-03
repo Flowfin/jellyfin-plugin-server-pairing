@@ -41,9 +41,9 @@ public class PeerPlaneControllerTests
     private const string Marker = "the body stream went away, 9f8c1d2b3a4e5f60";
 
     /// <summary>
-    /// Every message, so a case walks the five rather than naming one.
+    /// Every message, so a case walks the six rather than naming one.
     /// </summary>
-    /// <returns>The five messages.</returns>
+    /// <returns>The six messages.</returns>
     public static TheoryData<PairingMessage> EveryMessage()
     {
         var data = new TheoryData<PairingMessage>();
@@ -63,7 +63,7 @@ public class PeerPlaneControllerTests
     /// judged by what it resolves to.
     /// </summary>
     [Fact]
-    public void FiveActionsAreRoutedAtTheFivePaths()
+    public void SixActionsAreRoutedAtTheSixPaths()
     {
         var prefix = typeof(PeerPlaneController)
             .GetCustomAttributes<RouteAttribute>()
@@ -282,7 +282,7 @@ public class PeerPlaneControllerTests
 
     /// <summary>
     /// The host finds this controller by scanning the plugin assembly and builds it from the
-    /// container, so what it needs has to be registered or the five paths answer with a server
+    /// container, so what it needs has to be registered or the six paths answer with a server
     /// error instead of a refusal. This constructs it the way the framework does, out of what
     /// the registrator added and nothing else.
     /// </summary>
@@ -335,6 +335,7 @@ public class PeerPlaneControllerTests
         PairingMessage.Rotate => controller.Rotate(),
         PairingMessage.Revoke => controller.Revoke(),
         PairingMessage.Exchange => controller.Exchange(),
+        PairingMessage.Unpair => controller.Unpair(),
         _ => throw new ArgumentOutOfRangeException(nameof(message)),
     };
 

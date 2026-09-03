@@ -26,7 +26,7 @@ owner: "Flowfin"
 artifacts:
 - "Jellyfin.Plugin.ServerPairing.dll"
 changelog: >
-  The first release. A server that installs it answers on the five pairing paths
+  The first release. A server that installs it answers on the six pairing paths
   the specification fixes and refuses every request that reaches them. Nothing
   verifies yet, because a server has no key to verify against: the check that reads
   an arriving request looks the pairing up in this server's key store, and nothing

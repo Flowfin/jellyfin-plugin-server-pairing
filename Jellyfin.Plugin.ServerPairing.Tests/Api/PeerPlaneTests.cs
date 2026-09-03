@@ -10,7 +10,7 @@ using Xunit;
 namespace Jellyfin.Plugin.ServerPairing.Tests.Api;
 
 /// <summary>
-/// The five peer paths, and what a request arriving on one is told.
+/// The six peer paths, and what a request arriving on one is told.
 /// </summary>
 /// <remarks>
 /// Every path, every limit and every refusal asserted here is read out of
@@ -34,9 +34,9 @@ public class PeerPlaneTests
     private static byte[] Key { get; } = RandomNumberGenerator.GetBytes(32);
 
     /// <summary>
-    /// Every message this plane carries, so a case walks the five rather than naming one.
+    /// Every message this plane carries, so a case walks the six rather than naming one.
     /// </summary>
-    /// <returns>The five messages.</returns>
+    /// <returns>The six messages.</returns>
     public static TheoryData<PairingMessage> EveryMessage()
     {
         var data = new TheoryData<PairingMessage>();
@@ -50,17 +50,18 @@ public class PeerPlaneTests
     }
 
     /// <summary>
-    /// The five paths the specification fixes, spelled as that document spells them. This is
+    /// The six paths the specification fixes, spelled as that document spells them. This is
     /// the case that fails if a path is renamed on one side of the wire only.
     /// </summary>
     [Fact]
-    public void TheFivePathsAreTheOnesTheSpecificationFixes()
+    public void TheSixPathsAreTheOnesTheSpecificationFixes()
     {
         Assert.Equal("/ServerPairing/hello", PeerPlane.PathFor(PairingMessage.Hello));
         Assert.Equal("/ServerPairing/confirm", PeerPlane.PathFor(PairingMessage.Confirm));
         Assert.Equal("/ServerPairing/rotate", PeerPlane.PathFor(PairingMessage.Rotate));
         Assert.Equal("/ServerPairing/revoke", PeerPlane.PathFor(PairingMessage.Revoke));
         Assert.Equal("/ServerPairing/exchange", PeerPlane.PathFor(PairingMessage.Exchange));
+        Assert.Equal("/ServerPairing/unpair", PeerPlane.PathFor(PairingMessage.Unpair));
     }
 
     /// <summary>
@@ -232,6 +233,7 @@ public class PeerPlaneTests
             PairingMessage.Confirm,
             PairingMessage.Rotate,
             PairingMessage.Revoke,
+            PairingMessage.Unpair,
         };
 
         foreach (var message in eightKibibyteMessages)

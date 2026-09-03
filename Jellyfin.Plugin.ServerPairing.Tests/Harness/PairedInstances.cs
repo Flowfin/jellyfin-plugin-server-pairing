@@ -233,7 +233,7 @@ internal sealed class PairedInstances : IDisposable
         /// <summary>
         /// Hands one message to the receiving side's controller and records what came back.
         /// </summary>
-        /// <param name="message">Which of the five messages this is.</param>
+        /// <param name="message">Which of the six messages this is.</param>
         /// <param name="flight">The message as it arrives.</param>
         /// <param name="cancellationToken">The caller's cancellation token.</param>
         /// <returns>What that side answered.</returns>
@@ -289,7 +289,7 @@ internal sealed class PairedInstances : IDisposable
         /// rather than from a switch this harness holds over the plane.
         /// </summary>
         /// <param name="controller">The receiving side's controller.</param>
-        /// <param name="message">Which of the five messages this is.</param>
+        /// <param name="message">Which of the six messages this is.</param>
         /// <returns>The action's result.</returns>
         private static Task<IActionResult> Serve(PeerPlaneController controller, PairingMessage message)
             => message switch
@@ -299,6 +299,7 @@ internal sealed class PairedInstances : IDisposable
                 PairingMessage.Rotate => controller.Rotate(),
                 PairingMessage.Revoke => controller.Revoke(),
                 PairingMessage.Exchange => controller.Exchange(),
+                PairingMessage.Unpair => controller.Unpair(),
                 _ => throw new ArgumentOutOfRangeException(
                     nameof(message),
                     message,

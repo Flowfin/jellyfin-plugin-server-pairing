@@ -80,6 +80,7 @@ public sealed class PairingStateMachine
             PairingMessage.Confirm => Confirm(from),
             PairingMessage.Rotate => Rotate(from),
             PairingMessage.Revoke => Revoke(from),
+            PairingMessage.Unpair => Unpair(from),
             _ => Exchange(from),
         };
     }
@@ -259,6 +260,23 @@ public sealed class PairingStateMachine
         => from is PairingState.Absent or PairingState.Offered or PairingState.Revoked
             ? Stay(from)
             : Answer(PairingState.Revoked);
+
+    /// <summary>
+    /// An arriving unpair, which is accepted in exactly the states an arriving revoke is, and
+    /// for the same reason.
+    /// </summary>
+    /// <remarks>
+    /// The receiving side of an unpairing completes its own side without asking its operator,
+    /// which issue #56 fixes: the pairing is already gone from the other end, and a half
+    /// pairing is worse than acting. So the cell is the revoke cell, and this reads it from
+    /// there rather than restating it, so the two cannot drift apart in this type. What differs
+    /// is not the state reached but the cause written on the record, which names the message,
+    /// so an operator reading the record can tell a peer that unpaired from a peer that revoked.
+    /// The three refusing states are refused for the reason given at <see cref="Revoke"/>.
+    /// </remarks>
+    /// <param name="from">The state on this side.</param>
+    /// <returns>The cell.</returns>
+    private static PairingTransition Unpair(PairingState from) => Revoke(from);
 
     private static PairingTransition Exchange(PairingState from)
         => from switch

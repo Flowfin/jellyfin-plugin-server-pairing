@@ -26,7 +26,7 @@ says why underneath the table.
 | A mapping was added, changed or removed | Information | pairing id, the administrator who did it, which direction |
 | The key store could not be read or written | Error | the operation, the reason, no path contents |
 | The pairing record store could not be read | Error | the operation, the reason, no path contents, no pairing identifier |
-| A request on the pairing plane faulted | Error | which of the five messages it arrived on, and the fault the runtime raised, with no pairing identifier |
+| A request on the pairing plane faulted | Error | which of the six messages it arrived on, and the fault the runtime raised, with no pairing identifier |
 | The plugin started against a store that already holds a pairing | Information | pairing id, one entry per pairing found |
 | The key store was carried up from an older format | Information | the format it was in, the format it is now, and the name of the copy left beside it |
 | A setting was refused at startup | Error | the setting, the rule it broke, and that nothing was corrected |
@@ -151,7 +151,7 @@ writes is under the reading rather than counted here.
     origin/master:Jellyfin.Plugin.ServerPairing/Api/PeerPlaneController.cs:39:    private readonly ILogger<PeerPlaneController> _logger;
     origin/master:Jellyfin.Plugin.ServerPairing/Api/PeerPlaneController.cs:69:    public PeerPlaneController(PeerPlane plane, TimeProvider time, ILogger<PeerPlaneController> logger)
     origin/master:Jellyfin.Plugin.ServerPairing/Api/PeerPlaneController.cs:73:        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-    origin/master:Jellyfin.Plugin.ServerPairing/Api/PeerPlaneController.cs:253:            _logger.LogError(fault, "A request on the pairing plane faulted and was answered with the refusal every caller gets. Message: {PairingMessage}", message);
+    origin/master:Jellyfin.Plugin.ServerPairing/Api/PeerPlaneController.cs:260:            _logger.LogError(fault, "A request on the pairing plane faulted and was answered with the refusal every caller gets. Message: {PairingMessage}", message);
     origin/master:Jellyfin.Plugin.ServerPairing/Configuration/ConfigurationAtStartup.cs:34:    private readonly ILogger<ConfigurationAtStartup> _logger;
     origin/master:Jellyfin.Plugin.ServerPairing/Configuration/ConfigurationAtStartup.cs:42:    public ConfigurationAtStartup(ConfigurationReading reading, ILogger<ConfigurationAtStartup> logger)
     origin/master:Jellyfin.Plugin.ServerPairing/Configuration/ConfigurationAtStartup.cs:45:        _logger = logger ?? throw new ArgumentNullException(nameof(logger));

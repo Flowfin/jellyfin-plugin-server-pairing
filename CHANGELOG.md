@@ -46,7 +46,7 @@ the wire specification moved, which is why each of them says what a server
 installed today does rather than what an operator has to act on.
 
 What an operator gets by installing this version is a plugin that answers on the
-five pairing paths and refuses every request that reaches them. Nothing
+six pairing paths and refuses every request that reaches them. Nothing
 verifies, and the reason is that a server has no key to verify against rather
 than that nothing looks: the check that reads an arriving request looks the
 pairing up in this server's key store, and nothing puts a key there, because
@@ -54,6 +54,16 @@ there is no page and no endpoint an administrator can open an enrolment from.
 Two servers cannot be paired with this version. The `changelog` field in
 `build.yaml` and `build.net10.0.yaml` carries that paragraph in the same words.
 
+- [protocol] `unpair` is a sixth message on the pairing plane, at
+  `/ServerPairing/unpair`, carrying nothing beyond the envelope and answered
+  empty. A peer whose operator is finished with a pairing sends it before ending
+  its own side, and a server that receives a verified one completes its own side
+  without asking its operator, exactly as it does for `revoke`; what it records
+  names `unpair` rather than `revoke`, so an operator can tell the two apart
+  afterwards. Nothing on a server sends one or acts on one yet: the path is served
+  and refuses like the other five, for want of a key rather than for want of a
+  route. It is a message of protocol version 1, because no version of this plugin
+  has been published for a peer to be behind.
 - The plugin's configuration page now says whether an enrolment window is open on
   this server, and an administrative endpoint answers the same question for
   anything else that asks. A window an operator opened and forgot is the failure
