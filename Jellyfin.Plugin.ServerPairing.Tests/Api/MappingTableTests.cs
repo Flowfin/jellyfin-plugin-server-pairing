@@ -229,7 +229,7 @@ public class MappingTableTests
     {
         var (records, mappings, users) = TwoPairingsAndThreeUsers();
 
-        records.Write(new PairingRecord(Pairing, PairingState.Revoked, PairingState.Active, "AdministratorRevoked", "an-administrator", At));
+        records.Write(new PairingRecord(Pairing, PairingState.Revoked, PairingState.Active, "AdministratorRevoked", "an-administrator", At, "https://peer.example"));
 
         var table = Listed(Controller(records, mappings, users), Pairing);
 
@@ -399,8 +399,8 @@ public class MappingTableTests
     {
         var records = new InMemoryPairingRecords();
 
-        records.Write(new PairingRecord(Pairing, PairingState.Active, PairingState.ConfirmedByPeer, "Confirm", "an-administrator", At));
-        records.Write(new PairingRecord(OtherPairing, PairingState.Pending, PairingState.Offered, "Hello", "peer", At));
+        records.Write(new PairingRecord(Pairing, PairingState.Active, PairingState.ConfirmedByPeer, "Confirm", "an-administrator", At, "https://peer.example"));
+        records.Write(new PairingRecord(OtherPairing, PairingState.Pending, PairingState.Offered, "Hello", "peer", At, "https://other.example"));
 
         var users = new InMemoryLocalUsers().With(Anna, "anna").With(Bea, "bea").With(Carl, "carl");
 

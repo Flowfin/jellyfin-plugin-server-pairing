@@ -389,7 +389,7 @@ public class PairingStateMachineTests
         Assert.Equal(PairingState.Offered, machine.StateOf(PairingId));
         Assert.Equal(afterOpening + 1, records.Reads);
 
-        records.Write(new PairingRecord(PairingId, PairingState.Active, PairingState.ConfirmedHere, "elsewhere", Peer, At));
+        records.Write(new PairingRecord(PairingId, PairingState.Active, PairingState.ConfirmedHere, "elsewhere", Peer, At, "https://peer.example"));
 
         Assert.Equal(PairingState.Active, machine.StateOf(PairingId));
     }

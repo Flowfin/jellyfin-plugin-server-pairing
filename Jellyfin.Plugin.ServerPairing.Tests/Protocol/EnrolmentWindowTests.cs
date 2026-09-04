@@ -16,14 +16,35 @@ public class EnrolmentWindowTests
 {
     private const string SolutionFileName = "Jellyfin.Plugin.ServerPairing.sln";
 
+    /// <summary>
+    /// The one file in the plugin that may call the method that opens a window.
+    /// </summary>
+    private static readonly string[] _theJoin = new[] { "Enrolment.cs" };
+
     private static readonly DateTimeOffset Noon =
         new DateTimeOffset(2026, 8, 13, 12, 0, 0, TimeSpan.Zero);
 
     /// <summary>
     /// It opens only when an administrator opens it, never on startup, never on install,
-    /// never because a peer asked. Nothing in the plugin calls the one method that opens
-    /// one, so no path through the loaded assembly reaches a window without a person.
+    /// never because a peer asked.
     /// </summary>
+    /// <remarks>
+    /// THIS CASE EXPECTED NO CALLER AT ALL AND NOW EXPECTS EXACTLY ONE. What it rested on was
+    /// that nothing in the plugin called the method, which held while opening a window wrote no
+    /// record and was therefore something only the test project ever did. The join in
+    /// <see cref="Enrolment"/> is that caller, and an assertion of an empty set would have to be
+    /// deleted to let it land, which is the shape of a guard being worked around rather than
+    /// argued with.
+    /// <para>
+    /// The property is unchanged and the set is what carries it. The scan matches the text
+    /// <c>.Open(</c>, so a file calling <see cref="Enrolment.Open"/> is caught by it exactly as a
+    /// file calling <see cref="EnrolmentWindow.Open"/> is: both spellings are an instance call on
+    /// that name. So a startup path, a hosted service, a controller or anything on the peer plane
+    /// that reached either one would appear here, and what the equality says is that none of them
+    /// does. The one file named takes the address a person typed and the actor who typed it, and
+    /// is reached by nothing inside this assembly.
+    /// </para>
+    /// </remarks>
     [Fact]
     public void ItOpensOnlyWhenAnAdministratorOpensIt()
     {
@@ -34,7 +55,7 @@ public class EnrolmentWindowTests
             .OrderBy(f => f, StringComparer.Ordinal)
             .ToArray();
 
-        Assert.Equal(Array.Empty<string>(), callers);
+        Assert.Equal(_theJoin, callers);
     }
 
     /// <summary>

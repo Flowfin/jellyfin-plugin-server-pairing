@@ -33,6 +33,7 @@ public sealed class FilePairingRecordStoreTests : IDisposable
     private const string PairingId = "9f8c1d2b3a4e5f60718293a4b5c6d7e8";
     private const string Peer = "peer";
     private const string Administrator = "administrator";
+    private const string Address = "https://peer.example";
 
     private static readonly DateTimeOffset _at = DateTimeOffset.FromUnixTimeSeconds(1786000000);
 
@@ -49,6 +50,13 @@ public sealed class FilePairingRecordStoreTests : IDisposable
     /// for would deserialise to the default of the enumeration, which is
     /// <see cref="PairingState.Absent"/>, so a revoked pairing would come back as one that was
     /// never enrolled.
+    /// <para>
+    /// THE ONES CARRYING A NUMBER CARRY THE CURRENT ONE, AND THAT MATTERS SINCE THERE ARE TWO.
+    /// A fixture pinned to the first format would ask these questions of a document on its way
+    /// through a migration rather than of the document this build writes, and the shape a write of
+    /// this store leaves is the subject. The first format is the subject of its own cases, where a
+    /// document that is intact in it is read rather than refused.
+    /// </para>
     /// </remarks>
     public static TheoryData<string, string> ParsesAndIsNotARecordStore => new TheoryData<string, string>
     {
@@ -56,13 +64,17 @@ public sealed class FilePairingRecordStoreTests : IDisposable
         { "an array", "[]" },
         { "a number", "17" },
         { "a string", "\"records\"" },
-        { "no records member", "{\"format\":1}" },
-        { "records as an array", "{\"format\":1,\"records\":[]}" },
-        { "records as null", "{\"format\":1,\"records\":null}" },
-        { "a record that is a number", "{\"format\":1,\"records\":{\"p\":5}}" },
+        { "no records member", "{\"format\":2}" },
+        { "records as an array", "{\"format\":2,\"records\":[]}" },
+        { "records as null", "{\"format\":2,\"records\":null}" },
+        { "a record that is a number", "{\"format\":2,\"records\":{\"p\":5}}" },
+        { "no records member in the first format", "{\"format\":1}" },
+        { "records as an array in the first format", "{\"format\":1,\"records\":[]}" },
         { "no format member", "{\"records\":{}}" },
         { "a format that is not a number", "{\"format\":\"one\",\"records\":{}}" },
-        { "a state this build has no name for", "{\"format\":1,\"records\":{\"p\":{\"state\":99,\"cameFrom\":0,\"cause\":\"Revoke\",\"actor\":\"peer\",\"at\":1}}}" },
+        { "a format below the earliest one", "{\"format\":0,\"records\":{}}" },
+        { "a state this build has no name for", "{\"format\":2,\"records\":{\"p\":{\"state\":99,\"cameFrom\":0,\"cause\":\"Revoke\",\"actor\":\"peer\",\"at\":1}}}" },
+        { "a state this build has no name for in the first format", "{\"format\":1,\"records\":{\"p\":{\"state\":99,\"cameFrom\":0,\"cause\":\"Revoke\",\"actor\":\"peer\",\"at\":1}}}" },
     };
 
     /// <summary>
@@ -73,7 +85,7 @@ public sealed class FilePairingRecordStoreTests : IDisposable
     {
         { "an empty file", string.Empty },
         { "whitespace", "   \n" },
-        { "a truncated document", "{\"format\":1,\"records\":{\"" },
+        { "a truncated document", "{\"format\":2,\"records\":{\"" },
         { "text that is not JSON", "<html>not a record store</html>" },
     };
 
@@ -105,7 +117,8 @@ public sealed class FilePairingRecordStoreTests : IDisposable
             PairingState.ConfirmedByPeer,
             "Confirm",
             Peer,
-            _at));
+            _at,
+            Address));
 
         var read = new FilePairingRecordStore(file).Read(PairingId);
 
@@ -184,8 +197,8 @@ public sealed class FilePairingRecordStoreTests : IDisposable
         // either pairing into these states: that is issue #18 and it is why the seam is here.
         var seed = new FilePairingRecordStore(file);
 
-        seed.Write(new PairingRecord(expired, PairingState.Pending, PairingState.Offered, "Hello", Peer, _at));
-        seed.Write(new PairingRecord(PairingId, PairingState.Active, PairingState.ConfirmedByPeer, "Confirm", Peer, _at));
+        seed.Write(new PairingRecord(expired, PairingState.Pending, PairingState.Offered, "Hello", Peer, _at, Address));
+        seed.Write(new PairingRecord(PairingId, PairingState.Active, PairingState.ConfirmedByPeer, "Confirm", Peer, _at, Address));
 
         var machine = new PairingStateMachine(seed, new InMemoryUserMappings());
 
@@ -228,7 +241,7 @@ public sealed class FilePairingRecordStoreTests : IDisposable
 
         var store = new FilePairingRecordStore(file);
 
-        store.Write(new PairingRecord(provisional, PairingState.Offered, PairingState.Absent, "WindowOpened", Administrator, _at));
+        store.Write(new PairingRecord(provisional, PairingState.Offered, PairingState.Absent, "WindowOpened", Administrator, _at, Address));
         store.Write(Revoked(PairingId));
 
         var onDisk = new FilePairingRecordStore(file);
@@ -254,8 +267,8 @@ public sealed class FilePairingRecordStoreTests : IDisposable
 
         Assert.NotEqual(first, second);
 
-        store.Write(new PairingRecord(first, PairingState.Offered, PairingState.Absent, "WindowOpened", Administrator, _at));
-        store.Write(new PairingRecord(second, PairingState.Offered, PairingState.Absent, "WindowOpened", Administrator, _at));
+        store.Write(new PairingRecord(first, PairingState.Offered, PairingState.Absent, "WindowOpened", Administrator, _at, Address));
+        store.Write(new PairingRecord(second, PairingState.Offered, PairingState.Absent, "WindowOpened", Administrator, _at, Address));
 
         Assert.Equal(2, new FilePairingRecordStore(file).Pairings().Count);
     }
@@ -371,7 +384,8 @@ public sealed class FilePairingRecordStoreTests : IDisposable
             PairingState.ConfirmedByPeer,
             "Confirm",
             Peer,
-            _at)));
+            _at,
+            Address)));
 
         Assert.Equal(PairingState.Revoked, new FilePairingRecordStore(file).Read(PairingId)?.State);
     }
@@ -400,7 +414,8 @@ public sealed class FilePairingRecordStoreTests : IDisposable
         PairingState.Active,
         "Revoke",
         Peer,
-        _at);
+        _at,
+        Address);
 
     private string WithContent(string bytes)
     {

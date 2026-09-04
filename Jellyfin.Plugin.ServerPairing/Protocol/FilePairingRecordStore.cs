@@ -47,6 +47,15 @@ namespace Jellyfin.Plugin.ServerPairing.Protocol;
 /// without an envelope was this plugin. <see cref="RecordStoreFormat"/> is where that is argued.
 /// </para>
 /// <para>
+/// A FILE CARRYING AN OLDER FORMAT NUMBER IS CARRIED UP RATHER THAN REFUSED, WHICH IT WAS NOT
+/// UNTIL FORMAT 2. While there was one format, every number below it was written by something
+/// that is not this plugin and refusing was the whole of the answer. There are two now, so the
+/// walk in <see cref="RecordStoreFormat.Migrate"/> runs and only a number below the earliest
+/// format this store ever wrote is still damage. The carried document is not written back: a
+/// read migrates in memory and the file moves to the current format at the next write, so a
+/// server that only ever reads leaves the operator's file exactly as it found it.
+/// </para>
+/// <para>
 /// NO KEY MATERIAL PASSES THROUGH HERE, which <see cref="PairingRecord"/> states about itself and
 /// this class does not soften: the record says what state a pairing is in and how it got there,
 /// and what verifies a request is the key store. The two are separate files on purpose, so a key
@@ -215,15 +224,31 @@ public sealed class FilePairingRecordStore : IPairingRecordStore
                 StoreDamagedException.RecordStoreName);
         }
 
-        // Below the current format there is no rung, and there is no file either: this store has
-        // never written one. So a document declaring anything under the current number was not
-        // written by this plugin, which is damage rather than age.
-        if (format < RecordStoreFormat.Current)
+        // Below the earliest format this store ever wrote there is no rung and there was never a
+        // file, so a document declaring such a number was not written by this plugin, which is
+        // damage rather than age. Zero is in that set and is what a document with no number at all
+        // reads as, which is the refusal this store has always made.
+        if (format < RecordStoreFormat.Earliest)
         {
             throw StoreDamagedException.For(_file, StoreDamagedException.RecordStoreName);
         }
 
-        return Deserialise(Records(document));
+        // The strict question is asked of the file AS IT WAS READ rather than of the document the
+        // walk produced, and the order is the whole of it. RecordStoreFormat.Records answers an
+        // absent member with an empty object, which is the right answer for a caller asking what a
+        // document holds and would turn a file this store never wrote into an empty store if a
+        // rung were allowed to supply the member first.
+        var records = Records(document);
+
+        // Between the earliest and the current there is a ladder, so an older file is carried up
+        // rather than refused. The records are then read off the document the walk produced, so a
+        // rung that moved a record is read as it moved it rather than as the file held it.
+        if (format < RecordStoreFormat.Current)
+        {
+            records = Records(RecordStoreFormat.Migrate(document));
+        }
+
+        return Deserialise(records);
     }
 
     /// <summary>
@@ -318,6 +343,18 @@ public sealed class FilePairingRecordStore : IPairingRecordStore
         [JsonPropertyName("at")]
         public long At { get; set; }
 
+        /// <summary>
+        /// Gets or sets the peer this pairing is with, or null where the record carries none.
+        /// </summary>
+        /// <remarks>
+        /// The member format 2 added. It is absent from every record format 1 wrote and from the
+        /// file this store writes for a record that has none, because the serialiser is built to
+        /// leave a null out; a record read back from such a file carries null, which is the same
+        /// answer, so a write and a read of the same record agree.
+        /// </remarks>
+        [JsonPropertyName("address")]
+        public string? Address { get; set; }
+
         public static StoredRecord From(PairingRecord record) => new StoredRecord
         {
             State = record.State,
@@ -325,6 +362,7 @@ public sealed class FilePairingRecordStore : IPairingRecordStore
             Cause = record.Cause,
             Actor = record.Actor,
             At = record.At.ToUnixTimeSeconds(),
+            Address = record.PeerAddress,
         };
 
         public PairingRecord AsRecord(string pairingId) => new PairingRecord(
@@ -333,6 +371,7 @@ public sealed class FilePairingRecordStore : IPairingRecordStore
             CameFrom,
             Cause,
             Actor,
-            DateTimeOffset.FromUnixTimeSeconds(At));
+            DateTimeOffset.FromUnixTimeSeconds(At),
+            Address);
     }
 }

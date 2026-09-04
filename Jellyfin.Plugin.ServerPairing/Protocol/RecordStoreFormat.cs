@@ -16,15 +16,27 @@ namespace Jellyfin.Plugin.ServerPairing.Protocol;
 /// the failure the number exists to prevent.
 /// <para>
 /// THERE IS NO FORMAT 0 HERE AND THAT IS NOT AN OMISSION. The key store carries one because it
-/// wrote files before the number existed, and those files are on operators' disks. This store
-/// has never shipped, so every file it will ever meet was written with an envelope, and a file
-/// carrying no format number was written by something that is not this plugin. That is a damaged
-/// store rather than an old one, which is the difference between the two refusals below.
+/// wrote files before the number existed, and those files are on operators' disks. This store has
+/// carried an envelope since its first commit, so a file carrying no format number was written by
+/// something that is not this plugin. That is a damaged store rather than an old one, which is the
+/// difference between the two refusals in <see cref="FilePairingRecordStore"/>.
 /// </para>
 /// <para>
-/// A rung is owed the moment this number moves. There is no ladder here because there is nothing
-/// to climb yet, and the switch below fails rather than leaving a document where it was, so a
-/// format added without its migration is refused rather than silently half-read.
+/// THIS REMARK SAID THE STORE HAD NEVER SHIPPED AND USED THAT TO ARGUE THAT EVERY FILE BELOW THE
+/// CURRENT NUMBER WAS DAMAGE. It has shipped, in both releases the tree carries a tag for, so a
+/// build that raises this number can meet a file an older build wrote and that argument does not
+/// survive the raise.
+/// </para>
+/// <para>
+/// WHAT IS NOT CLAIMED IS THAT SUCH A FILE EXISTS ON A DISK. Nothing on a server wrote a record
+/// until the enrolment producer landed, so a shipped build could reach this store and never make a
+/// file. The rung below is written because the number moved on a store that shipped, not because a
+/// format 1 file was found anywhere, and no run on a server has been made to look for one.
+/// </para>
+/// <para>
+/// A rung is owed the moment this number moves, and one is written for every step of the ladder.
+/// <see cref="Rung"/> fails rather than leaving a document where it was, so a format added without
+/// its migration is refused rather than silently half-read.
 /// </para>
 /// </remarks>
 public static class RecordStoreFormat
@@ -32,7 +44,21 @@ public static class RecordStoreFormat
     /// <summary>
     /// The format this build writes and reads.
     /// </summary>
-    public const int Current = 1;
+    /// <remarks>
+    /// Format 2 is format 1 with a peer address on each record. It moved because
+    /// <see cref="PairingRecord.PeerAddress"/> arrived, and a store whose records gained a member
+    /// is a document that has moved whether or not the member is optional to read.
+    /// </remarks>
+    public const int Current = 2;
+
+    /// <summary>
+    /// The first format this store ever wrote, which is where the ladder starts.
+    /// </summary>
+    /// <remarks>
+    /// Named rather than written as a literal in two places, because the store refuses anything
+    /// below it as damage and the ladder starts at it, and those two have to be the same number.
+    /// </remarks>
+    public const int Earliest = 1;
 
     /// <summary>
     /// The member the format number is held in.
@@ -76,10 +102,14 @@ public static class RecordStoreFormat
     /// <exception cref="ArgumentNullException">The document is null.</exception>
     /// <exception cref="InvalidOperationException">There is no rung away from the format it declares.</exception>
     /// <remarks>
-    /// Nothing calls this today, because the only format a store may be in is the current one and
-    /// every other value is refused before a migration could be reached. It is here so that the
-    /// rung a second format needs has a place to be written, and so that the failure of adding a
-    /// format without one is a refusal rather than a document quietly left where it was.
+    /// THIS REMARK SAID NOTHING CALLS THIS. <see cref="FilePairingRecordStore"/> calls it for a
+    /// document declaring a format between <see cref="Earliest"/> and <see cref="Current"/>, which
+    /// is a population that came into existence when the number moved to 2.
+    /// <para>
+    /// The document handed back is a new one and the one handed in is not touched, so a caller
+    /// that kept a reference to what it parsed is holding the file as it was read rather than a
+    /// half-walked copy of it.
+    /// </para>
     /// </remarks>
     public static JsonObject Migrate(JsonObject document)
     {
@@ -128,9 +158,34 @@ public static class RecordStoreFormat
         };
     }
 
+    /// <summary>
+    /// One step of the ladder.
+    /// </summary>
+    /// <param name="from">The format the document declares.</param>
+    /// <param name="document">The document in that format.</param>
+    /// <returns>The document one rung up.</returns>
+    /// <exception cref="InvalidOperationException">There is no rung away from that format.</exception>
+    /// <remarks>
+    /// The rung from 1 to 2 moves the number and touches no record, and that is the whole of the
+    /// migration rather than a step left unwritten. Format 2 added an address member a record may
+    /// be without: a record written by format 1 was written by a build that had no address to
+    /// write, so the honest value for it is the absent one, and inventing a value here would put
+    /// an address on a record nobody ever entered one for.
+    /// <para>
+    /// The records are cloned out of the document rather than moved, because a node belongs to one
+    /// document and re-parenting the member would empty the one the caller handed in.
+    /// </para>
+    /// </remarks>
     private static JsonObject Rung(int from, JsonObject document)
     {
-        _ = document;
+        if (from == Earliest)
+        {
+            return new JsonObject
+            {
+                [FormatMember] = JsonValue.Create(from + 1),
+                [RecordsMember] = Records(document).DeepClone(),
+            };
+        }
 
         throw new InvalidOperationException(string.Format(
             CultureInfo.InvariantCulture,
