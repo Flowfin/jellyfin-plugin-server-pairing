@@ -109,6 +109,20 @@ not_older() {
     [ "$(printf '%s\n%s\n' "$1" "$2" | sort -V | tail -n1)" = "$1" ]
 }
 
+# The version an assembly compiled against a package binds its references at:
+# the numeric part of the package version, padded to the four positions a
+# targetAbi is written with so the two compare as strings of the same shape.
+#
+# The padding is what makes one rule serve both lines. A 10.11 package version
+# is three positions and its assembly is stamped with a fourth, and every 12.0
+# release candidate carries the same 12.0.0.0 whatever its suffix says, which
+# the table in abi-floor.sh measured once and wrote down.
+binds_at() {
+    printf '%s\n' "$1" | sed 's/[-+].*//' | awk -F. '{
+        printf "%s.%s.%s.%s\n", ($1 == "" ? 0 : $1), ($2 == "" ? 0 : $2), ($3 == "" ? 0 : $3), ($4 == "" ? 0 : $4)
+    }'
+}
+
 assembly_version=$(sed -n 's|.*<AssemblyVersion>\(.*\)</AssemblyVersion>.*|\1|p' "$props")
 if [ -z "$assembly_version" ]; then
     echo "::error::manifest-check found no AssemblyVersion in ${props}. Refusing to compare a version against nothing."
@@ -185,6 +199,28 @@ for manifest in $manifests; do
     elif ! not_older "$shipping" "$floor_pkg"; then
         echo "DISAGREES  ${manifest}: floor ${abi} is package ${floor_pkg}, and the shipping build uses ${shipping}"
         bad=$((bad + 1))
+    fi
+
+    # 3b. The other direction, and the one an operator found first. The rule
+    # above stops the build from compiling against something older than the
+    # floor; nothing stopped it from compiling against something newer, and that
+    # is what shipped. A build against 10.11.9 stamps every reference at
+    # 10.11.9.0 while the manifest promises 10.11.0.0, so a 10.11.0 server
+    # admits the package on the promise and then refuses every type in it:
+    #
+    #     Could not load file or assembly 'MediaBrowser.Common, Version=10.11.9.0'
+    #
+    # Read on containers rather than argued: the published 0.1.0.0 is
+    # NotSupported on 10.11.0 and Active on 10.11.11. A floor and not an
+    # equality, because a server at or above the bound version loads it; what is
+    # refused is a promise made to servers below it.
+    checked=$((checked + 1))
+    if [ -n "$shipping" ]; then
+        bound=$(binds_at "$shipping")
+        if ! not_older "$abi" "$bound"; then
+            echo "DISAGREES  ${manifest}: floor ${abi}, and the shipping build's ${shipping} binds the assembly at ${bound}"
+            bad=$((bad + 1))
+        fi
     fi
 
     # 5. The plugin the manifest describes is the plugin in the source.

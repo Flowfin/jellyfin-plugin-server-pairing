@@ -47,19 +47,35 @@
         the test project references the same server.
 
         The value is chosen by the target framework because that is what the
-        packages themselves are built for: 10.11.9 carries a net9.0 group and
+        packages themselves are built for: 10.11.0 carries a net9.0 group and
         12.0.0-rc3 carries a net10.0 group, read from their nuspecs. Both are
         built from the tags this repository reads the server source at, which is
         what makes them the right pair rather than merely a working one:
 
-            curl -s https://api.nuget.org/v3-flatcontainer/jellyfin.controller/10.11.9/jellyfin.controller.nuspec
-            <repository ... commit="e83a7e62f26443f7dd98f126d6955ac1af090125" />
+            curl -s https://api.nuget.org/v3-flatcontainer/jellyfin.controller/10.11.0/jellyfin.controller.nuspec
+            <repository ... commit="877251bcaec3780d44b7657c54684dc28646b1c3" />
               <group targetFramework="net9.0">
             curl -s https://api.nuget.org/v3-flatcontainer/jellyfin.controller/12.0.0-rc3/jellyfin.controller.nuspec
             <repository ... commit="fc43f151a2418cc112e116050a99dd6318917ab0" />
               <group targetFramework="net10.0">
 
-        Those two commits are v10.11.9 and v12.0-rc3.
+        Those two commits are v10.11.0 and v12.0-rc3.
+
+        WHY THE FIRST RELEASE OF THE LINE AND NOT THE NEWEST. The net9.0 value
+        was 10.11.9 until 2026-09-04, and a build against it stamps every
+        reference to a server assembly with 10.11.9.0 while build.yaml promises
+        targetAbi 10.11.0.0. A server between the two admits the package on the
+        promise and then refuses every type in it, because the runtime binds a
+        reference at the version the assembly names and takes no server assembly
+        below it. That is not a theory: the published 0.1.0.0 was read on two
+        containers, NotSupported on 10.11.0 and Active on 10.11.11, with
+
+            Could not load file or assembly 'MediaBrowser.Common, Version=10.11.9.0'
+
+        in the first server's log. Compiling against the line's first release
+        makes every server on the line one the manifest may honestly promise,
+        and .github/manifest-check.sh now refuses the other direction rather
+        than leaving it to an install.
 
         The conditions are written so a value handed in on the command line wins,
         which is how a build against a different server version is asked for
@@ -68,7 +84,7 @@
             dotnet build -f net9.0 -p:JellyfinPackageVersion=10.11.0
     -->
     <PropertyGroup>
-        <JellyfinPackageVersion Condition="'$(JellyfinPackageVersion)' == '' and '$(TargetFramework)' == 'net9.0'">10.11.9</JellyfinPackageVersion>
+        <JellyfinPackageVersion Condition="'$(JellyfinPackageVersion)' == '' and '$(TargetFramework)' == 'net9.0'">10.11.0</JellyfinPackageVersion>
         <JellyfinPackageVersion Condition="'$(JellyfinPackageVersion)' == '' and '$(TargetFramework)' == 'net10.0'">12.0.0-rc3</JellyfinPackageVersion>
     </PropertyGroup>
 

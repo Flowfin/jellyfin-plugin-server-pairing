@@ -33,7 +33,7 @@ public class HostLocalUsersTests
         var id = Guid.NewGuid();
         var host = Substitute.For<IUserManager>();
 
-        host.GetUsers().Returns(new[] { new User("anna", "provider", "reset") { Id = id } });
+        Answers(host, new User("anna", "provider", "reset") { Id = id });
 
         var user = Assert.Single(new HostLocalUsers(host).Users());
 
@@ -52,15 +52,14 @@ public class HostLocalUsersTests
     {
         var host = Substitute.For<IUserManager>();
 
-        host.GetUsers().Returns(Array.Empty<User>());
+        Answers(host);
 
         Assert.Empty(new HostLocalUsers(host).Users());
 
-        host.GetUsers().Returns(new[]
-        {
+        Answers(
+            host,
             new User("anna", "provider", "reset") { Id = Guid.NewGuid() },
-            new User("bea", "provider", "reset") { Id = Guid.NewGuid() },
-        });
+            new User("bea", "provider", "reset") { Id = Guid.NewGuid() });
 
         Assert.Equal("anna,bea", string.Join(",", new HostLocalUsers(host).Users().Select(user => user.Name).OrderBy(name => name, StringComparer.Ordinal)));
     }
@@ -75,59 +74,95 @@ public class HostLocalUsersTests
         var host = Substitute.For<IUserManager>();
         var users = new HostLocalUsers(host);
 
-        host.GetUsers().Returns(new[] { new User("anna", "provider", "reset") { Id = Guid.NewGuid() } });
+        Answers(host, new User("anna", "provider", "reset") { Id = Guid.NewGuid() });
 
         Assert.Single(users.Users());
 
-        host.GetUsers().Returns(Array.Empty<User>());
+        Answers(host);
 
         Assert.Empty(users.Users());
     }
 
     /// <summary>
-    /// The floor of the 10.11 line carries the enumeration as a property, and the plugin reads
-    /// through it. This is the arm the floor build found missing, reached through a contract that
-    /// carries only the property, because the compile-time contract carries the method and cannot
-    /// be made not to.
+    /// The later tags of the 10.11 line, and the whole of the 12.0 line, carry the enumeration
+    /// as a method, and the plugin reads through it. This is the arm the compile-time contract
+    /// cannot reach: the project is pinned at the floor of the line the manifest promises, so
+    /// the real contract carries the property and cannot be made to carry the method.
     /// </summary>
     [Fact]
-    public void AHostCarryingTheEnumerationAsAPropertyIsReadThroughIt()
+    public void AHostCarryingTheEnumerationAsAMethodIsReadThroughIt()
     {
         var id = Guid.NewGuid();
-        var host = new UsersAsAProperty(new[] { new User("anna", "provider", "reset") { Id = id } });
+        var host = new UsersAsAMethod(new[] { new User("anna", "provider", "reset") { Id = id } });
 
-        var user = Assert.Single(HostLocalUsers.Of(host, typeof(ICarriesUsersAsAProperty)));
+        var user = Assert.Single(HostLocalUsers.Of(host, typeof(ICarriesUsersAsAMethod)));
 
         Assert.Equal(id.ToString("N", CultureInfo.InvariantCulture), user.Id);
         Assert.Equal("anna", user.Name);
     }
 
     /// <summary>
-    /// The method is what the tags this plugin is built against carry, and it is the spelling
-    /// read on the real contract. The floor under the two cases above: the two names are looked
-    /// up on the contract rather than assumed, so a contract carrying neither is refused as a
-    /// missing member rather than answered empty, which would read as a server with no users.
+    /// The floor under the two cases above: the two names are looked up on the contract rather
+    /// than assumed, so a contract carrying neither is refused as a missing member rather than
+    /// answered empty, which would read as a server with no users.
     /// </summary>
+    /// <remarks>
+    /// The real contract is asserted to carry exactly one of the two spellings rather than a
+    /// named one. Which of them it is follows from the package the project is pinned at, and
+    /// pinning it at the floor the manifest promises moved it from the method to the property on
+    /// 2026-09-04; a test naming one spelling has to be rewritten every time that pin moves,
+    /// while the plugin's own rule, that it reads through whichever the running host has, does
+    /// not change with it.
+    /// </remarks>
     [Fact]
     public void AContractCarryingNeitherSpellingIsRefusedRatherThanAnsweredEmpty()
     {
-        Assert.NotNull(typeof(IUserManager).GetMethod(HostLocalUsers.MethodSpelling, Type.EmptyTypes));
-        Assert.Null(typeof(IUserManager).GetProperty(HostLocalUsers.PropertySpelling));
-        Assert.NotNull(typeof(ICarriesUsersAsAProperty).GetProperty(HostLocalUsers.PropertySpelling));
+        var asMethod = typeof(IUserManager).GetMethod(HostLocalUsers.MethodSpelling, Type.EmptyTypes) is not null;
+        var asProperty = typeof(IUserManager).GetProperty(HostLocalUsers.PropertySpelling) is not null;
+
+        Assert.True(
+            asMethod ^ asProperty,
+            "The host contract carries the enumeration as a method or as a property and this one carries "
+            + (asMethod && asProperty ? "both" : "neither") + ", so what the plugin reads through is unread here.");
+
+        Assert.NotNull(typeof(ICarriesUsersAsAMethod).GetMethod(HostLocalUsers.MethodSpelling, Type.EmptyTypes));
 
         Assert.Throws<MissingMemberException>(() => HostLocalUsers.Of(new CarriesNeither(), typeof(ICarriesNeither)));
     }
 
     /// <summary>
-    /// What the floor's user manager looks like to this plugin: the users as a property and no
-    /// method, which is the shape at v10.11.0 pasted at the type.
+    /// Tells a substitute for the host's user manager what its users are, through the spelling
+    /// the contract this assembly was compiled against carries.
     /// </summary>
-    internal interface ICarriesUsersAsAProperty
+    /// <remarks>
+    /// The two lines spell the enumeration differently and each target framework compiles
+    /// against one of them: the 10.11 floor carries the property, the 12.0 packages carry the
+    /// method. The plugin reads through whichever the running host has and needs no condition;
+    /// a substitute can only be told through the one the compiler saw, so the condition lives
+    /// here, once, rather than in each case above.
+    /// </remarks>
+    /// <param name="host">The substitute to tell.</param>
+    /// <param name="users">The users it answers with.</param>
+    private static void Answers(IUserManager host, params User[] users)
+    {
+#if NET9_0
+        host.Users.Returns(users);
+#else
+        host.GetUsers().Returns(users);
+#endif
+    }
+
+    /// <summary>
+    /// What a server above the floor looks like to this plugin: the users as a method and no
+    /// property, which is the shape at v10.11.9, v12.0-rc1 and v12.0-rc3 pasted at the type.
+    /// </summary>
+    internal interface ICarriesUsersAsAMethod
     {
         /// <summary>
         /// Gets the users.
         /// </summary>
-        IEnumerable<User> Users { get; }
+        /// <returns>The users.</returns>
+        IEnumerable<User> GetUsers();
     }
 
     /// <summary>
@@ -143,14 +178,16 @@ public class HostLocalUsersTests
         User? GetUserById(Guid id);
     }
 
-    private sealed class UsersAsAProperty : ICarriesUsersAsAProperty
+    private sealed class UsersAsAMethod : ICarriesUsersAsAMethod
     {
-        public UsersAsAProperty(IEnumerable<User> users)
+        private readonly IEnumerable<User> _users;
+
+        public UsersAsAMethod(IEnumerable<User> users)
         {
-            Users = users;
+            _users = users;
         }
 
-        public IEnumerable<User> Users { get; }
+        public IEnumerable<User> GetUsers() => _users;
     }
 
     private sealed class CarriesNeither : ICarriesNeither
