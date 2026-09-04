@@ -15,11 +15,10 @@ namespace Jellyfin.Plugin.ServerPairing.Protocol;
 /// It answers one question and returns no record, no key material and no count.
 /// </para>
 /// <para>
-/// <see cref="PairingRecord"/> carries no peer address today, so an implementation over the
-/// landed record cannot answer this. Issue #350 claims that field rather than leaving it owed
-/// by nobody, and the field lands with the store that has to read it. That owner is the
-/// sub-issue #18 was split into when it closed, so a reader following the number reaches work
-/// that is open rather than an issue that is done.
+/// THIS REMARK SAID <see cref="PairingRecord"/> CARRIED NO PEER ADDRESS AND THAT NO
+/// IMPLEMENTATION OVER THE LANDED RECORD COULD ANSWER THIS. The record carries one and
+/// <see cref="RecordedPeers"/> is that implementation, registered on a server, so the question is
+/// answered by something a container can build rather than only by fixtures in the test project.
 /// </para>
 /// </remarks>
 public interface IPairedPeers

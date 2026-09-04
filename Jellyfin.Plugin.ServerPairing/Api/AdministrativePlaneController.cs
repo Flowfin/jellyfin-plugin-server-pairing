@@ -170,12 +170,17 @@ public sealed class AdministrativePlaneController : ControllerBase
     /// a reader asking what windows are open are the same reader.
     /// </para>
     /// <para>
-    /// WHAT WRITES THAT RECORD IS NOT BUILT, AND THIS ACTION DOES NOT BUILD IT. `EnrolmentWindow`
-    /// holds an address, writes no record and calls no state machine, and the state machine is not
-    /// registered on a server at all. So on a running server this answers an empty list, and it
-    /// will go on answering one until the join between the window and the state machine exists.
-    /// What is delivered here is the reader; the producer is named in the issue rather than
-    /// implied by an answer nobody can tell an empty server from a broken one by.
+    /// THIS REMARK SAID WHAT WRITES THAT RECORD IS NOT BUILT AND THAT THIS ANSWERS AN EMPTY LIST
+    /// ON EVERY RUNNING SERVER. <see cref="Enrolment"/> is the join between the window and the
+    /// state machine and is registered, so a window opened through it is a record in
+    /// <see cref="PairingState.Offered"/> and appears here.
+    /// </para>
+    /// <para>
+    /// WHAT STILL ANSWERS AN EMPTY LIST ON A SERVER IS THIS SERVER, because no action and no page
+    /// calls that producer: the state-changing administrative endpoint is issue #53, and until one
+    /// exists an operator has no way to reach <see cref="Enrolment.Open"/>. So the sentence above
+    /// is now about a missing caller rather than about a missing producer, and the difference is
+    /// the whole of what issue #350 moved.
     /// </para>
     /// <para>
     /// It is a read and changes nothing, so it is not the state-changing endpoint issue #53's

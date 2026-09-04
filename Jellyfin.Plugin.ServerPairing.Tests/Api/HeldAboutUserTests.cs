@@ -345,8 +345,8 @@ public class HeldAboutUserTests
         var records = new InMemoryPairingRecords();
 
         keys.Add(ActivePairing, KeyMaterial.Fresh());
-        records.Write(new PairingRecord(ActivePairing, PairingState.Active, PairingState.ConfirmedByPeer, "Confirm", "an-administrator", At));
-        records.Write(new PairingRecord(PendingPairing, PairingState.Pending, PairingState.Offered, "Hello", "peer", At));
+        records.Write(new PairingRecord(ActivePairing, PairingState.Active, PairingState.ConfirmedByPeer, "Confirm", "an-administrator", At, "https://peer.example"));
+        records.Write(new PairingRecord(PendingPairing, PairingState.Pending, PairingState.Offered, "Hello", "peer", At, "https://other.example"));
 
         return (keys, records, new InMemoryUserMappings());
     }
