@@ -175,12 +175,29 @@ public sealed class RecordStoreFormatTests : IDisposable
         Assert.Throws<InvalidOperationException>(() => RecordStoreFormat.Migrate(document));
     }
 
+    /// <summary>
+    /// A store file holding exactly the bytes given, in a directory the store would accept.
+    /// </summary>
+    /// <param name="bytes">The file's whole content.</param>
+    /// <returns>The path to the file.</returns>
+    /// <remarks>
+    /// The directory is made through <see cref="StorePermissions.PrepareDirectory"/> rather than
+    /// through <see cref="Directory.CreateDirectory(string)"/>, which is what the neighbouring
+    /// suite over this store already does and for the reason it gives: on a platform that
+    /// expresses a Unix mode the store refuses a directory wider than its own, and one made at
+    /// the process umask is wider. A case that only ever reads passes either way, and the case
+    /// that writes refuses on Linux and passes on Windows, which is the shape a machine with no
+    /// Unix mode cannot see.
+    /// </remarks>
     private string WithContent(string bytes)
     {
-        var directory = Path.Join(Path.GetTempPath(), "pairing-format-" + Guid.NewGuid().ToString("N"));
+        var directory = Path.Join(
+            Path.GetTempPath(),
+            "server-pairing-format-" + Guid.NewGuid().ToString("N", CultureInfo.InvariantCulture));
 
-        Directory.CreateDirectory(directory);
         _directories.Add(directory);
+
+        StorePermissions.PrepareDirectory(directory);
 
         var file = Path.Join(directory, RecordStorePath.FileName);
 
