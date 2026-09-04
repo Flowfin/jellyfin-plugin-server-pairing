@@ -67,16 +67,19 @@ public static class WordingAnswer
     {
         var sentences = new SortedDictionary<string, string>(StringComparer.Ordinal);
 
-        var literals = register
+        // The value is read in the query rather than in the body, so the loop does not open with a
+        // test that discards. A constant declared null is dropped by the second Where and reaches
+        // no iteration; the null-forgiving operator carries that fact across a boundary the
+        // compiler cannot follow, and it is the whole of what it asserts.
+        var declared = register
             .GetFields(BindingFlags.Public | BindingFlags.Static | BindingFlags.DeclaredOnly)
-            .Where(field => field.IsLiteral && field.FieldType == typeof(string));
+            .Where(field => field.IsLiteral && field.FieldType == typeof(string))
+            .Select(field => (field.Name, Sentence: field.GetRawConstantValue() as string))
+            .Where(found => found.Sentence is not null);
 
-        foreach (var field in literals)
+        foreach (var (name, sentence) in declared)
         {
-            if (field.GetRawConstantValue() is string sentence)
-            {
-                sentences[field.Name] = sentence;
-            }
+            sentences[name] = sentence!;
         }
 
         return sentences;
