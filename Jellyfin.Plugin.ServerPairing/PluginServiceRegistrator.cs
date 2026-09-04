@@ -140,7 +140,7 @@ public class PluginServiceRegistrator : IPluginServiceRegistrator
         // implementation in this assembly. It has one now and both are registered below.
         //
         // What is unchanged is that nothing on a server writes a record, because nothing joins an
-        // enrolment to the state machine, which is issue #18. So the read above answers an empty
+        // enrolment to the state machine, which is issue #350. So the read above answers an empty
         // list on every server, which is stated at the action rather than left for a reader to
         // infer.
         serviceCollection.AddSingleton<IPairingRecordStore>(services =>
@@ -169,8 +169,9 @@ public class PluginServiceRegistrator : IPluginServiceRegistrator
         // THIS COMMENT SAID NOTHING RESOLVED IT. UserMappings below resolves it now, for the
         // mapping the administrative plane removes, so the registration is load-bearing. What
         // is unchanged is that no plane and no page applies an event to it, and what would put a
-        // record into it is the enrolment join in issue #18; ServiceRegistrationTests is still
-        // what says the container can build it.
+        // record into it is the enrolment join in issue #350; ServiceRegistrationTests is still
+        // what says the container can build it. THAT NUMBER WAS #18 UNTIL IT CLOSED: the window's
+        // own conditions are met and the join went to the sub-issue it was split into.
         serviceCollection.AddSingleton(services => new PairingStateMachine(
             services.GetRequiredService<IPairingRecordStore>(),
             services.GetRequiredService<IUserMappingStore>()));

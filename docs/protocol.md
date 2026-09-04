@@ -1053,9 +1053,12 @@ it. Nothing in the tree keeps it:
 
 Empty output, exit one, over the record, the record store, the key store and the
 keys a pairing holds. The same command is why the peer address is not there
-either; that field is claimed by issue #18 and unbuilt, and the version is issue
+either; that field is claimed by issue #350 and unbuilt, and the version is issue
 #316, which was opened because this paragraph said it was claimed by no issue at
-all and that was still true when it was read. Both are claimed and neither is
+all and that was still true when it was read. THE FIELD'S OWNER MOVED WHEN #18
+CLOSED, AND THIS SENTENCE NAMED THE CLOSED ISSUE UNTIL THEN: #18 is the enrolment
+window, its own conditions are met, and #350 is the sub-issue it was split into,
+which holds the field and the producer that writes one. Both are claimed and neither is
 built. Neither has bitten yet because nothing in this plugin sends a message: the
 only mentions of the channel's send are its own declaration and its own call into
 the HTTP client.
