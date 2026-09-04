@@ -165,10 +165,20 @@ does not load.
     grep -n '^version:' build.yaml
     grep -n '<Version>\|<AssemblyVersion>\|<FileVersion>' Directory.Build.props
 
-Both read `0.1.0.0`, which is the number the first release carries, written into
+Both read `0.1.1.0`, which is the number the second release carries, written into
 them ahead of the tag because that is the order [`RELEASING.md`](RELEASING.md)
-fixes. No release has been published, so the agreement has never been tested by
-one.
+fixes.
+
+The first release tested that agreement and found something the greps above
+cannot see. `0.1.0.0-stable` was published on 2026-09-03 and installs on a
+10.11.11 server and on no 10.11 server below it: the manifest promised
+`targetAbi 10.11.0.0` and the assembly bound the server's libraries at
+`10.11.9.0`, because the shipping build compiled against the newest package on
+the line rather than the one the floor names. So the manifest and the assembly
+agreed on the version and disagreed about the servers. `0.1.1.0` is the release
+that carries the repair, and `.github/manifest-check.sh` now refuses that
+direction as well, which is why this section's comparison is no longer only the
+two greps.
 
 The comparison is no longer only those two greps. A script that reads every
 manifest against the build it describes is in the tree, and a workflow runs it:
