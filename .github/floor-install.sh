@@ -40,18 +40,14 @@ manifest=${2:?the manifest declaring the floor}
 port=${3:-18096}
 
 test -f "$archive" || { echo "FAIL  no such archive: $archive"; exit 1; }
-test -f "$manifest" || { echo "FAIL  no such manifest: $manifest"; exit 1; }
 
 # THE FLOOR IS READ FROM THE MANIFEST RATHER THAN WRITTEN HERE, so a floor that moves moves this
-# with it and the check can never be judging a server the manifest does not promise. The image tag
-# is the first three components: a Jellyfin release is tagged X.Y.Z and targetAbi carries the
-# fourth component the manifest format requires.
-abi=$(grep -E '^targetAbi:' "$manifest" | head -1 | sed -E 's/^targetAbi:[[:space:]]*"?([^"]*)"?[[:space:]]*$/\1/')
-case "$abi" in
-    [0-9]*.[0-9]*.[0-9]*.[0-9]*) ;;
-    *) echo "FAIL  $manifest declares no four-part targetAbi, read as '$abi'"; exit 1 ;;
-esac
-image_tag=$(printf '%s' "$abi" | cut -d. -f1-3)
+# with it and the check can never be judging a server the manifest does not promise. The reading
+# itself is .github/floor-image.sh, which refuses a manifest that is not there and one whose
+# targetAbi is not four parts, and which the leg that says why a floor cannot be installed on yet
+# calls as well, so this directory holds one reading of that field rather than two that can
+# disagree about which server a promise is about.
+image_tag=$(sh .github/floor-image.sh "$manifest")
 image="jellyfin/jellyfin:$image_tag"
 
 name="floor-install-$image_tag-$$"

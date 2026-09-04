@@ -11,11 +11,16 @@
 # compiles and this one has an archive. What each judgement covers is written
 # at the step and in the script it runs.
 #
-# ONE MANIFEST IS JUDGED AND THERE ARE TWO. This job builds the net9.0 package
-# and build.net10.0.yaml declares a floor of 12.0.0.0, whose server line is a
-# release candidate and is not tagged 12.0.0 on the registry, so the image
-# cannot be derived from that manifest the way it is from this one. The 12.0
-# half stays open on #344.
+# BOTH MANIFESTS ARE READ AND ONLY ONE IS INSTALLED. This job builds the net9.0
+# package, so build.yaml's floor is installed on and read back off a server.
+# build.net10.0.yaml declares a floor of 12.0.0.0, whose server line has had no
+# release and which the registry carries no 12.0.0 tag for, so no image can be
+# derived from it the way one is from build.yaml. A leg reaching for a release
+# candidate instead would prove that candidate and promise the line, which is
+# the shape of promise this job exists to stop. So that floor is withheld
+# rather than skipped in silence: .github/floor-withheld.sh names the image the
+# install will use on the day the line has a release, and reds this job the day
+# the registry publishes it. #344 carries the argument.
 #
 # The judgement lives in .github/package-audit.sh so the command a person runs
 # and the command this job runs are the same bytes, and
@@ -110,6 +115,23 @@ jobs:
 
       - name: Prove the install check still refuses what it claims to refuse
         run: sh .github/floor-install-test.sh 18196
+
+      - name: Say why the floor build.net10.0.yaml claims is not installed on
+        # The other manifest, and the leg that cannot be built yet. It prints the
+        # image the install will use on the day the 12.0 line has a release, and
+        # it refuses the day the registry publishes that image, so the promise
+        # being withheld is visible in this run rather than being a step nobody
+        # notices is missing. It installs nothing and asks no server anything.
+        #
+        # It is a step of this job rather than a job of its own because the
+        # context this job's name produces is in the required set already, so
+        # the refusal stands in front of a merge without a ruleset edit. A new
+        # job would add a context nothing requires, and a guard that cannot
+        # block is the state this step exists to leave.
+        run: sh .github/floor-withheld.sh build.net10.0.yaml
+
+      - name: Prove the withholding still refuses what it claims to refuse
+        run: sh .github/floor-withheld-test.sh
 
       - name: Attach the component list to the run
         # Attached even when the reading refused, because a reader looking at a
