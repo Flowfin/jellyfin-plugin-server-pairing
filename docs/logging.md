@@ -111,6 +111,49 @@ expose for the pairing it identifies, so none may be logged. The prohibition
 rests on the sentence above being unwritten rather than on there being no
 truncation to prohibit, which is what it used to rest on.
 
+## One entry is one line
+
+The two lists above say what an entry may hold. This says what an entry may be,
+and it is a separate rule because a value that satisfies both lists can still
+write entries this plugin never composed.
+
+An entry that carries a line break is read as several. Every line after the
+first is one an operator attributes to this plugin, at whatever level and about
+whatever pairing the value chose, so a caller who can put a break into a value
+this plugin logs can write the log rather than appear in it. A pairing
+identifier arrives as a path segment of the request that asked for the change
+and nothing between the route and the entry reads its shape; an administrator
+arrives as a claim the host set, which is from outside this plugin whatever the
+host does with it today.
+
+So every value from outside is put on one line before it reaches an entry, by
+`OneLine` in `Jellyfin.Plugin.ServerPairing/Logging/OneLine.cs`. What it
+replaces is wider than the break: the escape character drives the terminal
+rendering the file, and the bidirectional overrides of CVE-2021-42574 reorder
+what a reader sees without changing what was stored, which is the same attack
+`.github/workflows/unicode-guard.yml` refuses in tracked source, arriving at
+runtime through a value instead of at review time through a file.
+
+The words the caller wrote stay in the entry. Removing them is a larger
+decision about what an audit entry may say, and it is not taken here; what is
+guaranteed is that they are one line of one entry, so an operator reads them as
+a value somebody sent rather than as a sentence this plugin wrote.
+
+WHAT THIS IS NOT IS VALIDATION AT THE EDGE. Refusing a malformed identifier
+where it arrives is a different rule with a different answer per endpoint, and
+nothing here asks for it or stands in for it. What holds at the call site holds
+whatever the edge does.
+
+TWO CALL SITES CARRY A VALUE FROM OUTSIDE TODAY AND BOTH ARE GUARDED. The
+mapping-change row and the report row are the two, and the guard is proved at
+each of them rather than only on the type: `MappingAuditTests` and
+`HeldAboutUserTests` each drive a forged value through and assert the entry has
+no break in it, and deleting the call turns exactly those two cases red. The
+other rows name this server's own facts - a setting, a store format, a message
+this plugin enumerates - and are not put through it. A row that starts carrying
+a value from outside is added to that set in the change that makes it do so,
+and nothing reads this paragraph to check that it was.
+
 ## The audit trail these lists have to support
 
 From the log alone, and with nothing else to hand, an operator can answer:

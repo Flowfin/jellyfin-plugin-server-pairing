@@ -203,6 +203,39 @@ public class HeldAboutUserTests
     }
 
     /// <summary>
+    /// The entry stays one line where the administrator carries a line break, so a report cannot
+    /// be made to write further entries under this plugin's name.
+    /// </summary>
+    /// <remarks>
+    /// The administrator is a claim the host set, which is a value from outside this plugin
+    /// whatever the host does with it today, and <c>OneLine</c> at the call site is what holds
+    /// this. Deleting that call turns this case red. What the value said is still in the entry:
+    /// removing the words is a larger decision about what an audit entry may say, and what is
+    /// asserted here is that they are one line rather than lines of their own. The break is
+    /// built from its codepoint because a literal one does not survive this repository's line
+    /// endings across a checkout.
+    /// </remarks>
+    [Fact]
+    public void AnAdministratorCarryingALineBreakStillWritesOneEntryOnOneLine()
+    {
+        const char CarriageReturn = (char)0x000D;
+        const char LineFeed = (char)0x000A;
+
+        var forged = Administrator + CarriageReturn + LineFeed
+            + "[Warning] A pairing was revoked by an administrator.";
+
+        var log = new CapturingLogger();
+
+        new HeldAboutUser(new InMemoryUserMappings(), log).Report(new[] { ActivePairing }, LocalUser, forged);
+
+        var entry = Assert.Single(log.Written);
+
+        Assert.DoesNotContain(LineFeed, entry.Text);
+        Assert.DoesNotContain(CarriageReturn, entry.Text);
+        Assert.Contains("[Warning] A pairing was revoked", entry.Text, StringComparison.Ordinal);
+    }
+
+    /// <summary>
     /// A report that found nothing is still a report somebody made about a person, and it is
     /// audited. An entry only for the reports that found something would leave the trail unable
     /// to say the question was asked.
