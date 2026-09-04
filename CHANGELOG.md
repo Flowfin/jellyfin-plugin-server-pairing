@@ -62,8 +62,8 @@ verifies, and the reason is that a server has no key to verify against rather
 than that nothing looks: the check that reads an arriving request looks the
 pairing up in this server's key store, and nothing puts a key there, because
 there is no page and no endpoint an administrator can open an enrolment from.
-Two servers cannot be paired with this version. The `changelog` field in
-`build.yaml` and `build.net10.0.yaml` carries that paragraph in the same words.
+Two servers cannot be paired with this version. The `0.1.0.0` packages carry
+that paragraph in their `changelog` field, in the same words.
 
 - The configuration page shows every pairing's mapping table, read from the
   listing below on every show, and offers the one change an administrator can

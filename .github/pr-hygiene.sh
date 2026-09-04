@@ -141,14 +141,38 @@ else
     echo "ok    every non-merge commit subject references an issue"
 fi
 
-# Refuses: a manifest version change arrives with a changelog entry. A version
-# published with no record of what it changed cannot be reconstructed later.
+# Refuses: a manifest version change arrives with a changelog entry, in both of
+# the two places that hold one. A version published with no record of what it
+# changed cannot be reconstructed later.
 #
-# The changelog is `CHANGELOG.md` where one exists and the manifest's own
-# `changelog` field until it does. The field is read by taking the lines from
-# `changelog:` to the next key at column zero, which is a heuristic over this
-# manifest's flat shape rather than YAML parsing; a nested manifest would need
-# a parser and would break this.
+# THE TWO ARE NOT ALTERNATIVES, AND THIS RULE TREATED THEM AS ONE UNTIL #345.
+# The comment here said the changelog was `CHANGELOG.md` where one exists and
+# the manifest's own `changelog` field until it does. That sentence is older
+# than `CHANGELOG.md`: once the file existed, the first arm passed on every
+# release and the field was never looked at again. They have different readers.
+# `CHANGELOG.md` is read by whoever works on this repository; the field is the
+# only text an operator browsing a catalogue is shown, and it ships inside the
+# package where it cannot be edited afterwards.
+#
+# What that cost is on the record. `0.1.1.0` published the paragraph written for
+# `0.1.0.0`, so the catalogue entry describing the release that repairs the
+# floor is the one that says nothing about it, in front of the operator on an
+# old server who is the only reader it matters to.
+#
+# The field is read by taking the lines from `changelog:` to the next key at
+# column zero, which is a heuristic over this manifest's flat shape rather than
+# YAML parsing; a nested manifest would need a parser and would break this.
+#
+# WHAT IS COMPARED IS BYTES AND NOT MEANING. This asks whether the field moved
+# with the version, never whether the words describe the version they ship
+# under, so a bump that rewrites the field into a second wrong paragraph passes
+# here. The entry in front of a release is still read by a person, which is what
+# docs/release.md already says of the marker leg below and for the same reason.
+#
+# Only `build.yaml` is read, and the second manifest is covered by assertion
+# rather than by hope: ManifestAgreementTests refuses any difference between the
+# two files outside `targetAbi` and `framework`, so a field that moved in one
+# and not the other reddens the suite instead of passing quietly here.
 manifest=build.yaml
 
 changelog_block() {
@@ -162,13 +186,20 @@ manifest_field() {
 
 if [ "$(manifest_field "$from" version)" = "$(manifest_field "$HEAD_SHA" version)" ]; then
     echo "ok    the manifest version is unchanged"
-elif printf '%s\n' "$changed" | grep -qx 'CHANGELOG.md'; then
-    echo "ok    the manifest version changed and CHANGELOG.md changed with it"
-elif [ "$(changelog_block "$from")" != "$(changelog_block "$HEAD_SHA")" ]; then
-    echo "ok    the manifest version changed and the manifest changelog changed with it"
 else
-    echo "FAIL  the manifest version changed with no changelog entry"
-    fail=1
+    if printf '%s\n' "$changed" | grep -qx 'CHANGELOG.md'; then
+        echo "ok    the manifest version changed and CHANGELOG.md changed with it"
+    else
+        echo "FAIL  the manifest version changed and CHANGELOG.md did not"
+        fail=1
+    fi
+
+    if [ "$(changelog_block "$from")" != "$(changelog_block "$HEAD_SHA")" ]; then
+        echo "ok    the manifest version changed and the manifest changelog field changed with it"
+    else
+        echo "FAIL  the manifest version changed and the manifest changelog field still describes the version before it"
+        fail=1
+    fi
 fi
 
 # Refuses: a change to the wire protocol or to the consumer contract arrives

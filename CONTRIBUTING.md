@@ -96,7 +96,11 @@ meant to stop a pull request rather than earn a note:
 
 - the body references the issue it belongs to, by number
 - every commit subject references an issue
-- a change to the version in the manifest comes with a changelog entry
+- a change to the version in the manifest comes with a changelog entry in both
+  places that hold one: [`CHANGELOG.md`](CHANGELOG.md), which whoever works here
+  reads, and the `changelog` field of the manifests, which is the only text an
+  operator browsing a catalogue is shown and which ships inside the package
+  where it cannot be edited afterwards
 - a change to the wire protocol or to the consumer contract comes with a
   changelog line marked `[protocol]` or `[contract]`, so the operator on the far
   side of a pairing and the author of a plugin built on this one can each find
