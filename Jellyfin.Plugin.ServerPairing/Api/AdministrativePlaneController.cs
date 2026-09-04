@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text.Json;
 using Jellyfin.Plugin.ServerPairing.KeyStore;
 using Jellyfin.Plugin.ServerPairing.Mapping;
@@ -188,17 +189,15 @@ public sealed class AdministrativePlaneController : ControllerBase
     {
         try
         {
-            var open = new List<OpenWindow>();
-
-            foreach (var pairingId in _records.Pairings())
-            {
-                var record = _records.Read(pairingId);
-
-                if (record is not null && record.State == PairingState.Offered)
-                {
-                    open.Add(new OpenWindow(record.PairingId, record.At));
-                }
-            }
+            // Materialised inside the try rather than returned as a query. A record store that
+            // throws on a read is the failure the catch below answers, and a lazy sequence
+            // handed to the serialiser would raise it outside this method instead.
+            var open = _records.Pairings()
+                .Select(_records.Read)
+                .OfType<PairingRecord>()
+                .Where(record => record.State == PairingState.Offered)
+                .Select(record => new OpenWindow(record.PairingId, record.At))
+                .ToList();
 
             return new ContentResult
             {

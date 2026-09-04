@@ -1,5 +1,7 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
+using Jellyfin.Plugin.ServerPairing.Logging;
 using Microsoft.Extensions.Logging;
 
 namespace Jellyfin.Plugin.ServerPairing.Mapping;
@@ -68,6 +70,13 @@ public sealed class HeldAboutUser
     /// nothing is still a report somebody made about a person, and an entry only for the
     /// reports that found something would leave the trail unable to say that the question was
     /// asked.
+    /// <para>
+    /// The administrator is put on one line before it reaches the entry, for the reason
+    /// <see cref="OneLine"/> gives and for the same reason it is done on the mapping-change
+    /// entry: the value is a claim the host set, which is from outside this plugin whatever the
+    /// host does with it today, and a line break in it writes further lines an operator reads as
+    /// this plugin's own. The two counts beside it are this plugin's own arithmetic.
+    /// </para>
     /// </remarks>
     public IReadOnlyList<UserMapping> Report(IReadOnlyList<string> pairings, string localUserId, string administrator)
     {
@@ -79,20 +88,16 @@ public sealed class HeldAboutUser
 
         foreach (var pairingId in pairings)
         {
-            foreach (var mapping in _mappings.For(pairingId))
-            {
-                if (string.Equals(mapping.LocalUserId, localUserId, StringComparison.Ordinal))
-                {
-                    held.Add(mapping);
-                }
-            }
+            held.AddRange(
+                _mappings.For(pairingId)
+                    .Where(mapping => string.Equals(mapping.LocalUserId, localUserId, StringComparison.Ordinal)));
         }
 
         if (_log.IsEnabled(LogLevel.Information))
         {
             _log.LogInformation(
                 "What is held about one user was reported to an administrator. Administrator: {Administrator}, pairings looked under: {Pairings}, mappings found: {Mappings}",
-                administrator,
+                OneLine.Of(administrator),
                 pairings.Count,
                 held.Count);
         }

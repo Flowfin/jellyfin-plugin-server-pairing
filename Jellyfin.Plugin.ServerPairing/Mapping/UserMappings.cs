@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Jellyfin.Plugin.ServerPairing.Logging;
 using Jellyfin.Plugin.ServerPairing.Protocol;
 using Microsoft.Extensions.Logging;
 
@@ -234,6 +235,14 @@ public sealed class UserMappings
     /// local user is mapped to reads the mapping table, live, and is entitled to; the log
     /// answers that a mapping moved, who moved it and which way.
     /// </para>
+    /// <para>
+    /// BOTH STRINGS ARE PUT ON ONE LINE BEFORE THEY REACH THE ENTRY. The pairing identifier is a
+    /// path segment of the request that asked for the change and nothing between the route and
+    /// here reads its shape, so the caller chooses its bytes; the administrator is a claim the
+    /// host set, which is a value from outside this plugin whatever the host does with it today.
+    /// A line break in either would write further lines an operator reads as this plugin's own.
+    /// <see cref="OneLine"/> carries the argument and the character set.
+    /// </para>
     /// </remarks>
     private void Record(string pairingId, string administrator, MappingDirection direction)
     {
@@ -241,8 +250,8 @@ public sealed class UserMappings
         {
             _log.LogInformation(
                 "A mapping was added, changed or removed by an administrator. Pairing: {PairingId}, administrator: {Administrator}, direction: {Direction}",
-                pairingId,
-                administrator,
+                OneLine.Of(pairingId),
+                OneLine.Of(administrator),
                 direction);
         }
     }

@@ -141,6 +141,58 @@ public class MappingAuditTests
     }
 
     /// <summary>
+    /// One change is one entry and one line, whatever the values it names carry.
+    /// </summary>
+    /// <remarks>
+    /// The pairing identifier reaches this type as a path segment of the request that asked for
+    /// the change, and nothing between the route and here reads its shape, so the caller chooses
+    /// its bytes. Without <c>OneLine</c> at the call site a break in it writes the lines after it
+    /// as entries of this plugin's own, at whatever level and about whatever pairing the caller
+    /// wrote. Deleting either call at the site turns this case red, which is what makes it the
+    /// guard rather than a restatement of the type's own cases in <c>OneLineTests</c>.
+    /// <para>
+    /// WHAT THE CALLER WROTE IS STILL IN THE ENTRY AND THAT IS THE POINT. Removing the words
+    /// would be a second, larger decision about what an audit entry may say; what is asserted is
+    /// that they are one line of this entry rather than lines of their own, so an operator reads
+    /// them as the value somebody sent.
+    /// </para>
+    /// <para>
+    /// The forged text is built from codepoints for the reason that file gives: the literal
+    /// carriage return would not survive this repository's line endings across a checkout.
+    /// </para>
+    /// </remarks>
+    [Fact]
+    public void AValueCarryingALineBreakStillWritesOneEntryOnOneLine()
+    {
+        const char CarriageReturn = (char)0x000D;
+        const char LineFeed = (char)0x000A;
+
+        var forgedPairing = "9f8c1d2b3a4e5f60718293a4b5c6d7e8" + CarriageReturn + LineFeed
+            + "[Warning] A pairing was revoked by an administrator.";
+        var forgedAdministrator = "administrator-anna" + LineFeed
+            + "[Error] The key store could not be read at startup.";
+
+        var mappings = new InMemoryUserMappings();
+        var machine = new PairingStateMachine(new InMemoryRecords(), mappings);
+        var log = new CapturingLogger();
+        var subject = new UserMappings(mappings, machine, log);
+
+        machine.Apply(forgedPairing, LocalEvent.WindowOpened, forgedAdministrator, At);
+        machine.Receive(forgedPairing, PairingMessage.Hello, OfferedKey.NotApplicable, Peer, At);
+
+        Assert.Equal(
+            MappingOutcome.Mapped,
+            subject.Map(forgedPairing, LocalUser, PeerUser, PeerDisplayName, forgedAdministrator, At));
+
+        var entry = Assert.Single(log.Written);
+
+        Assert.DoesNotContain(LineFeed, entry.Text);
+        Assert.DoesNotContain(CarriageReturn, entry.Text);
+        Assert.Contains("[Warning] A pairing was revoked", entry.Text, StringComparison.Ordinal);
+        Assert.Contains("[Error] The key store could not be read", entry.Text, StringComparison.Ordinal);
+    }
+
+    /// <summary>
     /// A refused mapping is not a change, so it writes nothing.
     /// </summary>
     /// <remarks>

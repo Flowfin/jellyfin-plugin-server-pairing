@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Reflection;
 using System.Text.Json;
 using Jellyfin.Plugin.ServerPairing.Wording;
@@ -66,12 +67,19 @@ public static class WordingAnswer
     {
         var sentences = new SortedDictionary<string, string>(StringComparer.Ordinal);
 
-        foreach (var field in register.GetFields(BindingFlags.Public | BindingFlags.Static | BindingFlags.DeclaredOnly))
+        // The value is read in the query rather than in the body, so the loop does not open with a
+        // test that discards. A constant declared null is dropped by the second Where and reaches
+        // no iteration; the null-forgiving operator carries that fact across a boundary the
+        // compiler cannot follow, and it is the whole of what it asserts.
+        var declared = register
+            .GetFields(BindingFlags.Public | BindingFlags.Static | BindingFlags.DeclaredOnly)
+            .Where(field => field.IsLiteral && field.FieldType == typeof(string))
+            .Select(field => (field.Name, Sentence: field.GetRawConstantValue() as string))
+            .Where(found => found.Sentence is not null);
+
+        foreach (var (name, sentence) in declared)
         {
-            if (field.IsLiteral && field.FieldType == typeof(string) && field.GetRawConstantValue() is string sentence)
-            {
-                sentences[field.Name] = sentence;
-            }
+            sentences[name] = sentence!;
         }
 
         return sentences;

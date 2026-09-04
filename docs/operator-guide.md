@@ -29,7 +29,7 @@ window, confirms a ceremony, revokes a pairing or adds a mapping, so every step
 below that changes something still waits:
 
     git grep -nE 'Http(Post|Put|Delete|Patch)' origin/master -- Jellyfin.Plugin.ServerPairing/Api/AdministrativePlaneController.cs ; echo "exit=$?"
-    origin/master:Jellyfin.Plugin.ServerPairing/Api/AdministrativePlaneController.cs:483:    [HttpDelete("pairings/{pairingId}/mappings/{localUserId}")]
+    origin/master:Jellyfin.Plugin.ServerPairing/Api/AdministrativePlaneController.cs:482:    [HttpDelete("pairings/{pairingId}/mappings/{localUserId}")]
     exit=0
 
 and the settings page is still the plugin template's example fields:
