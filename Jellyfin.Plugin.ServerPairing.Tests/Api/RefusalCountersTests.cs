@@ -68,7 +68,7 @@ public class RefusalCountersTests
     [Fact]
     public void EveryCodeInTheTaxonomyHasItsOwnCounter()
     {
-        var answered = DiagnosticsAnswer.Of(new RefusalCounters(), new ArrivalLimit()).RefusalsByCode;
+        var answered = DiagnosticsAnswer.Of(new RefusalCounters(), new ArrivalLimit(), SupportedVersions.Range).RefusalsByCode;
 
         Assert.Equal(
             Enum.GetValues<RefusalCode>().Select(Refusal.Wire).OrderBy(name => name, StringComparer.Ordinal),
@@ -83,7 +83,7 @@ public class RefusalCountersTests
     [Fact]
     public void EveryCauseHasItsOwnCounter()
     {
-        var answered = DiagnosticsAnswer.Of(new RefusalCounters(), new ArrivalLimit()).RefusalsByCause;
+        var answered = DiagnosticsAnswer.Of(new RefusalCounters(), new ArrivalLimit(), SupportedVersions.Range).RefusalsByCause;
 
         Assert.Equal(
             RefusalCounters.Causes().Select(RefusalCounters.Name).OrderBy(name => name, StringComparer.Ordinal),
@@ -289,11 +289,11 @@ public class RefusalCountersTests
         plane.Serve(PairingMessage.Hello, Arriving(target: "/ServerPairing/elsewhere"), At);
         plane.Serve(PairingMessage.Hello, Arriving(exceeded: true), At);
 
-        Assert.Equal(0, DiagnosticsAnswer.Of(counters, arrivals).IdentifiersBeingCounted);
+        Assert.Equal(0, DiagnosticsAnswer.Of(counters, arrivals, SupportedVersions.Range).IdentifiersBeingCounted);
 
         plane.Serve(PairingMessage.Hello, Arriving(), At);
 
-        var answer = DiagnosticsAnswer.Of(counters, arrivals);
+        var answer = DiagnosticsAnswer.Of(counters, arrivals, SupportedVersions.Range);
 
         Assert.Equal(2L, answer.RefusalsByCause[RefusalCounters.Name(RefusalCause.NotOnThisPlane)]);
         Assert.Equal(1L, answer.RefusalsByCause[RefusalCounters.Name(RefusalCause.BodyOverItsLimit)]);
@@ -312,7 +312,7 @@ public class RefusalCountersTests
     [Fact]
     public void EveryMemberOfThePayloadIsANumber()
     {
-        var answered = JsonSerializer.Serialize(DiagnosticsAnswer.Of(new RefusalCounters(), new ArrivalLimit()));
+        var answered = JsonSerializer.Serialize(DiagnosticsAnswer.Of(new RefusalCounters(), new ArrivalLimit(), SupportedVersions.Range));
 
         using var document = JsonDocument.Parse(answered);
 

@@ -33,9 +33,11 @@ public static class VersionNegotiation
     /// Selects the version for a pairing between this build and a peer offering a range.
     /// </summary>
     /// <remarks>
-    /// This is the one reader of <see cref="SupportedVersions.Range"/> in the plugin, and the
-    /// suite reads it as well to hold the range against the two constants it is built from.
-    /// What that is worth as proof is bounded and the bound is stated where the set is
+    /// THIS WAS THE ONE READER OF <see cref="SupportedVersions.Range"/> IN THE PLUGIN AND IS
+    /// ONE OF THREE. The others are <see cref="Api.Refusal.Body(Api.RefusalCode)"/> and the
+    /// diagnostics payload an administrator reads, which is what issue #25's fourth condition
+    /// asks for; the suite holds the three against one another rather than each against the
+    /// field. What that is worth as proof is bounded and the bound is stated where the set is
     /// declared: this
     /// build's range has one member, so a selection through it cannot be told apart from a
     /// constant. The overload below is where the rule itself is exercised.

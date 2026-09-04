@@ -49,9 +49,12 @@ namespace Jellyfin.Plugin.ServerPairing.Api;
 /// </para>
 /// <para>
 /// THE DIAGNOSTICS PAYLOAD WAS IN THAT LIST AND IS AN ACTION NOW, WHICH IS SMALLER THAN ISSUE
-/// #51. What it carries is what the peer plane has refused and why, and the members that issue
-/// asks for besides - a state per pairing, the two protocol versions, a last error - have no
-/// producer in this tree and no member here. <see cref="DiagnosticsAnswer"/> names each of them
+/// #51. What it carries is what the peer plane has refused and why, and the protocol versions
+/// this build speaks. THAT SENTENCE COUNTED THE TWO PROTOCOL VERSIONS AMONG THE ABSENCES and
+/// they are not one thing: what a peer speaks needs a peer that has answered, and what this
+/// server speaks is <see cref="SupportedVersions"/> and needed only a reader. The members that
+/// issue asks for besides - a state per pairing, the version a PEER speaks, a last error - have
+/// no producer in this tree and no member here. <see cref="DiagnosticsAnswer"/> names each of them
 /// with what has to exist first, so the absence is read there rather than inferred from this
 /// list.
 /// </para>
@@ -251,7 +254,8 @@ public sealed class AdministrativePlaneController : ControllerBase
         {
             StatusCode = 200,
             ContentType = "application/json",
-            Content = JsonSerializer.Serialize(DiagnosticsAnswer.Of(_refusals, _arrivals)),
+            Content = JsonSerializer.Serialize(
+                DiagnosticsAnswer.Of(_refusals, _arrivals, SupportedVersions.Range)),
         };
     }
 

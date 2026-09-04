@@ -33,8 +33,12 @@ about rather than the action on it: what it answers is the identifiers of the
 pairings this server holds a key for, and nothing else. The second is the
 diagnostics read, which is issue #51, and what it answers is how many requests
 the peer plane has refused since this server started and why, as numbers over two
-enumerations. It names no pairing, no address and no person, and the payload has
-the same shape on a server that has never been paired as on one that has.
+enumerations, together with the range of protocol versions this build speaks. It
+names no pairing, no address and no person, and the payload has the same shape on
+a server that has never been paired as on one that has. The range is read from the
+one place the supported set is declared, which is issue #25's fourth condition and
+its third reader: an operator comparing two servers reads each one's range where
+they already are rather than fetching it with a token.
 
 The third is the open enrolment windows, which is the seventh property of issue
 #18: while a window is open the plugin says so, because a window an operator
@@ -105,9 +109,11 @@ by a list, so a sentence added to a register reaches the page without the
 action moving. It reads no store and changes nothing.
 
 That second row is narrower than the issue it comes from. A state per pairing,
-the protocol version each side speaks and a last error per pairing are all things
-#51 asks the payload to carry, and none of them has anything in this tree that
-produces one. `DiagnosticsAnswer` names each of them with what has to exist
+the version a PEER speaks and a last error per pairing are all things #51 asks the
+payload to carry, and none of them has anything in this tree that produces one.
+THIS SENTENCE READ "the protocol version each side speaks" AND COUNTED TWO
+DIFFERENT ABSENCES AS ONE. What this server speaks is decided at build time and is
+in the payload; what a peer speaks needs a peer that has answered, and none has. `DiagnosticsAnswer` names each of them with what has to exist
 first, so the payload's silence is written down where somebody reading the
 payload will find it rather than being inferred from what is missing.
 
