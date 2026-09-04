@@ -6,10 +6,12 @@ namespace Jellyfin.Plugin.ServerPairing.Protocol;
 /// <remarks>
 /// Issue #25 asks for one list in one place, read by the negotiation, by the refusal and by
 /// the dashboard, because a supported set written down three times is a set that disagrees
-/// with itself the first time one of the three is edited. This is that place. One of the three
-/// readers exists today, which is <see cref="VersionNegotiation"/>; the dashboard is issue #49
-/// and there is no page, and what a refusal is allowed to say about the set is the open
-/// question recorded on issue #25 rather than something decided here.
+/// with itself the first time one of the three is edited. This is that place. ALL THREE
+/// READERS EXIST NOW, AND THIS PARAGRAPH SAID ONE DID. They are
+/// <see cref="VersionNegotiation"/>, <see cref="Api.Refusal.Body(Api.RefusalCode)"/>, which
+/// carries the range in the one refusal body the taxonomy lets carry anything, and
+/// <see cref="Api.DiagnosticsAnswer"/>, which the configuration page renders. Each reads this
+/// type; none holds a second copy of the numbers.
 /// <para>
 /// Version 1 is <c>docs/protocol.md</c> as it stands, which is the whole set. That makes every
 /// selection this build performs return 1, so the rule the negotiation implements cannot be
