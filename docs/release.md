@@ -123,9 +123,9 @@ number.
 One leg of the hygiene check reads those two markers on the way in:
 
     git grep -n 'marked_change' origin/master -- .github/pr-hygiene.sh
-    origin/master:.github/pr-hygiene.sh:225:marked_change() {
-    origin/master:.github/pr-hygiene.sh:254:marked_change protocol "$protocol_paths"
-    origin/master:.github/pr-hygiene.sh:255:marked_change contract "$contract_paths"
+    origin/master:.github/pr-hygiene.sh:256:marked_change() {
+    origin/master:.github/pr-hygiene.sh:285:marked_change protocol "$protocol_paths"
+    origin/master:.github/pr-hygiene.sh:286:marked_change contract "$contract_paths"
 
 It refuses a pull request that touches the protocol or the contract and adds no
 line carrying the marker for what it touched. That bound now stands in front of a
@@ -144,18 +144,30 @@ release owes: an entry is read for what the release changed rather than for what
 the guard accepted, and a declaration is a sentence in a pull request that no
 release note is assembled from.
 
-`build.yaml` carries a `changelog` field and it holds the first release entry
-rather than the placeholder it used to:
+`build.yaml` carries a `changelog` field and it holds the entry for the version
+that manifest declares:
 
     git show origin/master:build.yaml | grep -n -A2 'changelog'
     28:changelog: >
-    29-  The first release. A server that installs it answers on the six pairing paths
-    30-  the specification fixes and refuses every request that reaches them. Nothing
+    29-  Installs on every 10.11 server this manifest promises, which 0.1.0.0 did not.
+    30-  That release declares the floor of the 10.11 line and its assembly bound the
 
 `build.net10.0.yaml` carries the same field with the same words, and both take
 the entry from the changelog rather than a second wording.
 [`RELEASING.md`](RELEASING.md) fixes the order between writing the entry and
 moving the number, and that order is not restated here.
+
+IT HELD THE ENTRY FOR THE VERSION BEFORE IT UNTIL #345, AND THE READING ABOVE
+QUOTED THAT WITHOUT NOTICING. `0.1.1.0` moved the number and left the field
+saying what `0.1.0.0` said, so the entry a catalogue showed for the release that
+repairs the floor described the release that has the fault. The published
+`0.1.1.0` asset carries the stale words and cannot be edited; what corrects it
+for a reader is the next release, and nothing before then. Both arms of the
+version-bump leg now refuse separately, so a bump that moves `CHANGELOG.md` and
+leaves the field behind reds instead of passing on the first arm:
+
+    git grep -c 'the manifest version changed and' origin/master -- .github/pr-hygiene.sh
+    origin/master:.github/pr-hygiene.sh:4
 
 ## 5. The manifest, the assembly version and the changelog agree
 

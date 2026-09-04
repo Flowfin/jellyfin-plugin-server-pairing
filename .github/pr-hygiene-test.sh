@@ -132,6 +132,8 @@ bumped_tree=$(root_tree "$bumped_manifest" "$source_blob" "$test_blob" </dev/nul
 bumped_entry_tree=$(root_tree "$bumped_with_entry" "$source_blob" "$test_blob" </dev/null)
 bumped_changelog_tree=$(printf '100644 blob %s\tCHANGELOG.md\n' "$changelog_blob" |
     root_tree "$bumped_manifest" "$source_blob" "$test_blob")
+bumped_both_tree=$(printf '100644 blob %s\tCHANGELOG.md\n' "$changelog_blob" |
+    root_tree "$bumped_with_entry" "$source_blob" "$test_blob")
 big_tree=$(printf '100644 blob %s\tbig.txt\n' "$big_blob" |
     root_tree "$base_manifest" "$source_blob" "$test_blob")
 
@@ -180,6 +182,7 @@ unreferenced=$(commit_of "Change the plugin" "$base" "$both_tree")
 bumped=$(commit_of "Bump the manifest version (#65)" "$base" "$bumped_tree")
 bumped_entry=$(commit_of "Bump the manifest version (#65)" "$base" "$bumped_entry_tree")
 bumped_changelog=$(commit_of "Bump the manifest version (#65)" "$base" "$bumped_changelog_tree")
+bumped_both=$(commit_of "Bump the manifest version (#65)" "$base" "$bumped_both_tree")
 big=$(commit_of "Add a large file (#65)" "$base" "$big_tree")
 source_only=$(commit_of "Change only the plugin source (#65)" "$base" "$source_only_tree")
 protocol_doc=$(commit_of "Change the protocol document (#76)" "$base" "$protocol_doc_tree")
@@ -236,14 +239,21 @@ expect "a body with no issue reference is refused" \
 expect "a commit subject with no issue reference is refused" \
     1 "commit subjects reference no issue" "Closes #65." User OWNER "$unreferenced"
 
-expect "a manifest version change with no changelog entry is refused" \
-    1 "the manifest version changed with no changelog entry" "Closes #65." User OWNER "$bumped"
+# The version bump rule, one case per arm. The two middle cases are the ones
+# that carry it: each has one arm green and the other red, so a repair that
+# collapsed the two back into alternatives would go red here rather than in a
+# catalogue six weeks later, which is where #345 found it.
+expect "a manifest version change with neither changelog is refused" \
+    1 "the manifest version changed and CHANGELOG.md did not" "Closes #65." User OWNER "$bumped"
 
-expect "a manifest version change with a manifest changelog entry passes" \
-    0 "the manifest changelog changed with it" "Closes #65." User OWNER "$bumped_entry"
+expect "a manifest version change carrying only the manifest field is refused" \
+    1 "the manifest version changed and CHANGELOG.md did not" "Closes #65." User OWNER "$bumped_entry"
 
-expect "a manifest version change with a CHANGELOG.md change passes" \
-    0 "CHANGELOG.md changed with it" "Closes #65." User OWNER "$bumped_changelog"
+expect "a manifest version change carrying only CHANGELOG.md is refused" \
+    1 "the manifest changelog field still describes the version before it" "Closes #65." User OWNER "$bumped_changelog"
+
+expect "a manifest version change carrying both changelogs passes" \
+    0 "the manifest changelog field changed with it" "Closes #65." User OWNER "$bumped_both"
 
 expect "a protocol document change alone is not a protocol change" \
     0 "nothing in this pull request changes the protocol" "Closes #217." User OWNER "$protocol_doc"

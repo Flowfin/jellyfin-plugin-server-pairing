@@ -26,9 +26,13 @@ owner: "Flowfin"
 artifacts:
 - "Jellyfin.Plugin.ServerPairing.dll"
 changelog: >
-  The first release. A server that installs it answers on the six pairing paths
-  the specification fixes and refuses every request that reaches them. Nothing
-  verifies yet, because a server has no key to verify against: the check that reads
-  an arriving request looks the pairing up in this server's key store, and nothing
-  puts a key there, since there is no page and no endpoint an administrator can open
-  an enrolment from. Two servers cannot be paired with this version.
+  Installs on every 10.11 server this manifest promises, which 0.1.0.0 did not.
+  That release declares the floor of the 10.11 line and its assembly bound the
+  server libraries at 10.11.9.0, so a server between the two offered the plugin
+  and then refused every type in it: it installed and showed as NotSupported.
+  Read on two containers before and after, 10.11.0 answered NotSupported for
+  0.1.0.0 and Active for this build, and 10.11.11 answered Active for both.
+  Nothing about the plugin's behaviour changed and the 12.0 package is untouched,
+  so what 0.1.0.0 said still holds: two servers cannot be paired with this
+  version, because there is no page and no endpoint an administrator can open an
+  enrolment from.

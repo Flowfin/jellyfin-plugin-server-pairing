@@ -172,6 +172,16 @@ refuses a manifest version change that arrives with no changelog entry, and
 refuses a protocol or contract change that arrives with no line marked for it
 and no declaration in its body that nothing a peer or a consumer can see moved.
 
+The first of those asks for the entry in both places rather than in either, and
+it did ask for either until #345. `CHANGELOG.md` and the manifests' `changelog`
+field have different readers: one is read by whoever works on this repository,
+the other is the only text an operator browsing a catalogue is shown, and it
+ships inside the package where nobody can edit it afterwards. Accepting one for
+the other published `0.1.1.0` under the paragraph written for `0.1.0.0`. What
+the check compares is whether the field moved with the version, never whether
+its words describe the version they ship under, so the entry in front of a
+release is still read by a person.
+
 ## What this document does not decide
 
 The contract's own version constant and its supported-version set, issue #44.
