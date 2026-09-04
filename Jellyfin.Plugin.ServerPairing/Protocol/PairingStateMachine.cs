@@ -161,10 +161,11 @@ public sealed class PairingStateMachine
         string actor,
         DateTimeOffset at)
     {
-        var from = StateOf(pairingId);
+        var held = _records.Read(pairingId);
+        var from = held?.State ?? PairingState.Absent;
         var transition = Next(from, message, offered);
 
-        Persist(pairingId, from, transition, message.ToString(), actor, at);
+        Persist(pairingId, from, transition, message.ToString(), actor, at, held?.PeerAddress);
 
         return transition;
     }
@@ -178,11 +179,45 @@ public sealed class PairingStateMachine
     /// <param name="at">When it happened.</param>
     /// <returns>What the pairing became, and whether the event was accepted.</returns>
     public PairingTransition Apply(string pairingId, LocalEvent local, string actor, DateTimeOffset at)
+        => Apply(pairingId, local, actor, at, null);
+
+    /// <summary>
+    /// Applies something that happened on this side, telling the transition which peer the
+    /// pairing is with, and persists the result.
+    /// </summary>
+    /// <param name="pairingId">The pairing identifier.</param>
+    /// <param name="local">What happened here.</param>
+    /// <param name="actor">Who caused it, which for most of these is an administrator.</param>
+    /// <param name="at">When it happened.</param>
+    /// <param name="peerAddress">
+    /// The peer the pairing is with, or null to keep whatever the record already carries.
+    /// </param>
+    /// <returns>What the pairing became, and whether the event was accepted.</returns>
+    /// <remarks>
+    /// This is the one way a peer address reaches a record. There is no setter and no overload
+    /// that puts one on a record that already exists, so a record cannot be written without an
+    /// address and then be given one afterwards, and nothing outside a transition can move it.
+    /// <para>
+    /// The address is required only where the record is being written for the first time, which
+    /// is <see cref="LocalEvent.WindowOpened"/>. Every later transition is handed null and the
+    /// record keeps the address it was opened against, so an address is written once by the
+    /// administrator who typed it and is carried rather than re-supplied. Passing one for a
+    /// pairing that already holds a different one REPLACES it, which is why nothing but the
+    /// producer passes one.
+    /// </para>
+    /// </remarks>
+    public PairingTransition Apply(
+        string pairingId,
+        LocalEvent local,
+        string actor,
+        DateTimeOffset at,
+        PeerAddress? peerAddress)
     {
-        var from = StateOf(pairingId);
+        var held = _records.Read(pairingId);
+        var from = held?.State ?? PairingState.Absent;
         var transition = Next(from, local);
 
-        Persist(pairingId, from, transition, local.ToString(), actor, at);
+        Persist(pairingId, from, transition, local.ToString(), actor, at, peerAddress?.Value ?? held?.PeerAddress);
 
         return transition;
     }
@@ -306,6 +341,12 @@ public sealed class PairingStateMachine
     /// early return is why a repeated revocation does not remove mappings twice; the first one
     /// moved the pairing and took them.
     /// </para>
+    /// <para>
+    /// The peer address handed in is written as it stands. What decides whether that is the
+    /// address the caller supplied or the one the record already carried is the caller above,
+    /// because only the caller knows whether it is opening a pairing or moving one, and a rule
+    /// applied here would have to guess from the state which of the two it was looking at.
+    /// </para>
     /// </remarks>
     private void Persist(
         string pairingId,
@@ -313,7 +354,8 @@ public sealed class PairingStateMachine
         PairingTransition transition,
         string cause,
         string actor,
-        DateTimeOffset at)
+        DateTimeOffset at,
+        string? peerAddress)
     {
         if (!transition.Moves(from))
         {
@@ -332,6 +374,6 @@ public sealed class PairingStateMachine
             return;
         }
 
-        _records.Write(new PairingRecord(pairingId, transition.To, from, cause, actor, at));
+        _records.Write(new PairingRecord(pairingId, transition.To, from, cause, actor, at, peerAddress));
     }
 }

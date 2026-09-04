@@ -30,11 +30,22 @@ namespace Jellyfin.Plugin.ServerPairing.Tests.Api;
 /// started and the record store for every pairing that finished.
 /// </para>
 /// <para>
-/// WHAT IS NOT ASSERTED HERE IS THAT A WINDOW OPENED ON A SERVER APPEARS IN THIS ANSWER.
-/// Nothing joins <see cref="EnrolmentWindow"/> to the state machine, so no record is written
-/// when a window opens, and every case below writes the record itself. What is proved is the
-/// reader against the shape the transition table says a transition writes; the producer is
-/// issue #18's remaining work and is stated in the issue rather than implied by a green case.
+/// THIS REMARK SAID NO CASE HERE ASSERTS THAT A WINDOW OPENED APPEARS IN THIS ANSWER, BECAUSE
+/// NOTHING JOINED THE WINDOW TO THE STATE MACHINE. <see cref="Enrolment"/> is that join and one
+/// case below opens a window through it rather than writing the record itself, so the reader and
+/// the producer are asserted against each other rather than each against a shape somebody typed
+/// twice.
+/// </para>
+/// <para>
+/// The other cases go on writing their own records, and that is deliberate. A producer cannot
+/// make a record in a state it never produces, so the case that says a pairing which is not
+/// offered is not an open window has to write those states by hand or assert nothing about six
+/// of the eight.
+/// </para>
+/// <para>
+/// WHAT IS STILL NOT ASSERTED IS THAT AN OPERATOR CAN REACH ANY OF IT. Nothing on a server calls
+/// the producer, because the state-changing administrative endpoint is issue #53, so the answer
+/// on a running server is empty for want of a caller rather than for want of a producer.
 /// </para>
 /// </remarks>
 public class OpenWindowTests
@@ -59,7 +70,8 @@ public class OpenWindowTests
             PairingState.Absent,
             "AdministratorOpenedWindow",
             "an-administrator",
-            Opened));
+            Opened,
+            "https://peer.example"));
 
         var open = Answered(records);
 
@@ -70,7 +82,57 @@ public class OpenWindowTests
     }
 
     /// <summary>
-    /// The floor under the case above. A reader that answered every record would say a window
+    /// The answer carries a window that was opened rather than a record that was written. The two
+    /// cases either side of this one write the record they then read, so both would pass against a
+    /// producer that writes a record the reader cannot see; this one opens a window through
+    /// <see cref="Enrolment"/> and asks the action, which is the half of the seventh property of
+    /// issue #18 its reader could not supply on its own.
+    /// </summary>
+    [Fact]
+    public void AWindowOpenedThroughTheProducerIsInTheAnswer()
+    {
+        var records = new InMemoryPairingRecords();
+
+        Assert.Equal(PeerAddressOutcome.Accepted, PeerAddress.Parse("https://peer.example", out var address));
+
+        var enrolment = new Enrolment(
+            new EnrolmentWindow(new RecordedPeers(records)),
+            new PairingStateMachine(records, new InMemoryUserMappings()),
+            records);
+
+        var opened = enrolment.Open(address!, "an-administrator", Opened);
+
+        var window = Assert.Single(Answered(records));
+
+        Assert.Equal(opened.PairingId, window.PairingId);
+        Assert.Equal(Opened, window.OpenedAt);
+    }
+
+    /// <summary>
+    /// A window closed through the producer leaves the answer, in the same call it closes. An
+    /// operator reading this page after closing one must not be shown the window they just shut,
+    /// which is what a reader over a record nobody destroyed would show them.
+    /// </summary>
+    [Fact]
+    public void AWindowClosedThroughTheProducerLeavesTheAnswer()
+    {
+        var records = new InMemoryPairingRecords();
+
+        Assert.Equal(PeerAddressOutcome.Accepted, PeerAddress.Parse("https://peer.example", out var address));
+
+        var enrolment = new Enrolment(
+            new EnrolmentWindow(new RecordedPeers(records)),
+            new PairingStateMachine(records, new InMemoryUserMappings()),
+            records);
+
+        enrolment.Open(address!, "an-administrator", Opened);
+        enrolment.Close(address!, "an-administrator", Opened.AddMinutes(1));
+
+        Assert.Empty(Answered(records));
+    }
+
+    /// <summary>
+    /// The floor under the first case. A reader that answered every record would say a window
     /// is open on a server whose only pairing is working, which is the answer an operator would
     /// act on by going looking for a window nobody opened.
     /// </summary>
@@ -87,7 +149,8 @@ public class OpenWindowTests
                 PairingState.Absent,
                 state.ToString(),
                 "an-administrator",
-                Opened));
+                Opened,
+                "https://peer.example"));
         }
 
         Assert.Empty(Answered(records));

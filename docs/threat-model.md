@@ -75,7 +75,7 @@ stops a pairing on this server.
 
 ```
 git ls-tree -r --name-only origin/master -- Jellyfin.Plugin.ServerPairing/Protocol | wc -l
-41
+44
 ```
 
 That count rises whenever a file lands under that directory, so a reader who

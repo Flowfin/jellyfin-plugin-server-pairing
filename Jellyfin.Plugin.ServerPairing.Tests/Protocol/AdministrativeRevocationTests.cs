@@ -224,7 +224,7 @@ public sealed class AdministrativeRevocationTests : IDisposable
 
         /// <inheritdoc />
         public PairingRecord? Read(string pairingId)
-            => new PairingRecord(pairingId, PairingState.Active, PairingState.ConfirmedHere, "Confirm", "peer", At);
+            => new PairingRecord(pairingId, PairingState.Active, PairingState.ConfirmedHere, "Confirm", "peer", At, "https://peer.example");
 
         /// <inheritdoc />
         public void Write(PairingRecord record) => throw new IOException("the record store is not writable");

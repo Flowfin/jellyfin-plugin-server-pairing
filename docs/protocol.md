@@ -13,7 +13,7 @@ that stops a pairing on this server are here:
 
 ```
 git ls-tree -r --name-only origin/master -- Jellyfin.Plugin.ServerPairing/Protocol | wc -l
-41
+44
 ```
 
 **This paragraph said nothing reached any of them from outside this server, that
@@ -769,18 +769,35 @@ interrupted belongs and is what a second `hello` with a different key already
 produces. Writing first would leave one pairing under two identifiers, and the one
 nothing will ever name again would sit in the file until somebody looked.
 
-What this section does not decide is which type mints the identifier and what the
-administrative action that opens a window looks like. That is issue #18, and the
-window in the tree today still holds itself against the peer address, writes no
-record and calls no state machine:
+WHICH TYPE MINTS THE IDENTIFIER IS DECIDED AND BUILT, AND THIS PASSAGE SAID IT WAS
+NOT. It said no pairing had ever been in `Offered` on a running server and that
+nothing in this plugin had ever minted one of these. The join between the window
+and the state machine is what mints one and writes the record, and it is a type of
+its own rather than a method on either of the two it joins:
+
+    git grep -n 'ProvisionalPairingId.Mint()' origin/master -- Jellyfin.Plugin.ServerPairing/
+    origin/master:Jellyfin.Plugin.ServerPairing/Protocol/Enrolment.cs:113:        var pairingId = ProvisionalPairingId.Mint();
+
+The window itself is unmoved and still holds itself against the peer address,
+writes no record and calls no state machine, which is why the join is a third type:
 
     git grep -n 'OpenAddresses' origin/master -- Jellyfin.Plugin.ServerPairing/Protocol/EnrolmentWindow.cs
     origin/master:Jellyfin.Plugin.ServerPairing/Protocol/EnrolmentWindow.cs:264:    public IReadOnlyList<string> OpenAddresses(DateTimeOffset at)
 
-So no pairing has ever been in `Offered` on a running server, and nothing in this
-plugin has ever minted one of these. What has landed is the store the record is
-kept in and the shape the identifier takes, which is issue #311; what puts a
-pairing into that state is still unbuilt.
+WHAT IS STILL NOT DECIDED IS WHAT THE ADMINISTRATIVE ACTION LOOKS LIKE, and that
+is the half of the old sentence that survives. Nothing on a server calls the join,
+because there is no state-changing administrative endpoint to call it from - that
+is issue #53 - so a server running this build still has no way for an operator to
+open a window, and no pairing has been in `Offered` on one. The difference from
+what stood here is that the producer exists and is registered rather than being
+unbuilt, so what is missing is a caller.
+
+The record it writes carries the peer address, which is the field the reader of
+the open windows and the refusal against re-pairing an existing peer both need,
+and which no message on the wire supplies:
+
+    git grep -n 'public string? PeerAddress' origin/master -- Jellyfin.Plugin.ServerPairing/Protocol/PairingRecord.cs
+    origin/master:Jellyfin.Plugin.ServerPairing/Protocol/PairingRecord.cs:107:    public string? PeerAddress { get; }
 
 ## The error taxonomy
 
@@ -1048,18 +1065,24 @@ after `hello` carries the selected version in `X-Pairing-Version` and nowhere
 else, which this document states above, so a side that sends one has to have kept
 it. Nothing in the tree keeps it:
 
-    git grep -nE 'Version|Address' origin/master -- Jellyfin.Plugin.ServerPairing/Protocol/PairingRecord.cs Jellyfin.Plugin.ServerPairing/Protocol/IPairingRecordStore.cs Jellyfin.Plugin.ServerPairing/KeyStore/PairingKeys.cs Jellyfin.Plugin.ServerPairing/KeyStore/IPairingKeyStore.cs ; echo "exit=$?"
+    git grep -nE 'Version' origin/master -- Jellyfin.Plugin.ServerPairing/Protocol/PairingRecord.cs Jellyfin.Plugin.ServerPairing/Protocol/IPairingRecordStore.cs Jellyfin.Plugin.ServerPairing/KeyStore/PairingKeys.cs Jellyfin.Plugin.ServerPairing/KeyStore/IPairingKeyStore.cs ; echo "exit=$?"
     exit=1
 
 Empty output, exit one, over the record, the record store, the key store and the
-keys a pairing holds. The same command is why the peer address is not there
-either; that field is claimed by issue #350 and unbuilt, and the version is issue
-#316, which was opened because this paragraph said it was claimed by no issue at
-all and that was still true when it was read. THE FIELD'S OWNER MOVED WHEN #18
-CLOSED, AND THIS SENTENCE NAMED THE CLOSED ISSUE UNTIL THEN: #18 is the enrolment
-window, its own conditions are met, and #350 is the sub-issue it was split into,
-which holds the field and the producer that writes one. Both are claimed and neither is
-built. Neither has bitten yet because nothing in this plugin sends a message: the
+keys a pairing holds. THIS COMMAND ASKED FOR THE PEER ADDRESS AS WELL AND THIS
+PARAGRAPH SAID THAT FIELD WAS MISSING TOO. The record carries one now, so a
+command asking for both would answer with hits and prove nothing about the
+version, which is why it asks for the version alone and the address is read on its
+own line:
+
+    git grep -n 'public string? PeerAddress' origin/master -- Jellyfin.Plugin.ServerPairing/Protocol/PairingRecord.cs
+    origin/master:Jellyfin.Plugin.ServerPairing/Protocol/PairingRecord.cs:107:    public string? PeerAddress { get; }
+
+So what is left unbuilt here is the version. It is issue #316, which was opened
+because this paragraph said the field was claimed by no issue at all and that was
+still true when it was read. The address was issue #350, which is the sub-issue
+#18 was split into and which built the field and the producer that writes one. The
+version has not bitten yet because nothing in this plugin sends a message: the
 only mentions of the channel's send are its own declaration and its own call into
 the HTTP client.
 

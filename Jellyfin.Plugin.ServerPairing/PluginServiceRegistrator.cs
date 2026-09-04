@@ -166,14 +166,42 @@ public class PluginServiceRegistrator : IPluginServiceRegistrator
         // whoever needs it, because it sweeps the mapping table when a pairing ends and a second
         // instance over a second mapping store would sweep a table nobody is reading.
         //
-        // THIS COMMENT SAID NOTHING RESOLVED IT. UserMappings below resolves it now, for the
-        // mapping the administrative plane removes, so the registration is load-bearing. What
-        // is unchanged is that no plane and no page applies an event to it, and what would put a
-        // record into it is the enrolment join in issue #350, which was #18 until that closed;
-        // ServiceRegistrationTests is still what says the container can build it.
+        // THIS COMMENT SAID NOTHING RESOLVED IT AND THAT NO PLANE AND NO PAGE APPLIED AN EVENT TO
+        // IT. UserMappings below resolves it, for the mapping the administrative plane removes,
+        // and the enrolment registered below applies an event to it, which is the join issue #350
+        // holds. What is still true is that nothing on a server calls that enrolment, because the
+        // state-changing administrative endpoint is issue #53; ServiceRegistrationTests is what
+        // says the container can build all of it.
         serviceCollection.AddSingleton(services => new PairingStateMachine(
             services.GetRequiredService<IPairingRecordStore>(),
             services.GetRequiredService<IUserMappingStore>()));
+
+        // Whether this server already has a pairing with a peer, read out of the record store
+        // above. It is what refuses a window against a peer already paired with, and until it
+        // existed that refusal held in the test project and nowhere on a server, because no type a
+        // container could build answered the question at all.
+        serviceCollection.AddSingleton<IPairedPeers>(services =>
+            new RecordedPeers(services.GetRequiredService<IPairingRecordStore>()));
+
+        // The enrolment window, on the lifetime the operator chose. The reading is resolved rather
+        // than the configuration, so a refused value is named at Error once and this gets the
+        // lifetime a server nobody configured runs on rather than throwing out of a factory.
+        //
+        // Once, because what it holds is the windows this server has open, and a second instance
+        // would answer a second set of them. It is the one piece of pairing state this plugin
+        // keeps in memory rather than in a file, which is why a restart loses the window and keeps
+        // the record, and why the enrolment below retires a record whose window is gone.
+        serviceCollection.AddSingleton(services => new EnrolmentWindow(
+            services.GetRequiredService<IPairedPeers>(),
+            services.GetRequiredService<ConfigurationReading>().EnrolmentWindowSeconds));
+
+        // The join between the two, which is what makes opening a window write a record. Nothing
+        // on a server calls it yet, for the reason given at the state machine above, so this
+        // registration is what lets the endpoint in issue #53 be a caller rather than a rewiring.
+        serviceCollection.AddSingleton(services => new Enrolment(
+            services.GetRequiredService<EnrolmentWindow>(),
+            services.GetRequiredService<PairingStateMachine>(),
+            services.GetRequiredService<IPairingRecordStore>()));
 
         // The report of what is held about one user, which is the read half of issue #60 and is
         // resolved by the administrative plane. It takes the mapping store and a logger and
