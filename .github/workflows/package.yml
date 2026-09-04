@@ -1,9 +1,21 @@
-# Builds the package this repository would ship, reads what is inside it, and
-# publishes that reading as a component list a scanner can open.
+# Builds the package this repository would ship, reads what is inside it,
+# installs it on a server of the floor its manifest claims, and publishes the
+# reading as a component list a scanner can open.
 #
-# What it refuses: an assembly in the package that build.yaml does not name.
-# The opposite direction, a manifest naming an artefact the package does not
-# hold, is issue #71 and is not judged here.
+# What it refuses: an assembly in the package that build.yaml does not name,
+# and a package that does not load on a server at the floor build.yaml
+# promises. The opposite direction of the first, a manifest naming an artefact
+# the package does not hold, is issue #71 and is not judged here.
+#
+# The install is #344 and it is here rather than in abi-floor because that job
+# compiles and this one has an archive. What each judgement covers is written
+# at the step and in the script it runs.
+#
+# ONE MANIFEST IS JUDGED AND THERE ARE TWO. This job builds the net9.0 package
+# and build.net10.0.yaml declares a floor of 12.0.0.0, whose server line is a
+# release candidate and is not tagged 12.0.0 on the registry, so the image
+# cannot be derived from that manifest the way it is from this one. The 12.0
+# half stays open on #344.
 #
 # The judgement lives in .github/package-audit.sh so the command a person runs
 # and the command this job runs are the same bytes, and
@@ -80,6 +92,24 @@ jobs:
 
       - name: Prove the check still refuses what it claims to refuse
         run: sh .github/package-audit-test.sh
+
+      - name: Install the package on the floor build.yaml claims and read it back
+        # The archive this run built, on a server of the version the manifest
+        # promises, answering GET /Plugins. Reading a package is not installing
+        # one: 0.1.0.0 was read clean here and published, and does not load on
+        # any 10.11 server below 10.11.9, because the assembly binds the server
+        # libraries above the floor the manifest declares. That is invisible to
+        # every other check in this tree and is what this step exists for.
+        #
+        # The path comes from the packager and is passed in the environment
+        # rather than interpolated into the script, for the reason the reading
+        # above gives.
+        env:
+          PACKAGE: ${{ steps.jprm.outputs.artifact }}
+        run: sh .github/floor-install.sh "$PACKAGE" build.yaml
+
+      - name: Prove the install check still refuses what it claims to refuse
+        run: sh .github/floor-install-test.sh 18196
 
       - name: Attach the component list to the run
         # Attached even when the reading refused, because a reader looking at a
