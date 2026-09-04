@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Reflection;
 using System.Text.Json;
 using Jellyfin.Plugin.ServerPairing.Wording;
@@ -66,9 +67,13 @@ public static class WordingAnswer
     {
         var sentences = new SortedDictionary<string, string>(StringComparer.Ordinal);
 
-        foreach (var field in register.GetFields(BindingFlags.Public | BindingFlags.Static | BindingFlags.DeclaredOnly))
+        var literals = register
+            .GetFields(BindingFlags.Public | BindingFlags.Static | BindingFlags.DeclaredOnly)
+            .Where(field => field.IsLiteral && field.FieldType == typeof(string));
+
+        foreach (var field in literals)
         {
-            if (field.IsLiteral && field.FieldType == typeof(string) && field.GetRawConstantValue() is string sentence)
+            if (field.GetRawConstantValue() is string sentence)
             {
                 sentences[field.Name] = sentence;
             }
