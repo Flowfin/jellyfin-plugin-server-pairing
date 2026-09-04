@@ -38,6 +38,17 @@ claim that cannot be verified belongs rather than in this file.
 
 Anything else is an ordinary line with no marker.
 
+## 0.1.1.0
+
+Installs on every 10.11 server the manifest promises, which 0.1.0.0 did not.
+
+That release declares `targetAbi 10.11.0.0`, the floor of the 10.11 line, and its assembly binds the server libraries at `10.11.9.0`, because the shipping build compiled against the newest package on the line instead of the one the floor names. A server between the two offers the plugin on the strength of the declared floor and then refuses every type in it: the plugin installs and shows as `NotSupported`, with
+`Could not load file or assembly 'MediaBrowser.Common, Version=10.11.9.0'` in the server log.
+
+Read on two containers before and after: 10.11.0 answered `NotSupported` for 0.1.0.0 and `Active` for this build, and 10.11.11 answered `Active` for both.
+
+Nothing about the plugin's behaviour changed, and the 12.0 package is untouched. If your server is 10.11.9 or newer there is nothing here for you; if it is older, this is the first version you can use.
+
 ## 0.1.0.0
 
 The first release, so nothing under this heading is a difference from a
