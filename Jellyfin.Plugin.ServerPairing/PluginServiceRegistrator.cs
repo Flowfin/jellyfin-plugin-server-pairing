@@ -169,9 +169,8 @@ public class PluginServiceRegistrator : IPluginServiceRegistrator
         // THIS COMMENT SAID NOTHING RESOLVED IT. UserMappings below resolves it now, for the
         // mapping the administrative plane removes, so the registration is load-bearing. What
         // is unchanged is that no plane and no page applies an event to it, and what would put a
-        // record into it is the enrolment join in issue #350; ServiceRegistrationTests is still
-        // what says the container can build it. THAT NUMBER WAS #18 UNTIL IT CLOSED: the window's
-        // own conditions are met and the join went to the sub-issue it was split into.
+        // record into it is the enrolment join in issue #350, which was #18 until that closed;
+        // ServiceRegistrationTests is still what says the container can build it.
         serviceCollection.AddSingleton(services => new PairingStateMachine(
             services.GetRequiredService<IPairingRecordStore>(),
             services.GetRequiredService<IUserMappingStore>()));
