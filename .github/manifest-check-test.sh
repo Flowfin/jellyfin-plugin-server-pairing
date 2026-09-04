@@ -95,6 +95,16 @@ d=$(tree floor-above)
 sed -i 's/^targetAbi: "10.11.0.0"$/targetAbi: "12.0.0.0"/' "${d}/build.yaml"
 expect "a floor above the package the shipping build uses" refuses "$d"
 
+# The other direction, and the one that shipped. The pin sat at 10.11.9 while
+# the manifest promised 10.11.0.0, which the rule above accepts because 10.11.9
+# is not older than the floor package; the assembly it produces binds every
+# server reference at 10.11.9.0, and a 10.11.0 server admits the package on the
+# promise and then refuses every type in it. The fixture is the released state,
+# so what this watches refusing is what an operator met.
+d=$(tree binds-above-the-floor)
+sed -i "s|'net9.0'\">10.11.0<|'net9.0'\">10.11.9<|" "${d}/Directory.Build.props"
+expect "a shipping build that binds above the floor the manifest promises" refuses "$d"
+
 # A floor nothing holds a package for. Refused rather than skipped, so a new
 # server line cannot pass by being unrecognised.
 d=$(tree floor-unknown)
