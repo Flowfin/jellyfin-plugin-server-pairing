@@ -22,7 +22,7 @@ namespace Jellyfin.Plugin.ServerPairing.Api;
 /// here.
 /// </para>
 /// <para>
-/// No peer address is on this shape because no peer address is on the record. Issue #18 claims
+/// No peer address is on this shape because no peer address is on the record. Issue #350 claims
 /// that field and it is not built, so what an operator is told is that a window is open and
 /// when it opened, and not which address it was opened against. That is a narrower answer than
 /// the property asks for and it is the whole of what the record can answer today.

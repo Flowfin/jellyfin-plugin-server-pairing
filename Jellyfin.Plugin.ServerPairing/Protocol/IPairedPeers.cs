@@ -16,8 +16,10 @@ namespace Jellyfin.Plugin.ServerPairing.Protocol;
 /// </para>
 /// <para>
 /// <see cref="PairingRecord"/> carries no peer address today, so an implementation over the
-/// landed record cannot answer this. Issue #18 claims that field rather than leaving it owed
-/// by nobody, and the field lands with the store that has to read it.
+/// landed record cannot answer this. Issue #350 claims that field rather than leaving it owed
+/// by nobody, and the field lands with the store that has to read it. That owner is the
+/// sub-issue #18 was split into when it closed, so a reader following the number reaches work
+/// that is open rather than an issue that is done.
 /// </para>
 /// </remarks>
 public interface IPairedPeers
