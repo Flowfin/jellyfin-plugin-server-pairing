@@ -83,8 +83,17 @@ expect "a manifest claiming a framework the project does not build" refuses "$d"
 # The version a manifest publishes against the version the assembly carries.
 # This is the case the issue asks for by name, and the near-miss is a manifest
 # bumped for a release with the assembly version left behind.
+#
+# The fixture moves whatever version the tree holds, and moves it to one the
+# tree will never hold. A literal on the left of the substitution is a fixture
+# that stops firing the day the version moves past it: this line read
+# `s/^version: "0.1.0.0"$/` until 2026-09-04, when build.yaml went to 0.1.1.0,
+# the substitution matched nothing, the case handed manifest-check a tree that
+# agrees with itself, and the run that should have watched a refusal watched an
+# acceptance instead. A case that cannot fail is worse than no case, because it
+# reports a guard nobody is holding.
 d=$(tree version)
-sed -i 's/^version: "0.1.0.0"$/version: "0.2.0.0"/' "${d}/build.yaml"
+sed -i 's/^version: ".*"$/version: "9.9.9.9"/' "${d}/build.yaml"
 expect "a manifest version the assembly does not carry" refuses "$d"
 
 # The floor a manifest claims against the package the shipping build compiles
@@ -102,7 +111,7 @@ expect "a floor above the package the shipping build uses" refuses "$d"
 # promise and then refuses every type in it. The fixture is the released state,
 # so what this watches refusing is what an operator met.
 d=$(tree binds-above-the-floor)
-sed -i "s|'net9.0'\">10.11.0<|'net9.0'\">10.11.9<|" "${d}/Directory.Build.props"
+sed -i "s|\(== 'net9.0'\">\)[^<]*<|\199.99.99<|" "${d}/Directory.Build.props"
 expect "a shipping build that binds above the floor the manifest promises" refuses "$d"
 
 # A floor nothing holds a package for. Refused rather than skipped, so a new
