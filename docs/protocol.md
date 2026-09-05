@@ -8,12 +8,13 @@ Part of what this document describes now exists in the tree, and the part that
 does not is what a reader has to be told about first. The types that hold the
 state machine, the canonical form, the field limits, the freshness window with
 its nonce store, the key overlap, the peer address, the enrolment window, the
-version negotiation, the store a pairing record is kept in and the revocation
+version negotiation, the reader that turns an arriving body into the members
+the table below names, the store a pairing record is kept in and the revocation
 that stops a pairing on this server are here:
 
 ```
 git ls-tree -r --name-only origin/master -- Jellyfin.Plugin.ServerPairing/Protocol | wc -l
-44
+51
 ```
 
 **This paragraph said nothing reached any of them from outside this server, that
@@ -320,6 +321,34 @@ rather than as they would re-serialise.
 | every type | refusal, `version` only | `versionLow` | protocol version, the lowest this server speaks |
 | every type | refusal, `version` only | `versionHigh` | protocol version, the highest this server speaks |
 
+**EACH MEMBER'S JSON TYPE IS FIXED HERE TOO, AND THIS SECTION LEFT IT OPEN.** The
+table above named the members and the limits table said what each value is, and
+between them a reader could still build `versionLow` as `1` or as `"1"` and be
+following both. Two implementations agreeing about every value and disagreeing
+about its type interoperate exactly as badly as two disagreeing about a name, so
+the type is written down rather than discovered:
+
+| Member | JSON type |
+| --- | --- |
+| `versionLow`, `versionHigh` | number |
+| `key`, `address`, `digest`, `code` | string |
+
+A protocol version is a number and everything else is a string. The two version
+members are numbers because the one refusal body that carries a range already
+writes them as numbers, in the error taxonomy below, and that section says a peer
+reads one spelling of a version range rather than two - which it would not, if a
+request wrote the same two members as strings. Everything else is a string because
+its limit is a length or an alphabet rather than a magnitude.
+
+A member of the wrong type is refused rather than converted. There is no coercion
+rule here, and asking for one is asking which of two implementations is right about
+a value neither of them can check.
+
+`notAfter` is the one member the table above names that this list does not, and it
+is left open deliberately: it is a rotation instant whose bound is the rotation
+section rather than the limits table, and no reader in this tree parses one. It is
+fixed when a `rotate` body is read.
+
 The version range is two members rather than one nested object, so each half is
 checked against the protocol version limit by itself and a range whose halves
 are the wrong way round is one comparison rather than a parse. `hello` is the
@@ -357,6 +386,27 @@ version, which [`versioning.md`](versioning.md) already calls a removal wearing
 a smaller number: give it a new protocol version and keep the old one accepted,
 or accept that it moves the first part of the plugin version. Each of those
 carries a `[protocol]` line in [`../CHANGELOG.md`](../CHANGELOG.md).
+
+**WHAT EXECUTES THIS SECTION, AND WHICH TWO ROWS IT DOES NOT REACH.** Every rule
+above is read by one type, which is handed the bytes of a request that has already
+verified:
+
+```
+git grep -n 'public static ArrivingBody Read' origin/master -- Jellyfin.Plugin.ServerPairing/Protocol/ArrivingBody.cs
+origin/master:Jellyfin.Plugin.ServerPairing/Protocol/ArrivingBody.cs:61:    public static ArrivingBody Read(PairingMessage message, ReadOnlySpan<byte> body) => message switch
+```
+
+It reads a `hello` request, a `confirm` request, and the two rows that say empty. A
+`rotate` request body has a row here and no reader, so nothing in this tree refuses
+one that breaks these rules; an `exchange` body is opaque to this layer by the row
+above and is not read here by design rather than by omission. No response row has a
+reader at all: `PeerChannel` reads a peer's answer into bytes against its limit and
+hands them on, and nothing turns those bytes into the members this table names for
+a response.
+
+The refusal a body earns is `malformed`, and only a caller whose signature verified
+is ever told it, which is the error taxonomy below rather than a rule of this
+section.
 
 ## What is authenticated, and over exactly which bytes
 
@@ -734,7 +784,7 @@ to hold it under. The wire already says as much about the request that arrives i
 that state:
 
     git grep -n "^them. Its .X-Pairing-Id. is 32" origin/master -- docs/protocol.md
-    origin/master:docs/protocol.md:436:them. Its `X-Pairing-Id` is 32 `0` characters, which is what line 5 of its
+    origin/master:docs/protocol.md:486:them. Its `X-Pairing-Id` is 32 `0` characters, which is what line 5 of its
 
 **`OFFERED` IS WRITTEN, UNDER A PROVISIONAL IDENTIFIER.** Opening a window mints
 one and writes the record under it. The record moves to the derived identifier at
@@ -1047,11 +1097,26 @@ not the one this pairing settled on is `state`, and that one needs the selected
 version to have been remembered, which is issue #316. Nothing remembers one, so
 only the first of the two is answered today.
 
-The other caller the taxonomy lets see `version` is a `hello` whose range does not
-overlap this server's, and no site answers that one. The two ranges are body
-members and nothing in this plugin turns a body into fields, so a peer outside the
-overlap is refused for its signature or for the state rather than for the version.
-That is the half of issue #25 that stays open.
+THIS PARAGRAPH SAID NO SITE ANSWERS THE OTHER CALLER THE TAXONOMY LETS SEE
+`version`, BECAUSE THE TWO RANGES ARE BODY MEMBERS AND NOTHING TURNED A BODY INTO
+FIELDS. One does. A `hello` that verified is read against the member table above,
+and a range that does not overlap this server's is answered `version` carrying the
+range this build speaks:
+
+```
+git grep -n 'RefusalCause.NoVersionInCommon' origin/master -- Jellyfin.Plugin.ServerPairing/Api/PeerPlane.cs
+origin/master:Jellyfin.Plugin.ServerPairing/Api/PeerPlane.cs:331:            return Refuse(RefusalCause.NoVersionInCommon);
+```
+
+WHICH OF THE TWO CALLERS REACHES IT TODAY IS THE HALF TO READ CAREFULLY. The
+taxonomy names two, and the one that has a route is the caller holding a verifying
+key. The other is a caller inside an open enrolment window, and that route does not
+exist: a `hello` carries 32 zero characters where the identifier goes and is signed
+with the private half of the key it offers, and no such verification is built, so
+nothing on this plane admits a caller that holds no pairing key. A peer outside the
+overlap that has never paired is therefore still refused for its signature. What is
+answered `version` is a peer whose range moved out from under a pairing that
+already has one.
 
 ## What is not decided here
 

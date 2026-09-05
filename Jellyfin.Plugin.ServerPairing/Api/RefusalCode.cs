@@ -11,12 +11,17 @@ namespace Jellyfin.Plugin.ServerPairing.Api;
 /// <para>
 /// Which members this tree can currently produce is a smaller set than this enumeration, and
 /// deliberately so. THIS PARAGRAPH SAID <see cref="PeerPlane"/> PRODUCES <see cref="Refused"/>
-/// AND NOTHING ELSE, AND THEN THAT IT PRODUCES FOUR CODES. It produces five: the plane judges
-/// the declared version and then freshness once a request has verified, so
-/// <see cref="Version"/>, <see cref="Clock"/>, <see cref="Replay"/> and <see cref="Busy"/> are
-/// answered to a caller that has proved it holds the pairing's key. What is unchanged is what an
-/// unauthenticated caller gets, which is <see cref="Refused"/> and only that, because both
-/// judgements are made after verification and never before it.
+/// AND NOTHING ELSE, THEN THAT IT PRODUCES FOUR CODES, THEN FIVE. It produces six: the plane
+/// judges the declared version, then freshness, then the body against its member table, once a
+/// request has verified, so <see cref="Version"/>, <see cref="Clock"/>, <see cref="Replay"/>,
+/// <see cref="Busy"/> and <see cref="Malformed"/> are answered to a caller that has proved it
+/// holds the pairing's key. What is unchanged is what an unauthenticated caller gets, which is
+/// <see cref="Refused"/> and only that, because every one of those judgements is made after
+/// verification and never before it.
+/// <para>
+/// <see cref="State"/> is the one member no site produces. Which code the undistinguished
+/// refusal below should become once a pairing record is read on this plane is issue #287.
+/// </para>
 /// </para>
 /// <para>
 /// The <c>Absent</c> row of the transition table is still the undistinguished refusal for all
@@ -53,8 +58,16 @@ public enum RefusalCode
     /// <see cref="PeerPlane.Serve"/> produces it for the second of those two callers: a request
     /// whose signature verified and whose declared version is outside
     /// <see cref="Protocol.SupportedVersions.Range"/> is answered this, with the range in the
-    /// body. The first caller is a <c>hello</c> whose range does not overlap this server's, and
-    /// that one needs a body to be parsed, which is issue #25's remaining half.
+    /// body. THAT SENTENCE WENT ON TO SAY THE OTHER CAUSE OF THIS CODE - a <c>hello</c> whose
+    /// range does not overlap this server's - NEEDED A BODY TO BE PARSED AND HAD NO SITE. One
+    /// parses a body, and <see cref="PeerPlane.Serve"/> answers this for that cause as well.
+    /// <para>
+    /// The two CAUSES both have a site; the two CALLERS do not, and that is the distinction to
+    /// keep. Both sites are reached after verification, so what sees this code today is a caller
+    /// holding a verifying key. A caller inside an open enrolment window is admitted by nothing,
+    /// because a <c>hello</c> proves possession of the key it offers and no route here verifies
+    /// that.
+    /// </para>
     /// </summary>
     Version = 2,
 
@@ -66,8 +79,16 @@ public enum RefusalCode
 
     /// <summary>
     /// The signature verified and the body does not parse, or a field is outside its limit.
-    /// Only a caller holding a verifying key ever sees it. No site produces it yet, because
-    /// nothing on this plane parses a body.
+    /// Only a caller holding a verifying key ever sees it. THIS SENTENCE SAID NO SITE PRODUCES
+    /// IT, BECAUSE NOTHING ON THIS PLANE PARSED A BODY. <see cref="PeerPlane.Serve"/> produces
+    /// it: <see cref="Protocol.ArrivingBody"/> reads a body that has verified against the member
+    /// table in <c>docs/protocol.md</c>, and this is the answer where it is not the body that
+    /// table fixes.
+    /// <para>
+    /// Two bodies cannot reach it, and that is the document rather than an omission. A
+    /// <c>rotate</c> body has a member table and no reader here yet, and an <c>exchange</c> body
+    /// is opaque to this layer, so neither is judged and neither is answered this.
+    /// </para>
     /// </summary>
     Malformed = 4,
 

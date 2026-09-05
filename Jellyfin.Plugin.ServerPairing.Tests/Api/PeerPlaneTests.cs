@@ -41,6 +41,51 @@ public class PeerPlaneTests
     private static byte[] Key { get; } = RandomNumberGenerator.GetBytes(32);
 
     /// <summary>
+    /// Gets a public key member of the length <c>docs/crypto.md</c> measured for a P-256
+    /// <c>SubjectPublicKeyInfo</c>. The bytes are not a key and nothing imports them: what the
+    /// member table fixes for that member is base64 inside a length limit, and this is that.
+    /// </summary>
+    private static string OfferedPublicKey { get; } =
+        Convert.ToBase64String(RandomNumberGenerator.GetBytes(91));
+
+    /// <summary>
+    /// The body the member table fixes for a message, so a case that is not about a body sends
+    /// one the plane reads rather than one it refuses.
+    /// </summary>
+    /// <param name="message">The message.</param>
+    /// <returns>The body bytes.</returns>
+    /// <remarks>
+    /// The two versions are read out of the declared set rather than written down, so a case
+    /// carrying this body offers a range that overlaps whatever this build speaks on the day the
+    /// set moves. <c>revoke</c> and <c>unpair</c> get nothing, because the table says they carry
+    /// none. <c>rotate</c> and <c>exchange</c> get bytes nothing reads: no reader on this plane
+    /// judges either, so what they carry is free, and carrying something is what lets a case
+    /// about handing a body on say anything for them.
+    /// </remarks>
+    private static byte[] BodyFor(PairingMessage message) => message switch
+    {
+        PairingMessage.Hello => HelloOffering(SupportedVersions.Lowest, SupportedVersions.Highest),
+        PairingMessage.Confirm => Encoding.ASCII.GetBytes(
+            "{\"" + ConfirmRequestBody.DigestMember + "\":\""
+            + new string('a', ConfirmRequestBody.DigestLength) + "\"}"),
+        PairingMessage.Rotate or PairingMessage.Exchange =>
+            Encoding.ASCII.GetBytes("{\"probe\":\"body\"}"),
+        _ => Array.Empty<byte>(),
+    };
+
+    /// <summary>
+    /// A <c>hello</c> body the member table admits, offering a range.
+    /// </summary>
+    /// <param name="low">The lowest version the sender offers.</param>
+    /// <param name="high">The highest version the sender offers.</param>
+    /// <returns>The body bytes.</returns>
+    private static byte[] HelloOffering(int low, int high) => Encoding.ASCII.GetBytes(
+        "{\"" + HelloRequestBody.KeyMember + "\":\"" + OfferedPublicKey
+        + "\",\"" + HelloRequestBody.VersionLowMember + "\":" + low.ToString(CultureInfo.InvariantCulture)
+        + ",\"" + HelloRequestBody.VersionHighMember + "\":" + high.ToString(CultureInfo.InvariantCulture)
+        + ",\"" + HelloRequestBody.AddressMember + "\":\"https://peer.example.org\"}");
+
+    /// <summary>
     /// Every message this plane carries, so a case walks the six rather than naming one.
     /// </summary>
     /// <returns>The six messages.</returns>
@@ -213,11 +258,18 @@ public class PeerPlaneTests
     /// that case while serving nothing.
     /// </summary>
     /// <param name="message">The message.</param>
+    /// <remarks>
+    /// The body is the one the member table fixes for the message rather than a probe, because
+    /// the plane reads a body now and a probe would be refused as malformed on the two messages
+    /// that have a reader. What that costs is that <c>revoke</c> and <c>unpair</c> carry no body,
+    /// so for those two this asserts that an empty body is handed on as empty; the messages that
+    /// carry bytes are the ones that make the whole-body comparison say anything.
+    /// </remarks>
     [Theory]
     [MemberData(nameof(EveryMessage))]
     public void ABodyThatVerifiedIsHandedOnWhole(PairingMessage message)
     {
-        var body = Encoding.ASCII.GetBytes("{\"probe\":\"body\"}");
+        var body = BodyFor(message);
 
         var outcome = Plane().Serve(message, Signed(message, body: body), At);
 
@@ -534,6 +586,113 @@ public class PeerPlaneTests
                 At);
 
             Assert.Equal(RefusalCode.Version, outcome.Code);
+            Assert.False(outcome.BodyWasHandedOn);
+        }
+    }
+
+    /// <summary>
+    /// A <c>hello</c> whose range does not overlap this build's is refused for the version, and
+    /// the refusal names the range this build speaks. That is the second of the two callers the
+    /// taxonomy lets see that code, and it is the half of it a declared version cannot reach: a
+    /// range is two body members, so nothing could answer it while nothing read a body.
+    /// </summary>
+    /// <param name="low">The lowest version the peer offers.</param>
+    /// <param name="high">The highest version it offers.</param>
+    /// <remarks>
+    /// Both directions, above the range and below it, because a build whose lowest and highest
+    /// version are the same number cannot otherwise show that the comparison is not one-sided. A
+    /// range below is expressible while <see cref="SupportedVersions.Lowest"/> is above zero,
+    /// which the case asserts rather than assumes, so it stops being written the day that stops
+    /// being true instead of quietly testing the same direction twice.
+    /// </remarks>
+    [Theory]
+    [InlineData(2, 3)]
+    [InlineData(0, 0)]
+    public void AHelloOfferingNoVersionInCommonIsRefusedForTheVersionWithTheRangeNamed(int low, int high)
+    {
+        Assert.True(low > SupportedVersions.Highest || high < SupportedVersions.Lowest);
+
+        var outcome = Plane().Serve(
+            PairingMessage.Hello,
+            Signed(PairingMessage.Hello, body: HelloOffering(low, high)),
+            At);
+
+        Assert.Equal(RefusalCode.Version, outcome.Code);
+        Assert.False(outcome.BodyWasHandedOn);
+        Assert.Equal(Refusal.VersionBody(SupportedVersions.Range), Refusal.Body(outcome.Code));
+    }
+
+    /// <summary>
+    /// A <c>hello</c> whose range does overlap is not refused for its version, which is the floor
+    /// under the case above: without it, a plane that refused every <c>hello</c> for its version
+    /// would satisfy that case.
+    /// </summary>
+    [Fact]
+    public void AHelloOfferingARangeThatOverlapsIsNotRefusedForItsVersion()
+    {
+        var outcome = Plane().Serve(
+            PairingMessage.Hello,
+            Signed(PairingMessage.Hello, body: HelloOffering(SupportedVersions.Lowest, SupportedVersions.Highest + 5)),
+            At);
+
+        Assert.NotEqual(RefusalCode.Version, outcome.Code);
+        Assert.Equal(RefusalCode.Refused, outcome.Code);
+    }
+
+    /// <summary>
+    /// A verified message missing a member its declared version requires is refused rather than
+    /// completed, and so is one carrying a body where the table says it carries none. A default
+    /// is a value neither side agreed on standing in for one they would have had to send, and
+    /// that is the failure issue #25 is written against.
+    /// </summary>
+    /// <param name="message">The message.</param>
+    /// <param name="body">The body it arrives with.</param>
+    [Theory]
+    [InlineData(PairingMessage.Hello, "{\"versionLow\":1,\"versionHigh\":1,\"address\":\"https://peer.example.org\"}")]
+    [InlineData(PairingMessage.Confirm, "{}")]
+    [InlineData(PairingMessage.Revoke, "{\"reason\":\"revoked\"}")]
+    [InlineData(PairingMessage.Unpair, "{}")]
+    public void AVerifiedMessageWhoseBodyIsNotTheOneTheTableFixesIsRefusedAsMalformed(
+        PairingMessage message,
+        string body)
+    {
+        var outcome = Plane().Serve(message, Signed(message, body: Encoding.ASCII.GetBytes(body)), At);
+
+        Assert.Equal(RefusalCode.Malformed, outcome.Code);
+        Assert.False(outcome.BodyWasHandedOn);
+        Assert.True(outcome.VerifiedBody.IsEmpty);
+        Assert.Equal("{\"code\":\"malformed\"}", Refusal.Body(outcome.Code));
+    }
+
+    /// <summary>
+    /// A caller holding no verifying key learns nothing from either of the two answers this file
+    /// adds, because both are judged after verification and never before it. The same bytes that
+    /// produce <c>malformed</c> and <c>version</c> for a caller holding the key produce the
+    /// undistinguished refusal for one that does not.
+    /// </summary>
+    /// <remarks>
+    /// Compared as bytes rather than as codes, because bytes are what a stranger can tell apart.
+    /// </remarks>
+    [Fact]
+    public void AStrangerLearnsNothingFromAMalformedBodyOrARangeWithNoOverlap()
+    {
+        var plane = Plane();
+
+        var bodies = new[]
+        {
+            Encoding.ASCII.GetBytes("{}"),
+            HelloOffering(SupportedVersions.Highest + 1, SupportedVersions.Highest + 2),
+        };
+
+        foreach (var body in bodies)
+        {
+            var outcome = plane.Serve(
+                PairingMessage.Hello,
+                Signed(PairingMessage.Hello, signature: "not-the-signature", body: body, carries: FreshNonce()),
+                At);
+
+            Assert.Equal(RefusalCode.Refused, outcome.Code);
+            Assert.Equal("{\"code\":\"refused\"}", Refusal.Body(outcome.Code));
             Assert.False(outcome.BodyWasHandedOn);
         }
     }
@@ -858,7 +1017,12 @@ public class PeerPlaneTests
         string? version = null)
     {
         var path = PeerPlane.PathFor(message);
-        var bytes = body ?? Array.Empty<byte>();
+
+        // The body the member table fixes, unless a case named its own. A case about anything
+        // other than a body sends one the plane reads, so it fails for its own reason instead of
+        // for a body nobody meant to make malformed - which is the same argument the signature
+        // argument below is written under.
+        var bytes = body ?? BodyFor(message);
         var carried = carries ?? Nonce;
         var declared = version ?? Version;
 

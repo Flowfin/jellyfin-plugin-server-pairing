@@ -128,6 +128,12 @@ public sealed class RevocationTests : IDisposable
     /// than a restatement of <c>PeerPlaneTests</c> is the comparison inside one server: three
     /// unauthentic revocations and one authentic one against one store, so the refusals are
     /// about the signature rather than about a plane that refuses whatever arrives.
+    /// <para>
+    /// THE BODY IS EMPTY BECAUSE THE MEMBER TABLE SAYS A <c>revoke</c> CARRIES NONE, and this
+    /// case carried one until the plane began reading bodies. What separates the four answers is
+    /// therefore whether the body was handed past verification rather than which bytes came
+    /// back, and the empty body is the one the table fixes rather than an absence of test data.
+    /// </para>
     /// </remarks>
     [Fact]
     public void AnUnauthenticatedRevocationIsIgnoredWhereASignedOneIsUnderstood()
@@ -138,7 +144,7 @@ public sealed class RevocationTests : IDisposable
         store.Add(PairingId, KeyMaterial.From(key));
 
         var plane = PlaneOver(store);
-        var body = Encoding.ASCII.GetBytes("{\"reason\":\"revoked\"}");
+        var body = Array.Empty<byte>();
 
         var unauthentic = new string?[]
         {

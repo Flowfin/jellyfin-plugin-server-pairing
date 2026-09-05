@@ -83,7 +83,8 @@ public sealed class RefusalCounters
         RefusalCause.TimestampOutsideTheWindow => RefusalCode.Clock,
         RefusalCause.NonceAlreadySeen => RefusalCode.Replay,
         RefusalCause.NoRoomToRememberTheNonce => RefusalCode.Busy,
-        RefusalCause.VersionNotSpoken => RefusalCode.Version,
+        RefusalCause.VersionNotSpoken or RefusalCause.NoVersionInCommon => RefusalCode.Version,
+        RefusalCause.BodyDidNotParse => RefusalCode.Malformed,
         _ => throw new ArgumentOutOfRangeException(nameof(cause)),
     };
 
@@ -111,6 +112,8 @@ public sealed class RefusalCounters
         RefusalCause.NonceAlreadySeen => "nonce-already-seen",
         RefusalCause.NoRoomToRememberTheNonce => "no-room-to-remember-the-nonce",
         RefusalCause.VersionNotSpoken => "version-not-spoken",
+        RefusalCause.BodyDidNotParse => "body-did-not-parse",
+        RefusalCause.NoVersionInCommon => "no-version-in-common",
         _ => throw new ArgumentOutOfRangeException(nameof(cause)),
     };
 
