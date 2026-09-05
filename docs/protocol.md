@@ -8,12 +8,13 @@ Part of what this document describes now exists in the tree, and the part that
 does not is what a reader has to be told about first. The types that hold the
 state machine, the canonical form, the field limits, the freshness window with
 its nonce store, the key overlap, the peer address, the enrolment window, the
-version negotiation, the store a pairing record is kept in and the revocation
+version negotiation, the reader that turns an arriving body into the members
+the table below names, the store a pairing record is kept in and the revocation
 that stops a pairing on this server are here:
 
 ```
 git ls-tree -r --name-only origin/master -- Jellyfin.Plugin.ServerPairing/Protocol | wc -l
-44
+51
 ```
 
 **This paragraph said nothing reached any of them from outside this server, that
@@ -783,7 +784,7 @@ to hold it under. The wire already says as much about the request that arrives i
 that state:
 
     git grep -n "^them. Its .X-Pairing-Id. is 32" origin/master -- docs/protocol.md
-    origin/master:docs/protocol.md:436:them. Its `X-Pairing-Id` is 32 `0` characters, which is what line 5 of its
+    origin/master:docs/protocol.md:486:them. Its `X-Pairing-Id` is 32 `0` characters, which is what line 5 of its
 
 **`OFFERED` IS WRITTEN, UNDER A PROVISIONAL IDENTIFIER.** Opening a window mints
 one and writes the record under it. The record moves to the derived identifier at
