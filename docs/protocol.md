@@ -391,7 +391,8 @@ above is read by one type, which is handed the bytes of a request that has alrea
 verified:
 
 ```
-git grep -n 'public static ArrivingBody Read' -- Jellyfin.Plugin.ServerPairing/Protocol/ArrivingBody.cs
+git grep -n 'public static ArrivingBody Read' origin/master -- Jellyfin.Plugin.ServerPairing/Protocol/ArrivingBody.cs
+origin/master:Jellyfin.Plugin.ServerPairing/Protocol/ArrivingBody.cs:61:    public static ArrivingBody Read(PairingMessage message, ReadOnlySpan<byte> body) => message switch
 ```
 
 It reads a `hello` request, a `confirm` request, and the two rows that say empty. A
@@ -1102,7 +1103,8 @@ and a range that does not overlap this server's is answered `version` carrying t
 range this build speaks:
 
 ```
-git grep -n 'RefusalCause.NoVersionInCommon' -- Jellyfin.Plugin.ServerPairing/Api/PeerPlane.cs
+git grep -n 'RefusalCause.NoVersionInCommon' origin/master -- Jellyfin.Plugin.ServerPairing/Api/PeerPlane.cs
+origin/master:Jellyfin.Plugin.ServerPairing/Api/PeerPlane.cs:331:            return Refuse(RefusalCause.NoVersionInCommon);
 ```
 
 WHICH OF THE TWO CALLERS REACHES IT TODAY IS THE HALF TO READ CAREFULLY. The
