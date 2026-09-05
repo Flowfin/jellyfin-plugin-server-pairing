@@ -26,7 +26,7 @@ says why underneath the table.
 | A mapping was added, changed or removed | Information | pairing id, the administrator who did it, which direction |
 | What is held about one user was reported | Information | the administrator who asked, how many pairings were looked under, how many mappings were found |
 | The key store could not be read or written | Error | the operation, the reason, no path contents |
-| The pairing record store could not be read | Error | the operation, the reason, no path contents, no pairing identifier |
+| The pairing record store could not be read or written | Error | the operation, the reason, no path contents, no pairing identifier |
 | The mapping store could not be read or written | Error | the operation, the reason, no path contents, no pairing identifier |
 | A request on the pairing plane faulted | Error | which of the six messages it arrived on, and the fault the runtime raised, with no pairing identifier |
 | The plugin started against a store that already holds a pairing | Information | pairing id, one entry per pairing found |
@@ -198,16 +198,19 @@ that four do, then that five do. Six do. Which rows of the table each of them
 writes is under the reading rather than counted here.
 
     git grep -nE "ILogger|_logger" origin/master -- Jellyfin.Plugin.ServerPairing
-    origin/master:Jellyfin.Plugin.ServerPairing/Api/AdministrativePlaneController.cs:75:    private readonly ILogger<AdministrativePlaneController> _logger;
-    origin/master:Jellyfin.Plugin.ServerPairing/Api/AdministrativePlaneController.cs:96:        ILogger<AdministrativePlaneController> logger)
-    origin/master:Jellyfin.Plugin.ServerPairing/Api/AdministrativePlaneController.cs:105:        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-    origin/master:Jellyfin.Plugin.ServerPairing/Api/AdministrativePlaneController.cs:145:            _logger.LogError(fault, "The key store could not be read for an administrator, so what this server holds is unknown. The answer names the problem and carries nothing of the fault.");
-    origin/master:Jellyfin.Plugin.ServerPairing/Api/AdministrativePlaneController.cs:218:            _logger.LogError(fault, "The pairing record store could not be read for an administrator, so whether a window is open is unknown. The answer names the problem and carries nothing of the fault.");
-    origin/master:Jellyfin.Plugin.ServerPairing/Api/AdministrativePlaneController.cs:334:            _logger.LogError(fault, "The pairing record store could not be read for an administrator, so what is held about a user is unknown. The answer names the problem and carries nothing of the fault.");
-    origin/master:Jellyfin.Plugin.ServerPairing/Api/AdministrativePlaneController.cs:359:            _logger.LogError(fault, "The mapping store could not be read for an administrator, so what is held about a user is unknown. The answer names the problem and carries nothing of the fault.");
-    origin/master:Jellyfin.Plugin.ServerPairing/Api/AdministrativePlaneController.cs:414:            _logger.LogError(fault, "The pairing record store could not be read for an administrator, so whether a pairing holds a mapping table is unknown. The answer names the problem and carries nothing of the fault.");
-    origin/master:Jellyfin.Plugin.ServerPairing/Api/AdministrativePlaneController.cs:434:            _logger.LogError(fault, "The mapping store could not be read or written for an administrator, so what a pairing's table holds is unknown. The answer names the problem and carries nothing of the fault.");
-    origin/master:Jellyfin.Plugin.ServerPairing/Api/AdministrativePlaneController.cs:507:            _logger.LogError(fault, "The mapping store could not be read or written for an administrator, so whether a mapping was removed is unknown. The answer names the problem and carries nothing of the fault.");
+    origin/master:Jellyfin.Plugin.ServerPairing/Api/AdministrativePlaneController.cs:80:    private readonly ILogger<AdministrativePlaneController> _logger;
+    origin/master:Jellyfin.Plugin.ServerPairing/Api/AdministrativePlaneController.cs:107:        ILogger<AdministrativePlaneController> logger)
+    origin/master:Jellyfin.Plugin.ServerPairing/Api/AdministrativePlaneController.cs:119:        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+    origin/master:Jellyfin.Plugin.ServerPairing/Api/AdministrativePlaneController.cs:159:            _logger.LogError(fault, "The key store could not be read for an administrator, so what this server holds is unknown. The answer names the problem and carries nothing of the fault.");
+    origin/master:Jellyfin.Plugin.ServerPairing/Api/AdministrativePlaneController.cs:232:            _logger.LogError(fault, "The pairing record store could not be read for an administrator, so whether a window is open is unknown. The answer names the problem and carries nothing of the fault.");
+    origin/master:Jellyfin.Plugin.ServerPairing/Api/AdministrativePlaneController.cs:327:            _logger.LogError(fault, "The pairing record store could not be read or written for an administrator, so whether a window was opened is unknown. The answer names the problem and carries nothing of the fault.");
+    origin/master:Jellyfin.Plugin.ServerPairing/Api/AdministrativePlaneController.cs:341:        if (_logger.IsEnabled(LogLevel.Information))
+    origin/master:Jellyfin.Plugin.ServerPairing/Api/AdministrativePlaneController.cs:343:            _logger.LogInformation(
+    origin/master:Jellyfin.Plugin.ServerPairing/Api/AdministrativePlaneController.cs:463:            _logger.LogError(fault, "The pairing record store could not be read for an administrator, so what is held about a user is unknown. The answer names the problem and carries nothing of the fault.");
+    origin/master:Jellyfin.Plugin.ServerPairing/Api/AdministrativePlaneController.cs:488:            _logger.LogError(fault, "The mapping store could not be read for an administrator, so what is held about a user is unknown. The answer names the problem and carries nothing of the fault.");
+    origin/master:Jellyfin.Plugin.ServerPairing/Api/AdministrativePlaneController.cs:543:            _logger.LogError(fault, "The pairing record store could not be read for an administrator, so whether a pairing holds a mapping table is unknown. The answer names the problem and carries nothing of the fault.");
+    origin/master:Jellyfin.Plugin.ServerPairing/Api/AdministrativePlaneController.cs:563:            _logger.LogError(fault, "The mapping store could not be read or written for an administrator, so what a pairing's table holds is unknown. The answer names the problem and carries nothing of the fault.");
+    origin/master:Jellyfin.Plugin.ServerPairing/Api/AdministrativePlaneController.cs:636:            _logger.LogError(fault, "The mapping store could not be read or written for an administrator, so whether a mapping was removed is unknown. The answer names the problem and carries nothing of the fault.");
     origin/master:Jellyfin.Plugin.ServerPairing/Api/PeerPlaneController.cs:39:    private readonly ILogger<PeerPlaneController> _logger;
     origin/master:Jellyfin.Plugin.ServerPairing/Api/PeerPlaneController.cs:69:    public PeerPlaneController(PeerPlane plane, TimeProvider time, ILogger<PeerPlaneController> logger)
     origin/master:Jellyfin.Plugin.ServerPairing/Api/PeerPlaneController.cs:73:        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
@@ -233,8 +236,8 @@ writes is under the reading rather than counted here.
     origin/master:Jellyfin.Plugin.ServerPairing/Mapping/UserMappings.cs:38:    private readonly ILogger<UserMappings> _log;
     origin/master:Jellyfin.Plugin.ServerPairing/Mapping/UserMappings.cs:54:    public UserMappings(IUserMappingStore mappings, PairingStateMachine pairings, ILogger<UserMappings> log)
     origin/master:Jellyfin.Plugin.ServerPairing/PluginServiceRegistrator.cs:130:                services.GetRequiredService<ILogger<FilePairingKeyStore>>()));
-    origin/master:Jellyfin.Plugin.ServerPairing/PluginServiceRegistrator.cs:218:            services.GetRequiredService<ILogger<HeldAboutUser>>()));
-    origin/master:Jellyfin.Plugin.ServerPairing/PluginServiceRegistrator.cs:237:            services.GetRequiredService<ILogger<UserMappings>>()));
+    origin/master:Jellyfin.Plugin.ServerPairing/PluginServiceRegistrator.cs:220:            services.GetRequiredService<ILogger<HeldAboutUser>>()));
+    origin/master:Jellyfin.Plugin.ServerPairing/PluginServiceRegistrator.cs:239:            services.GetRequiredService<ILogger<UserMappings>>()));
 
 THIS BLOCK WENT STALE TWICE AND NO RUN ON THIS REPOSITORY SAW EITHER TIME. It
 pasted two types, then four, then five, and the command returns 7 that hold a logger; the registration line

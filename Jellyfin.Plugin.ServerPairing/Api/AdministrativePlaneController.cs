@@ -2,7 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json;
+using Jellyfin.Plugin.ServerPairing.Configuration;
 using Jellyfin.Plugin.ServerPairing.KeyStore;
+using Jellyfin.Plugin.ServerPairing.Logging;
 using Jellyfin.Plugin.ServerPairing.Mapping;
 using Jellyfin.Plugin.ServerPairing.Protocol;
 using MediaBrowser.Common.Api;
@@ -40,7 +42,7 @@ namespace Jellyfin.Plugin.ServerPairing.Api;
 /// </para>
 /// <para>
 /// The actions of this plan land here rather than each bringing a controller: opening an
-/// enrolment window and confirming a ceremony are issues #18 and #19, revoking is #24, the
+/// enrolment window is here and is issue #357, confirming a ceremony is #19, revoking is #24, the
 /// pairing states the page renders are #49, and reporting what is held about one user is here
 /// while removing it is the other half of #60. Listing a pairing's mapping table and removing
 /// a row from it are here too, and are the half of issue #40 that needs nothing from the peer;
@@ -72,6 +74,9 @@ public sealed class AdministrativePlaneController : ControllerBase
     private readonly HeldAboutUser _held;
     private readonly UserMappings _mappings;
     private readonly ILocalUsers _localUsers;
+    private readonly Enrolment _enrolment;
+    private readonly ConfigurationReading _configuration;
+    private readonly TimeProvider _time;
     private readonly ILogger<AdministrativePlaneController> _logger;
 
     /// <summary>
@@ -84,7 +89,10 @@ public sealed class AdministrativePlaneController : ControllerBase
     /// <param name="held">What this plugin holds about one user, and the audit entry saying it was asked.</param>
     /// <param name="mappings">The one way a mapping is read, made or removed, and the audit entry a change writes.</param>
     /// <param name="localUsers">The users this server has, read from the host.</param>
-    /// <param name="logger">Where the detail of an unreadable store goes.</param>
+    /// <param name="enrolment">The join that opens a window and writes the record saying so.</param>
+    /// <param name="configuration">This server's settings as read for this request: the peer a window opens against, and whether any setting was refused.</param>
+    /// <param name="time">The one clock this plugin reads, for the instant a window opens at.</param>
+    /// <param name="logger">Where the detail of an unreadable store goes, and the entry saying an enrolment was started.</param>
     public AdministrativePlaneController(
         IPairingKeyStore keys,
         IPairingRecordStore records,
@@ -93,6 +101,9 @@ public sealed class AdministrativePlaneController : ControllerBase
         HeldAboutUser held,
         UserMappings mappings,
         ILocalUsers localUsers,
+        Enrolment enrolment,
+        ConfigurationReading configuration,
+        TimeProvider time,
         ILogger<AdministrativePlaneController> logger)
     {
         _keys = keys ?? throw new ArgumentNullException(nameof(keys));
@@ -102,6 +113,9 @@ public sealed class AdministrativePlaneController : ControllerBase
         _held = held ?? throw new ArgumentNullException(nameof(held));
         _mappings = mappings ?? throw new ArgumentNullException(nameof(mappings));
         _localUsers = localUsers ?? throw new ArgumentNullException(nameof(localUsers));
+        _enrolment = enrolment ?? throw new ArgumentNullException(nameof(enrolment));
+        _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
+        _time = time ?? throw new ArgumentNullException(nameof(time));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -176,11 +190,11 @@ public sealed class AdministrativePlaneController : ControllerBase
     /// <see cref="PairingState.Offered"/> and appears here.
     /// </para>
     /// <para>
-    /// WHAT STILL ANSWERS AN EMPTY LIST ON A SERVER IS THIS SERVER, because no action and no page
-    /// calls that producer: the state-changing administrative endpoint is issue #53, and until one
-    /// exists an operator has no way to reach <see cref="Enrolment.Open"/>. So the sentence above
-    /// is now about a missing caller rather than about a missing producer, and the difference is
-    /// the whole of what issue #350 moved.
+    /// THIS REMARK THEN SAID NO ACTION CALLED THAT PRODUCER AND NAMED ISSUE #53 FOR THE ONE THAT
+    /// WOULD. <see cref="OpenEnrolmentWindow"/> calls it, which is issue #357; #53 is about how a
+    /// dashboard request is authenticated and never asked for an action. So what this answers on
+    /// a server is what an administrator opened through that action and nothing has since closed,
+    /// and no page calls the action yet, which is issue #49.
     /// </para>
     /// <para>
     /// It is a read and changes nothing, so it is not the state-changing endpoint issue #53's
@@ -224,6 +238,121 @@ public sealed class AdministrativePlaneController : ControllerBase
                 Content = AdministrativeAnswer.Body(AdministrativeProblem.RecordStoreUnreadable),
             };
         }
+    }
+
+    /// <summary>
+    /// Opens an enrolment window against the configured peer, and writes the record that says a
+    /// pairing is being built with it.
+    /// </summary>
+    /// <returns>
+    /// Created, carrying the identifier the record was written under and the instant it opened,
+    /// in the shape <see cref="Windows"/> lists; the refusal where this server declines to open
+    /// one; or the named problem where the caller could not be named or the store could not be
+    /// read or written.
+    /// </returns>
+    /// <remarks>
+    /// This is issue #357 and the second action on this plane that changes state. Every part of
+    /// an opening existed before it - the window, the join that writes a record when one opens,
+    /// the read that says one is open - and nothing on a server called the join, so the page
+    /// rendered an empty list on every server and no pairing had ever been in
+    /// <see cref="PairingState.Offered"/> on one.
+    /// <para>
+    /// THE ADDRESS IS THE ONE THE CONFIGURATION HOLDS AND THE REQUEST CARRIES NONE.
+    /// <c>docs/configuration.md</c> fixes <c>PeerAddress</c> as the one address this server will
+    /// send a pairing request to, and parses it there under the cleartext acknowledgement the
+    /// same file governs, so an address arriving in a body would be a second address with a
+    /// second parse. The reading is resolved per request rather than once at load, so the address
+    /// an operator saved a moment ago is the one a window opens against.
+    /// </para>
+    /// <para>
+    /// WHAT IS REFUSED, AND IN WHAT ORDER. A principal naming nobody is refused before anything
+    /// is read, because the record names its actor and a change nobody is named for is the
+    /// trail's failure and not only the entry's. A configuration a setting was refused on is
+    /// refused next, which is where <c>docs/configuration.md</c> says <c>MayPair</c> is read: the
+    /// window would open on the lifetime a server nobody configured runs on rather than the one
+    /// the operator asked for, and a window of a length they did not choose is one they will not
+    /// go looking for. A configuration holding no address has nothing to open against. Then the
+    /// window's own two refusals, a pairing already held with that peer and a window already
+    /// open against it, are carried to the wire under a word each rather than collapsed into one.
+    /// </para>
+    /// <para>
+    /// The window answers first and the record follows it, which is <see cref="Enrolment"/>'s
+    /// property rather than this action's, so a refused opening writes nothing and the audit
+    /// entry is written only once a record is. The entry is the row <c>docs/logging.md</c> gives
+    /// an enrolment that was started, and it carries the peer address, which that row names and
+    /// which is an address the operator entered rather than anything a peer said.
+    /// </para>
+    /// <para>
+    /// One catch, over the one store the join reads and writes, and its bound is worth stating.
+    /// A record left in <c>Offered</c> by a window a restart lost is retired on the way in, and
+    /// the state machine sweeps the mapping table when a pairing ends, so a mapping store that
+    /// will not read on that path is answered under the record store's name. That path is
+    /// reached only where a half-built record already exists for this address, and the log line
+    /// carries the fault's own words for an operator who meets it.
+    /// </para>
+    /// </remarks>
+    [HttpPost("windows")]
+    public IActionResult OpenEnrolmentWindow()
+    {
+        var administrator = RequestingAdministrator.Of(User);
+
+        if (administrator is null)
+        {
+            return Named(AdministrativeProblem.AdministratorUnidentified);
+        }
+
+        if (!_configuration.MayPair)
+        {
+            return Refused(OpeningRefusal.ConfigurationRefused);
+        }
+
+        var peer = _configuration.Peer;
+
+        if (peer is null)
+        {
+            return Refused(OpeningRefusal.NoPeerAddress);
+        }
+
+        var at = _time.GetUtcNow();
+        WindowOpened opened;
+
+        try
+        {
+            opened = _enrolment.Open(peer, administrator, at);
+        }
+#pragma warning disable CA1031 // Every escaping exception is the failure this catch exists for, so the type cannot be narrowed without reopening it.
+        catch (Exception fault)
+#pragma warning restore CA1031
+        {
+            _logger.LogError(fault, "The pairing record store could not be read or written for an administrator, so whether a window was opened is unknown. The answer names the problem and carries nothing of the fault.");
+
+            return Named(AdministrativeProblem.RecordStoreUnreadable);
+        }
+
+        if (opened.Opening != WindowOpening.Opened)
+        {
+            return Refused(OpeningAnswer.RefusalFor(opened.Opening));
+        }
+
+        // The join names the record it wrote whenever the window opened, which is its own
+        // contract rather than a hope, and EnrolmentTests holds it to that.
+        var pairingId = opened.PairingId!;
+
+        if (_logger.IsEnabled(LogLevel.Information))
+        {
+            _logger.LogInformation(
+                "An enrolment was started by an administrator. Pairing: {PairingId}, peer address: {PeerAddress}, administrator: {Administrator}",
+                OneLine.Of(pairingId),
+                OneLine.Of(peer.Value),
+                OneLine.Of(administrator));
+        }
+
+        return new ContentResult
+        {
+            StatusCode = 201,
+            ContentType = "application/json",
+            Content = JsonSerializer.Serialize(new OpenWindow(pairingId, at)),
+        };
     }
 
     /// <summary>
@@ -549,5 +678,18 @@ public sealed class AdministrativePlaneController : ControllerBase
             StatusCode = AdministrativeAnswer.ProblemStatus,
             ContentType = "application/json",
             Content = AdministrativeAnswer.Body(problem),
+        };
+
+    /// <summary>
+    /// The answer a refused opening is carried in.
+    /// </summary>
+    /// <param name="refusal">The refusal.</param>
+    /// <returns>The answer, at the status every refusal to open a window carries.</returns>
+    private static ContentResult Refused(OpeningRefusal refusal)
+        => new ContentResult
+        {
+            StatusCode = OpeningAnswer.RefusedStatus,
+            ContentType = "application/json",
+            Content = OpeningAnswer.Body(refusal),
         };
 }

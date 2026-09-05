@@ -271,12 +271,15 @@ exists to spare the operator. So the plugin loads, serves its page, and
 
     git grep -n 'public bool MayPair' -- Jellyfin.Plugin.ServerPairing/Configuration/ConfigurationReading.cs
 
-WHAT "REFUSING TO PAIR" REACHES TODAY IS SMALLER THAN THE SENTENCE SOUNDS, and it
-is a bound rather than an assurance. No administrative endpoint in this tree opens
-an enrolment window, so there is no live pairing path for the reading to stop; what
-it does stop is the peer address existing at all, since a refused address produces
-none and an enrolment window is opened against one. The endpoint is issue #49, and
-whoever builds it reads `MayPair` there.
+WHAT "REFUSING TO PAIR" REACHES IS ONE ACTION, AND THIS PARAGRAPH SAID IT REACHED
+NONE. `AdministrativePlaneController.OpenEnrolmentWindow` reads `MayPair` before
+it opens a window and refuses where it is false, which is issue #357 and is where
+the wording that stood here said whoever built the endpoint would read it; the
+issue it named for that endpoint, #49, is the page rather than the action. What
+the reading also stops is the peer address existing at all, since a refused
+address produces none and a window is opened against the one the configuration
+holds. Beyond that one action the bound stands: nothing else in this tree starts
+a pairing.
 
 The refusals are written to the log at Error when the server starts, one line per
 setting, and the plugin keeps running:

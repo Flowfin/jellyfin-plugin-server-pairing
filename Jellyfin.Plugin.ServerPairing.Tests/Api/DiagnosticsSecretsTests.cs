@@ -160,14 +160,19 @@ public class DiagnosticsSecretsTests
     /// <returns>The serialised payload.</returns>
     private static string DiagnosticsOf(PairedInstance side)
     {
+        var records = new Tests.Protocol.InMemoryPairingRecords();
+
         var controller = new AdministrativePlaneController(
             side.Keys,
-            new Tests.Protocol.InMemoryPairingRecords(),
+            records,
             side.Refusals,
             side.Arrivals,
             new HeldAboutUser(new InMemoryUserMappings(), NullLogger<HeldAboutUser>.Instance),
             new UserMappings(new InMemoryUserMappings(), new Jellyfin.Plugin.ServerPairing.Protocol.PairingStateMachine(new Tests.Protocol.InMemoryPairingRecords(), new InMemoryUserMappings()), NullLogger<UserMappings>.Instance),
             new InMemoryLocalUsers(),
+            PlaneDependencies.EnrolmentOver(records),
+            PlaneDependencies.NothingEntered(),
+            PlaneDependencies.StoppedClock(),
             NullLogger<AdministrativePlaneController>.Instance);
 
         var answered = Assert.IsType<ContentResult>(controller.Diagnostics());
