@@ -18,9 +18,11 @@ namespace Jellyfin.Plugin.ServerPairing.Wording;
 /// these sentences rather than inside them.
 /// </para>
 /// <para>
-/// The page does not hold a second copy. What renders these is issue #49 and the endpoint that
-/// serves them is issue #53; until those exist nothing reads this type, and the assertion that
-/// no markup in this plugin carries these sentences is what keeps the single copy single.
+/// The page does not hold a second copy. <c>AdministrativePlaneController.Wording</c> serves
+/// these and what renders them is issue #49; the step the first sentence describes is
+/// <c>AdministrativePlaneController.OpenEnrolmentWindow</c>, which is issue #357. THIS REMARK
+/// NAMED ISSUE #53 FOR THE ENDPOINT, and #53 never asked for one. The assertion that no markup
+/// in this plugin carries these sentences is what keeps the single copy single.
 /// </para>
 /// </remarks>
 public static class CeremonyWording

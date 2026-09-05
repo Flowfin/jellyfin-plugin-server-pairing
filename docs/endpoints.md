@@ -21,14 +21,15 @@ describing them once they exist.
 | `AdministrativePlaneController.Pairings` | `GET` | `/ServerPairing/Administration/pairings` | administrative | `elevation` | the host's elevation policy |
 | `AdministrativePlaneController.Diagnostics` | `GET` | `/ServerPairing/Administration/diagnostics` | administrative | `elevation` | the host's elevation policy |
 | `AdministrativePlaneController.Windows` | `GET` | `/ServerPairing/Administration/windows` | administrative | `elevation` | the host's elevation policy |
+| `AdministrativePlaneController.OpenEnrolmentWindow` | `POST` | `/ServerPairing/Administration/windows` | administrative | `elevation` | the host's elevation policy |
 | `AdministrativePlaneController.HeldAbout` | `GET` | `/ServerPairing/Administration/users/{localUserId}` | administrative | `elevation` | the host's elevation policy |
 | `AdministrativePlaneController.Mappings` | `GET` | `/ServerPairing/Administration/pairings/{pairingId}/mappings` | administrative | `elevation` | the host's elevation policy |
 | `AdministrativePlaneController.Unmap` | `DELETE` | `/ServerPairing/Administration/pairings/{pairingId}/mappings/{localUserId}` | administrative | `elevation` | the host's elevation policy |
 | `AdministrativePlaneController.Wording` | `GET` | `/ServerPairing/Administration/wording` | administrative | `elevation` | the host's elevation policy |
 
-Thirteen rows. Six are the peer plane, which is the paths the specification fixes.
+Fourteen rows. Six are the peer plane, which is the paths the specification fixes.
 THIS PARAGRAPH SAID THE ADMINISTRATIVE PLANE HAS NO ENDPOINT AND THEREFORE NO
-ROW; it has seven. The first is issue #289, and the plane is what that issue is
+ROW; it has eight. The first is issue #289, and the plane is what that issue is
 about rather than the action on it: what it answers is the identifiers of the
 pairings this server holds a key for, and nothing else. The second is the
 diagnostics read, which is issue #51, and what it answers is how many requests
@@ -46,11 +47,11 @@ opened and forgot is the failure the other six properties exist against. It read
 the pairing record store and not `EnrolmentWindow`, which is the surface the
 decision under the local events table in [`protocol.md`](protocol.md) settled on:
 a pairing in `Offered` is written as a record, so what is half-built and what is
-finished are one surface rather than two. WHAT WRITES THAT RECORD IS NOT BUILT.
-Nothing joins the window to the state machine, and the state machine is not
-registered on a server at all, so this action answers an empty list on every
-server today. That is stated here and at the action rather than left for an
-operator to read an empty answer as a server with no window open.
+finished are one surface rather than two. THIS PARAGRAPH SAID WHAT WRITES THAT
+RECORD WAS NOT BUILT AND THAT NOTHING JOINED THE WINDOW TO THE STATE MACHINE.
+`Enrolment` is that join, issue #350 built it, and the eighth row below is what
+calls it on a server, so this read answers what an administrator opened through
+that row and nothing has since closed.
 
 The fourth is what this plugin holds about one local user, which is the report
 half of issue #60: every mapping held for that user across every pairing, each
@@ -108,6 +109,28 @@ answered, and the answer is built by reflection over the registers rather than
 by a list, so a sentence added to a register reaches the page without the
 action moving. It reads no store and changes nothing.
 
+The eighth opens an enrolment window, which is issue #357, and it is the second
+action on this plane that changes state. It opens the window against the peer
+address the configuration holds and takes no address from the request, because
+[`configuration.md`](configuration.md) fixes `PeerAddress` as the one address
+this server will send a pairing request to and parses it there under the
+cleartext acknowledgement; the reading is resolved per request, so the address
+an operator saved a moment ago is the one the window opens against. It answers
+the identifier the record was written under and the instant it opened, in the
+shape the third row lists, so the page reads one shape for a window it just
+opened and for one it found open. A principal naming nobody is refused before
+anything is read, as the named problem the removal answers. Everything else it
+refuses is refused under a word each and at a status that is not the one a named
+problem carries, because the request was sound and nothing failed: a
+configuration a setting was refused on, which is where
+[`configuration.md`](configuration.md) says `MayPair` is read; a configuration
+holding no address; a pairing this server already holds with that peer; and a
+window already open against it. The window answers before the record is written,
+so a refused opening writes nothing, and the audit entry is the row
+[`logging.md`](logging.md) gives an enrolment that was started, written only
+once a record is. NO PAGE CALLS IT YET, which is issue #49: what an operator has
+is an action a client can call and a page that does not.
+
 That second row is narrower than the issue it comes from. A state per pairing,
 the version a PEER speaks and a last error per pairing are all things #51 asks the
 payload to carry, and none of them has anything in this tree that produces one.
@@ -118,13 +141,13 @@ first, so the payload's silence is written down where somebody reading the
 payload will find it rather than being inferred from what is missing.
 
 The rest of the administrative actions are still issues rather than actions, and
-a row for one of them would describe something no request can reach: OPENING an
-enrolment window is #18, which the row above does not do - it says whether one is
-open and provides no way to open one - confirming a ceremony is #19, revoking is
-#24, adding a mapping is the rest of #40 behind a peer user list nothing fetches
-yet, removing what is held about one user is the other half of #60 and the
-pairing states the page renders are #49. Each of them lands
-on the plane above rather than bringing a controller of its own.
+a row for one of them would describe something no request can reach: confirming
+a ceremony is #19, revoking is #24, adding a mapping is the rest of #40 behind a
+peer user list nothing fetches yet, removing what is held about one user is the
+other half of #60 and the pairing states the page renders are #49. THIS
+PARAGRAPH COUNTED OPENING AN ENROLMENT WINDOW AMONG THEM AND NAMED #18 FOR IT;
+the eighth row opens one and is issue #357. Each of them lands on the plane
+above rather than bringing a controller of its own.
 
 ### What the two authorization words mean
 
