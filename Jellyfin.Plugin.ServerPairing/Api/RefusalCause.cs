@@ -133,4 +133,36 @@ public enum RefusalCause
     /// </para>
     /// </remarks>
     VersionNotSpoken = 9,
+
+    /// <summary>
+    /// The signature verified and the body is not the one the member table fixes for the
+    /// message that arrived. It carries a member the table does not name, it is missing one the
+    /// table does name, a value is outside its limit, it is not one JSON object, or it carries
+    /// bytes at all where the table says the message carries none.
+    /// </summary>
+    /// <remarks>
+    /// The causes are one rather than several because they are one repair: the sending side is
+    /// writing a body this protocol does not describe, and which of the ways it did that is a
+    /// thing the peer's own log says and this server's cannot. Splitting them here would report
+    /// a shape of the far side's defect from the near side's counter.
+    /// <para>
+    /// It is reached only after verification, so nobody without a verifying key is ever told
+    /// it. That bound is the taxonomy's: <c>malformed</c> is a code for a caller holding a key,
+    /// and a body parsed before a signature was checked would hand it to a stranger.
+    /// </para>
+    /// </remarks>
+    BodyDidNotParse = 10,
+
+    /// <summary>
+    /// The signature verified and the range the <c>hello</c> offered does not overlap the one
+    /// this build speaks, so there is no version both sides could run the pairing at.
+    /// </summary>
+    /// <remarks>
+    /// Counted apart from <see cref="VersionNotSpoken"/> although both answer
+    /// <see cref="RefusalCode.Version"/>, because the two are different events on this server:
+    /// one is a peer declaring a version this build does not have, and this one is a peer whose
+    /// whole range is on the other side of an upgrade, which is the number an operator reads
+    /// before deciding whether to upgrade a server or to leave a pairing alone.
+    /// </remarks>
+    NoVersionInCommon = 11,
 }
