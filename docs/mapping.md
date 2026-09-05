@@ -51,7 +51,7 @@ than intended, by both routes that remove a row.
 ## Where the table lives
 
 With the pairing state, not in the plugin configuration, for the same reason the
-key store is not there — [`docs/keystore.md`](keystore.md) argues that at length.
+key store is not there: [`docs/keystore.md`](keystore.md) argues that at length.
 The short form is that the configuration is a file an operator edits by hand and
 the host rewrites as plaintext XML, and a table deciding where one person's data
 goes does not belong in it.
@@ -83,8 +83,8 @@ one of these and a second process is out of reach entirely.
 as an empty table**, which is the key store's answer read one file over. An empty
 table is what a fresh installation has, so an administrator meeting one makes the
 mappings again on top of rows that are still on the disk. A row this build could
-not turn into a mapping — a blank pairing, a blank user on either side, a blank
-actor, or no display name member at all — is damage of the same kind and is
+not turn into a mapping, a blank pairing, a blank user on either side, a blank
+actor, or no display name member at all, is damage of the same kind and is
 refused with the rest of the document, because a table quietly one row shorter
 than its file sends one person's data nowhere or to somebody else.
 

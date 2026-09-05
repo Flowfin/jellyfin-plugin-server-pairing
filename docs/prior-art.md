@@ -160,10 +160,12 @@ newer data", and "Playback positions are synced if the master server has newer
 data". Observation: the guard is one-directional, so a position that is newer on
 the child is not carried back by that rule.
 
-Topology. "Recommended topology: one master server and one child server with
-matching usernames. Multi-server setups and complex user mapping topologies are
-supported but have not been extensively tested — take care when combining
-both."
+Topology. Quoted from that project's README, punctuation and all:
+
+> Recommended topology: one master server and one child server with
+> matching usernames. Multi-server setups and complex user mapping topologies are
+> supported but have not been extensively tested — take care when combining
+> both.
 
 Revocation. Observation: revocation is not a step this tool has. Withdrawing
 access means deleting an API key on a Jellyfin server, which is Jellyfin's
