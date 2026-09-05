@@ -448,6 +448,26 @@ public class RefusalCountersTests
                 Filling(FreshnessWindow.NoncesPerPairing)),
         RefusalCause.VersionNotSpoken =>
             plane.Serve(PairingMessage.Hello, Arriving(sign: true, version: Unspoken), At),
+
+        // An object carrying none of the four members a hello has. It is one object and it is
+        // valid JSON, so what refuses it is the member table rather than the bytes being
+        // unreadable, which is the half of this cause worth reaching first.
+        RefusalCause.BodyDidNotParse =>
+            plane.Serve(
+                PairingMessage.Hello,
+                Arriving(sign: true, sends: System.Text.Encoding.ASCII.GetBytes("{}")),
+                At),
+
+        // A range whose whole span is above the one this build speaks, so there is no version
+        // both sides could run the pairing at. The declared version is one this build does speak,
+        // which is what keeps this at its own site rather than at the one above it.
+        RefusalCause.NoVersionInCommon =>
+            plane.Serve(
+                PairingMessage.Hello,
+                Arriving(
+                    sign: true,
+                    sends: HelloBody(SupportedVersions.Highest + 1, SupportedVersions.Highest + 2)),
+                At),
         _ => throw new ArgumentOutOfRangeException(nameof(cause)),
     };
 
@@ -509,6 +529,7 @@ public class RefusalCountersTests
     /// <param name="carries">The nonce it carries.</param>
     /// <param name="stamp">The timestamp it carries.</param>
     /// <param name="version">The version it declares.</param>
+    /// <param name="sends">The body it carries, where the case is about one.</param>
     /// <returns>The request.</returns>
     private static ArrivingRequest Arriving(
         string? target = null,
@@ -517,10 +538,16 @@ public class RefusalCountersTests
         bool exceeded = false,
         string? carries = null,
         string stamp = Timestamp,
-        string? version = null)
+        string? version = null,
+        byte[]? sends = null)
     {
         var path = PeerPlane.PathFor(PairingMessage.Hello);
-        var body = Array.Empty<byte>();
+
+        // A hello the member table admits, unless the case named its own. Every request here is
+        // a hello, and the plane reads a hello's body once it has verified, so a case about
+        // anything other than a body has to carry one that parses or it is refused for the body
+        // instead of at the site it is about.
+        var body = sends ?? HelloBody(SupportedVersions.Lowest, SupportedVersions.Highest);
         var carried = carries ?? Nonce;
         var declared = version ?? Version;
 
@@ -545,6 +572,25 @@ public class RefusalCountersTests
             body,
             exceeded);
     }
+
+    /// <summary>
+    /// A <c>hello</c> body the member table admits, offering a range.
+    /// </summary>
+    /// <param name="low">The lowest version the sender offers.</param>
+    /// <param name="high">The highest version the sender offers.</param>
+    /// <returns>The body bytes.</returns>
+    /// <remarks>
+    /// The range is an argument because two of the cases below are about it: one offers the set
+    /// this build speaks so that the request reaches the state it is in, and one offers a range
+    /// entirely above it so that the negotiation finds nothing in common. Both are derived from
+    /// the declared set rather than written down, so neither goes stale on the day it moves.
+    /// </remarks>
+    private static byte[] HelloBody(int low, int high) => System.Text.Encoding.ASCII.GetBytes(
+        "{\"" + HelloRequestBody.KeyMember + "\":\""
+        + Convert.ToBase64String(new byte[91])
+        + "\",\"" + HelloRequestBody.VersionLowMember + "\":" + low.ToString(CultureInfo.InvariantCulture)
+        + ",\"" + HelloRequestBody.VersionHighMember + "\":" + high.ToString(CultureInfo.InvariantCulture)
+        + ",\"" + HelloRequestBody.AddressMember + "\":\"https://peer.example.org\"}");
 
     /// <summary>
     /// A nonce no other request in a case carries, of the shape the specification fixes.

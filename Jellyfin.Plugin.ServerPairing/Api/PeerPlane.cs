@@ -154,9 +154,23 @@ public sealed class PeerPlane
     /// an enrolment window an administrator opened, and by nobody else, so judging the version
     /// before the signature would hand the range to a stranger.
     /// <para>
-    /// The other caller the taxonomy allows is a <c>hello</c> whose range does not overlap this
-    /// server's, and no site answers that one: the two ranges are body members and nothing in
-    /// this plugin turns a body into fields. Issue #25 carries that half.
+    /// THAT PARAGRAPH SAID NO SITE ANSWERS THE OTHER CAUSE OF THAT CODE, BECAUSE THE TWO RANGES
+    /// ARE BODY MEMBERS AND NOTHING TURNED A BODY INTO FIELDS. One does.
+    /// <see cref="Protocol.ArrivingBody"/> reads a <c>hello</c> against the member table, and a
+    /// range that does not overlap <see cref="Protocol.SupportedVersions.Range"/> is answered
+    /// <see cref="RefusalCode.Version"/> with the range, exactly as a declared version this
+    /// build does not speak is. The two are counted apart because they are different events on
+    /// this server, and they answer one code because a peer can act on one thing either way,
+    /// which is to look at the range it was handed.
+    /// </para>
+    /// <para>
+    /// WHICH OF THE TWO CALLERS REACHES IT IS STILL ONLY THE ONE HOLDING A KEY. A caller inside
+    /// an open enrolment window is the other audience the taxonomy names, and no route admits
+    /// one: a <c>hello</c> carries 32 zero characters where the identifier goes and proves
+    /// possession of the key it offers, and nothing here verifies that. So a peer outside the
+    /// overlap that has never paired is refused for its signature, and what is answered
+    /// <see cref="RefusalCode.Version"/> is a peer whose range moved under a pairing that
+    /// already has a key.
     /// </para>
     /// </para>
     /// <para>
@@ -174,6 +188,32 @@ public sealed class PeerPlane
     /// A request refused for freshness hands nothing on, even though its body verified.
     /// Verification says the bytes are authentic and freshness says they are not this request,
     /// and acting on a replayed body is exactly what the nonce store exists to stop.
+    /// </para>
+    /// <para>
+    /// THE BODY IS READ AFTER ALL OF THAT AND BEFORE THE STATE, AND BOTH HALVES OF THAT POSITION
+    /// ARE ARGUED RATHER THAN CONVENIENT. After verification and freshness, because
+    /// <see cref="RefusalCode.Malformed"/> is a code the taxonomy gives only to a caller that has
+    /// proved it holds the key, so a body parsed earlier would hand that answer to a stranger and
+    /// would spend a parse on bytes nobody authenticated. Before the state, for the reason the
+    /// version sits before freshness: a body that is not the shape the member table fixes is not
+    /// a message of this protocol at all, and whether a message is accepted in a state cannot be
+    /// asked of something that is not one. The alternative order - the state first, so that the
+    /// <c>Absent</c> row refuses everything before a body is looked at - answers a caller holding
+    /// a key with the coarser of the two codes it could have been told, and tells the operator on
+    /// the far side nothing about a body their own server wrote.
+    /// </para>
+    /// <para>
+    /// A REQUEST WHOSE BODY DID NOT PARSE HANDS NOTHING ON, and that is the same rule the
+    /// freshness refusal above follows. Verification says the bytes are authentic and the member
+    /// table says they are not a message, and handing on a body no reader could place is exactly
+    /// what reading it exists to stop.
+    /// </para>
+    /// <para>
+    /// TWO MESSAGES HAVE NO READER AND THE ANSWER FOR THEM IS UNMOVED.
+    /// <see cref="Protocol.BodyOutcome.NotReadHere"/> carries which and why: an <c>exchange</c>
+    /// body is opaque to this layer by the document, and a <c>rotate</c> body has a member table
+    /// and no reader yet. Neither is refused for its body here, so nothing about what those two
+    /// are told has moved with this.
     /// </para>
     /// <para>
     /// THIS PARAGRAPH SAID EVERY ANSWER TODAY IS <see cref="RefusalCode.Refused"/>. A verified
@@ -276,6 +316,19 @@ public sealed class PeerPlane
         if (freshness != FreshnessOutcome.Fresh)
         {
             return Refuse(CauseOf(freshness));
+        }
+
+        var body = ArrivingBody.Read(message, verified.Span);
+
+        if (body.Outcome == BodyOutcome.DidNotParse)
+        {
+            return Refuse(RefusalCause.BodyDidNotParse);
+        }
+
+        if (body.Hello is not null
+            && VersionNegotiation.Select(body.Hello.Versions).Outcome == VersionOutcome.NoVersionInCommon)
+        {
+            return Refuse(RefusalCause.NoVersionInCommon);
         }
 
         _refusals.Record(RefusalCause.NotAcceptedInThisState);
