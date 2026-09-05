@@ -76,7 +76,11 @@ public class LoggedEventTableTests
         ["The key store could not be read for an administrator, so what this server holds is unknown."] =
             "The key store could not be read or written",
         ["The pairing record store could not be read for an administrator, so whether a window is open is unknown."] =
-            "The pairing record store could not be read",
+            "The pairing record store could not be read or written",
+        ["The pairing record store could not be read or written for an administrator, so whether a window was opened is unknown."] =
+            "The pairing record store could not be read or written",
+        ["An enrolment was started by an administrator."] =
+            "An enrolment was started",
         ["The key store could not be read at startup, so what it holds is unknown and no pairing will work."] =
             "The key store could not be read or written",
         ["The key store was written by an older build and has been carried up to the format this one reads."] =
@@ -88,11 +92,11 @@ public class LoggedEventTableTests
         ["What is held about one user was reported to an administrator."] =
             "What is held about one user was reported",
         ["The pairing record store could not be read for an administrator, so what is held about a user is unknown."] =
-            "The pairing record store could not be read",
+            "The pairing record store could not be read or written",
         ["The mapping store could not be read for an administrator, so what is held about a user is unknown."] =
             "The mapping store could not be read or written",
         ["The pairing record store could not be read for an administrator, so whether a pairing holds a mapping table is unknown."] =
-            "The pairing record store could not be read",
+            "The pairing record store could not be read or written",
         ["The mapping store could not be read or written for an administrator, so what a pairing's table holds is unknown."] =
             "The mapping store could not be read or written",
         ["The mapping store could not be read or written for an administrator, so whether a mapping was removed is unknown."] =

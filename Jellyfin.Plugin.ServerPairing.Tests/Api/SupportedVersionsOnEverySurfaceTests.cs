@@ -162,6 +162,9 @@ public class SupportedVersionsOnEverySurfaceTests
                 new PairingStateMachine(records, new InMemoryUserMappings()),
                 NullLogger<UserMappings>.Instance),
             new InMemoryLocalUsers(),
+            PlaneDependencies.EnrolmentOver(records),
+            PlaneDependencies.NothingEntered(),
+            PlaneDependencies.StoppedClock(),
             NullLogger<AdministrativePlaneController>.Instance);
 
         var answered = Assert.IsType<ContentResult>(controller.Diagnostics());

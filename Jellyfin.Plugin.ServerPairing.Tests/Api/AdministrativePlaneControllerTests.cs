@@ -301,6 +301,9 @@ public class AdministrativePlaneControllerTests
             new HeldAboutUser(new InMemoryUserMappings(), NullLogger<HeldAboutUser>.Instance),
             new UserMappings(new InMemoryUserMappings(), new PairingStateMachine(new InMemoryPairingRecords(), new InMemoryUserMappings()), NullLogger<UserMappings>.Instance),
             new InMemoryLocalUsers(),
+            PlaneDependencies.EnrolmentOver(records),
+            PlaneDependencies.NothingEntered(),
+            PlaneDependencies.StoppedClock(),
             NullLogger<AdministrativePlaneController>.Instance);
 
     /// <summary>

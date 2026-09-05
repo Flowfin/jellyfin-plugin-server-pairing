@@ -445,6 +445,9 @@ public class MappingTableTests
             new HeldAboutUser(mappings, NullLogger<HeldAboutUser>.Instance),
             new UserMappings(mappings, new PairingStateMachine(records, mappings), log ?? NullLogger<UserMappings>.Instance),
             users,
+            PlaneDependencies.EnrolmentOver(records),
+            PlaneDependencies.NothingEntered(),
+            PlaneDependencies.StoppedClock(),
             NullLogger<AdministrativePlaneController>.Instance)
         {
             ControllerContext = new ControllerContext { HttpContext = context },

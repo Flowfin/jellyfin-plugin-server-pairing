@@ -784,13 +784,15 @@ writes no record and calls no state machine, which is why the join is a third ty
     git grep -n 'OpenAddresses' origin/master -- Jellyfin.Plugin.ServerPairing/Protocol/EnrolmentWindow.cs
     origin/master:Jellyfin.Plugin.ServerPairing/Protocol/EnrolmentWindow.cs:264:    public IReadOnlyList<string> OpenAddresses(DateTimeOffset at)
 
-WHAT IS STILL NOT DECIDED IS WHAT THE ADMINISTRATIVE ACTION LOOKS LIKE, and that
-is the half of the old sentence that survives. Nothing on a server calls the join,
-because there is no state-changing administrative endpoint to call it from - that
-is issue #53 - so a server running this build still has no way for an operator to
-open a window, and no pairing has been in `Offered` on one. The difference from
-what stood here is that the producer exists and is registered rather than being
-unbuilt, so what is missing is a caller.
+THIS PARAGRAPH SAID WHAT THE ADMINISTRATIVE ACTION LOOKS LIKE WAS NOT DECIDED,
+THAT NOTHING ON A SERVER CALLED THE JOIN, AND NAMED ISSUE #53 FOR THE ENDPOINT
+THAT WOULD. The action is `AdministrativePlaneController.OpenEnrolmentWindow`,
+issue #357, and [`endpoints.md`](endpoints.md) carries its row and its shape: it
+opens the window against the peer address the configuration holds, answers the
+identifier the record was written under, and refuses under a word each what the
+window refuses. #53 is about how a dashboard request is authenticated and never
+asked for an action. What has not happened is a run: no window has been opened
+on a running server, and no pairing has been in `Offered` on one.
 
 The record it writes carries the peer address, which is the field the reader of
 the open windows and the refusal against re-pairing an existing peer both need,

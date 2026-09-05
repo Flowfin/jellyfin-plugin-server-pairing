@@ -397,6 +397,9 @@ public class HeldAboutUserTests
             held,
             new UserMappings(new InMemoryUserMappings(), new PairingStateMachine(new InMemoryPairingRecords(), new InMemoryUserMappings()), NullLogger<UserMappings>.Instance),
             new InMemoryLocalUsers(),
+            PlaneDependencies.EnrolmentOver(records),
+            PlaneDependencies.NothingEntered(),
+            PlaneDependencies.StoppedClock(),
             NullLogger<AdministrativePlaneController>.Instance)
         {
             ControllerContext = new ControllerContext { HttpContext = context },

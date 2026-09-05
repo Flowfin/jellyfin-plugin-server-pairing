@@ -143,13 +143,24 @@ public class WordingTests
     /// </summary>
     /// <returns>The controller.</returns>
     private static AdministrativePlaneController Controller()
+        => Controller(new InMemoryPairingRecords());
+
+    /// <summary>
+    /// A controller over one record store, which the enrolment is joined over as well.
+    /// </summary>
+    /// <param name="records">The record store.</param>
+    /// <returns>The controller.</returns>
+    private static AdministrativePlaneController Controller(InMemoryPairingRecords records)
         => new AdministrativePlaneController(
             new InMemoryPairingKeyStore(),
-            new InMemoryPairingRecords(),
+            records,
             new RefusalCounters(),
             new ArrivalLimit(),
             new HeldAboutUser(new InMemoryUserMappings(), NullLogger<HeldAboutUser>.Instance),
             new UserMappings(new InMemoryUserMappings(), new PairingStateMachine(new InMemoryPairingRecords(), new InMemoryUserMappings()), NullLogger<UserMappings>.Instance),
             new InMemoryLocalUsers(),
+            PlaneDependencies.EnrolmentOver(records),
+            PlaneDependencies.NothingEntered(),
+            PlaneDependencies.StoppedClock(),
             NullLogger<AdministrativePlaneController>.Instance);
 }
