@@ -575,19 +575,24 @@ public class PeerPlaneTests
     {
         var plane = Plane();
 
-        foreach (var version in new[] { SupportedVersions.Lowest - 1, SupportedVersions.Highest + 1 })
-        {
-            var outcome = plane.Serve(
-                PairingMessage.Hello,
-                Signed(
+        // Both ends rather than the first that fails, and the index of the one that did. A loop
+        // here stopped at the first, so a build that refused the high end and admitted the low
+        // one reported the same failure as one that admitted both.
+        Assert.All(
+            new[] { SupportedVersions.Lowest - 1, SupportedVersions.Highest + 1 },
+            version =>
+            {
+                var outcome = plane.Serve(
                     PairingMessage.Hello,
-                    version: version.ToString(CultureInfo.InvariantCulture),
-                    carries: FreshNonce()),
-                At);
+                    Signed(
+                        PairingMessage.Hello,
+                        version: version.ToString(CultureInfo.InvariantCulture),
+                        carries: FreshNonce()),
+                    At);
 
-            Assert.Equal(RefusalCode.Version, outcome.Code);
-            Assert.False(outcome.BodyWasHandedOn);
-        }
+                Assert.Equal(RefusalCode.Version, outcome.Code);
+                Assert.False(outcome.BodyWasHandedOn);
+            });
     }
 
     /// <summary>
