@@ -22,14 +22,16 @@ pair:
     exit=1
 
 THIS PARAGRAPH SAID NOTHING AN ADMINISTRATOR PRESSES REACHES THIS PLUGIN AND THAT
-EVERY ACTION BEHIND ITS TWO ROUTE PREFIXES IS A READ. One thing does and one
-action is not: an administrator can remove a mapping from a pairing's table,
-and that is the whole of what an administrator can change here. Nothing opens a
-window, confirms a ceremony, revokes a pairing or adds a mapping, so every step
-below that changes something still waits:
+EVERY ACTION BEHIND ITS TWO ROUTE PREFIXES IS A READ, AND THEN THAT ONE ACTION
+WAS NOT. Two are not: an administrator can remove a mapping from a pairing's
+table, and can open an enrolment window against the peer address in the
+settings, and that is the whole of what an administrator can change here.
+Nothing confirms a ceremony, revokes a pairing or adds a mapping, so every step
+below that changes something else still waits:
 
     git grep -nE 'Http(Post|Put|Delete|Patch)' origin/master -- Jellyfin.Plugin.ServerPairing/Api/AdministrativePlaneController.cs ; echo "exit=$?"
-    origin/master:Jellyfin.Plugin.ServerPairing/Api/AdministrativePlaneController.cs:487:    [HttpDelete("pairings/{pairingId}/mappings/{localUserId}")]
+    origin/master:Jellyfin.Plugin.ServerPairing/Api/AdministrativePlaneController.cs:294:    [HttpPost("windows")]
+    origin/master:Jellyfin.Plugin.ServerPairing/Api/AdministrativePlaneController.cs:616:    [HttpDelete("pairings/{pairingId}/mappings/{localUserId}")]
     exit=0
 
 and the settings page is still the plugin template's example fields:
@@ -121,8 +123,8 @@ The ten minutes are `EnrolmentWindowSeconds` in
 above that maximum is refused when the configuration is read, with the setting
 named, rather than quietly shortened to the maximum.
 
-*Waits on: an administrative action that opens a window. The window itself is
-built and has no caller.*
+*Waits on: the page. The action that opens a window exists and a client can
+call it; what renders the button is issue #49, so there is nothing to press yet.*
 
 ## 3. What the other operator does
 

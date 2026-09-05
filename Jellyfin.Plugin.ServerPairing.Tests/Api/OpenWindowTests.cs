@@ -43,9 +43,9 @@ namespace Jellyfin.Plugin.ServerPairing.Tests.Api;
 /// of the eight.
 /// </para>
 /// <para>
-/// WHAT IS STILL NOT ASSERTED IS THAT AN OPERATOR CAN REACH ANY OF IT. Nothing on a server calls
-/// the producer, because the state-changing administrative endpoint is issue #53, so the answer
-/// on a running server is empty for want of a caller rather than for want of a producer.
+/// THIS REMARK SAID NOTHING ON A SERVER CALLED THE PRODUCER AND NAMED ISSUE #53 FOR THE ENDPOINT
+/// THAT WOULD. <c>WindowOpeningTests</c> is that action, which is issue #357, and is where the
+/// read is asserted to answer what the action opened; the cases here stay about the read alone.
 /// </para>
 /// </remarks>
 public class OpenWindowTests
@@ -244,6 +244,9 @@ public class OpenWindowTests
             new HeldAboutUser(new InMemoryUserMappings(), NullLogger<HeldAboutUser>.Instance),
             new UserMappings(new InMemoryUserMappings(), new PairingStateMachine(new InMemoryPairingRecords(), new InMemoryUserMappings()), NullLogger<UserMappings>.Instance),
             new InMemoryLocalUsers(),
+            PlaneDependencies.EnrolmentOver(records),
+            PlaneDependencies.NothingEntered(),
+            PlaneDependencies.StoppedClock(),
             NullLogger<AdministrativePlaneController>.Instance);
 
     /// <summary>

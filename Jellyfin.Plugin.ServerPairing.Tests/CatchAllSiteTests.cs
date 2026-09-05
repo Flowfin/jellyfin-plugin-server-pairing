@@ -67,6 +67,8 @@ public class CatchAllSiteTests
     /// the same reason. THIS PARAGRAPH SAID FOUR AND THERE ARE SEVEN: the listing of a pairing's
     /// mapping table reads the record store and then the mapping store and carries one per store,
     /// and the removal of a mapping reads and writes the mapping store alone and carries one.
+    /// IT THEN SAID SEVEN AND THERE ARE EIGHT: opening an enrolment window reads and writes the
+    /// record store through the join and carries one.
     ///
     /// KeyStore/StoreAtStartup.cs: a store that cannot be read at startup must not take the
     /// server down with it, so the read is reported and the host is left running.
@@ -78,7 +80,7 @@ public class CatchAllSiteTests
     private static readonly Dictionary<string, int> DeclaredSites = new(StringComparer.Ordinal)
     {
         ["Api/PeerPlaneController.cs"] = 1,
-        ["Api/AdministrativePlaneController.cs"] = 7,
+        ["Api/AdministrativePlaneController.cs"] = 8,
         ["KeyStore/StoreAtStartup.cs"] = 1,
         ["KeyStore/AtomicWrite.cs"] = 1,
     };

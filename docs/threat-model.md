@@ -417,7 +417,7 @@ issue #19. The wording it would show is written and is in the tree rather than
 owed by issue #54:
 
     git grep -n "public const string TheComparisonIsTheTrust" origin/master -- Jellyfin.Plugin.ServerPairing/Wording/CeremonyWording.cs
-    origin/master:Jellyfin.Plugin.ServerPairing/Wording/CeremonyWording.cs:60:    public const string TheComparisonIsTheTrust =
+    origin/master:Jellyfin.Plugin.ServerPairing/Wording/CeremonyWording.cs:62:    public const string TheComparisonIsTheTrust =
 
 What that issue is still open on is the markup half, the fingerprint read as
 eight groups by a screen reader and no state signalled by colour alone. Both of

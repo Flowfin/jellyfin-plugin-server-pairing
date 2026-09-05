@@ -17,9 +17,10 @@ public class EnrolmentWindowTests
     private const string SolutionFileName = "Jellyfin.Plugin.ServerPairing.sln";
 
     /// <summary>
-    /// The one file in the plugin that may call the method that opens a window.
+    /// The two files in the plugin that may call the method that opens a window: the join that
+    /// writes the record, and the administrative action an administrator reaches it through.
     /// </summary>
-    private static readonly string[] _theJoin = new[] { "Enrolment.cs" };
+    private static readonly string[] _theCallers = new[] { "AdministrativePlaneController.cs", "Enrolment.cs" };
 
     private static readonly DateTimeOffset Noon =
         new DateTimeOffset(2026, 8, 13, 12, 0, 0, TimeSpan.Zero);
@@ -29,20 +30,23 @@ public class EnrolmentWindowTests
     /// never because a peer asked.
     /// </summary>
     /// <remarks>
-    /// THIS CASE EXPECTED NO CALLER AT ALL AND NOW EXPECTS EXACTLY ONE. What it rested on was
-    /// that nothing in the plugin called the method, which held while opening a window wrote no
-    /// record and was therefore something only the test project ever did. The join in
-    /// <see cref="Enrolment"/> is that caller, and an assertion of an empty set would have to be
-    /// deleted to let it land, which is the shape of a guard being worked around rather than
-    /// argued with.
+    /// THIS CASE EXPECTED NO CALLER AT ALL, THEN EXACTLY ONE, AND NOW EXPECTS TWO. What it first
+    /// rested on was that nothing in the plugin called the method, which held while opening a
+    /// window wrote no record and was therefore something only the test project ever did. The
+    /// join in <see cref="Enrolment"/> was the first caller. The second is the action on the
+    /// administrative plane that an administrator opens a window through, which is issue #357:
+    /// it sits behind the host's elevation policy and reads the actor off the principal the host
+    /// authenticated, so it is the administrator this property names rather than an exception to
+    /// it. An assertion of one file would have to be deleted to let it land, which is the shape
+    /// of a guard being worked around rather than argued with, and this remark is the argument.
     /// <para>
     /// The property is unchanged and the set is what carries it. The scan matches the text
     /// <c>.Open(</c>, so a file calling <see cref="Enrolment.Open"/> is caught by it exactly as a
     /// file calling <see cref="EnrolmentWindow.Open"/> is: both spellings are an instance call on
-    /// that name. So a startup path, a hosted service, a controller or anything on the peer plane
-    /// that reached either one would appear here, and what the equality says is that none of them
-    /// does. The one file named takes the address a person typed and the actor who typed it, and
-    /// is reached by nothing inside this assembly.
+    /// that name. So a startup path, a hosted service, anything on the peer plane or a second
+    /// controller that reached either one would appear here, and what the equality says is that
+    /// none of them does. Of the two files named, the join takes the address a person typed and
+    /// the actor who typed it, and the action is the one place that hands it both.
     /// </para>
     /// </remarks>
     [Fact]
@@ -55,7 +59,7 @@ public class EnrolmentWindowTests
             .OrderBy(f => f, StringComparer.Ordinal)
             .ToArray();
 
-        Assert.Equal(_theJoin, callers);
+        Assert.Equal(_theCallers, callers);
     }
 
     /// <summary>

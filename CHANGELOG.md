@@ -38,6 +38,15 @@ claim that cannot be verified belongs rather than in this file.
 
 Anything else is an ordinary line with no marker.
 
+## Unreleased
+
+- An administrator can open an enrolment window on a running server, against the
+  peer address entered in the plugin's settings, by calling the administrative
+  plane; the dashboard page does not offer a button for it yet. Opening one is
+  refused, with the reason named, where a setting was refused, no peer address is
+  entered, this server is already paired with that peer, or a window is already
+  open against it.
+
 ## 0.1.1.0
 
 Installs on every 10.11 server the manifest promises, which 0.1.0.0 did not.

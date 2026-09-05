@@ -169,9 +169,10 @@ public class PluginServiceRegistrator : IPluginServiceRegistrator
         // THIS COMMENT SAID NOTHING RESOLVED IT AND THAT NO PLANE AND NO PAGE APPLIED AN EVENT TO
         // IT. UserMappings below resolves it, for the mapping the administrative plane removes,
         // and the enrolment registered below applies an event to it, which is the join issue #350
-        // holds. What is still true is that nothing on a server calls that enrolment, because the
-        // state-changing administrative endpoint is issue #53; ServiceRegistrationTests is what
-        // says the container can build all of it.
+        // holds. IT THEN SAID NOTHING ON A SERVER CALLED THAT ENROLMENT AND NAMED ISSUE #53 FOR
+        // THE ENDPOINT THAT WOULD: the administrative plane opens a window through it now, which
+        // is issue #357, and ServiceRegistrationTests is what says the container can build all
+        // of it.
         serviceCollection.AddSingleton(services => new PairingStateMachine(
             services.GetRequiredService<IPairingRecordStore>(),
             services.GetRequiredService<IUserMappingStore>()));
@@ -195,9 +196,10 @@ public class PluginServiceRegistrator : IPluginServiceRegistrator
             services.GetRequiredService<IPairedPeers>(),
             services.GetRequiredService<ConfigurationReading>().EnrolmentWindowSeconds));
 
-        // The join between the two, which is what makes opening a window write a record. Nothing
-        // on a server calls it yet, for the reason given at the state machine above, so this
-        // registration is what lets the endpoint in issue #53 be a caller rather than a rewiring.
+        // The join between the two, which is what makes opening a window write a record. The
+        // administrative plane's action that opens a window resolves it, which is issue #357, and
+        // this registration is what makes that action a caller rather than a rewiring. THIS
+        // COMMENT NAMED ISSUE #53 FOR THAT ACTION, and #53 never asked for one.
         serviceCollection.AddSingleton(services => new Enrolment(
             services.GetRequiredService<EnrolmentWindow>(),
             services.GetRequiredService<PairingStateMachine>(),
