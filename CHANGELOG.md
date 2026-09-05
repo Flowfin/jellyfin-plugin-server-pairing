@@ -40,6 +40,15 @@ Anything else is an ordinary line with no marker.
 
 ## Unreleased
 
+- [protocol] A peer whose request is signed correctly and declares a protocol
+  version this plugin does not speak is now told so, and the answer names the
+  versions this plugin does speak. It used to be refused with the same answer
+  everything else gets, which left the operator on the other side with a
+  signature error to chase and no way to see that the two servers were on
+  different sides of an upgrade. A caller that has not proved it holds the
+  pairing's key still learns nothing, because the version is read after the
+  signature.
+
 - An administrator can open an enrolment window on a running server, against the
   peer address entered in the plugin's settings, by calling the administrative
   plane; the dashboard page does not offer a button for it yet. Opening one is

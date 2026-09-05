@@ -114,4 +114,23 @@ public enum RefusalCause
     /// room are repaired in opposite directions.
     /// </summary>
     NoRoomToRememberTheNonce = 8,
+
+    /// <summary>
+    /// The signature verified and the version the request declares is not one this build
+    /// speaks. What a peer is told carries the range this server does speak, which is the one
+    /// exception <c>docs/protocol.md</c> makes to the refusal shape.
+    /// </summary>
+    /// <remarks>
+    /// It is counted separately from <see cref="DidNotVerify"/> because the two are repaired in
+    /// opposite directions and by different people: a signature that does not verify is a key
+    /// problem on this pairing, and a version nobody speaks is two servers on different sides of
+    /// an upgrade, which the operator on the far side fixes by upgrading rather than by
+    /// re-pairing.
+    /// <para>
+    /// It is reached only after verification, so nobody without a verifying key is ever told it.
+    /// That bound is the taxonomy's: the audience for this code is a caller holding a key or one
+    /// inside a window an administrator opened, and this site is the first of the two.
+    /// </para>
+    /// </remarks>
+    VersionNotSpoken = 9,
 }

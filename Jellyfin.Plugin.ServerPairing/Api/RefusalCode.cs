@@ -11,11 +11,12 @@ namespace Jellyfin.Plugin.ServerPairing.Api;
 /// <para>
 /// Which members this tree can currently produce is a smaller set than this enumeration, and
 /// deliberately so. THIS PARAGRAPH SAID <see cref="PeerPlane"/> PRODUCES <see cref="Refused"/>
-/// AND NOTHING ELSE. It produces four codes now: the plane judges freshness once a request has
-/// verified, so <see cref="Clock"/>, <see cref="Replay"/> and <see cref="Busy"/> are answered
-/// to a caller that has proved it holds the pairing's key. What is unchanged is what an
-/// unauthenticated caller gets, which is <see cref="Refused"/> and only that, because freshness
-/// is judged after verification and never before it.
+/// AND NOTHING ELSE, AND THEN THAT IT PRODUCES FOUR CODES. It produces five: the plane judges
+/// the declared version and then freshness once a request has verified, so
+/// <see cref="Version"/>, <see cref="Clock"/>, <see cref="Replay"/> and <see cref="Busy"/> are
+/// answered to a caller that has proved it holds the pairing's key. What is unchanged is what an
+/// unauthenticated caller gets, which is <see cref="Refused"/> and only that, because both
+/// judgements are made after verification and never before it.
 /// </para>
 /// <para>
 /// The <c>Absent</c> row of the transition table is still the undistinguished refusal for all
@@ -48,7 +49,12 @@ public enum RefusalCode
 
     /// <summary>
     /// No version in common. A caller inside an open enrolment window, or one holding a
-    /// verifying key, may see it. No site produces it yet.
+    /// verifying key, may see it. THIS SENTENCE SAID NO SITE PRODUCES IT.
+    /// <see cref="PeerPlane.Serve"/> produces it for the second of those two callers: a request
+    /// whose signature verified and whose declared version is outside
+    /// <see cref="Protocol.SupportedVersions.Range"/> is answered this, with the range in the
+    /// body. The first caller is a <c>hello</c> whose range does not overlap this server's, and
+    /// that one needs a body to be parsed, which is issue #25's remaining half.
     /// </summary>
     Version = 2,
 
