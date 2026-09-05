@@ -330,6 +330,62 @@ public class ArrivingBodyTests
     }
 
     /// <summary>
+    /// The shape refuses a value of a kind this protocol has no member of, at the read rather
+    /// than at the member that would have received it. Asserted against the shape directly and
+    /// not through a message, because every member this protocol has today refuses an empty value
+    /// of its own accord: a reader that took <c>null</c> for an empty string would be caught by
+    /// each of their limits and by nothing that says why, and the day a member accepts an empty
+    /// value that reader would admit <c>null</c> in its place.
+    /// </summary>
+    /// <param name="value">The value the member carries.</param>
+    [Theory]
+    [InlineData("null")]
+    [InlineData("true")]
+    [InlineData("false")]
+    [InlineData("{}")]
+    [InlineData("{\"nested\":\"member\"}")]
+    [InlineData("[]")]
+    [InlineData("[\"one\"]")]
+    public void AValueOfAKindNoMemberHasIsRefusedByTheShape(string value)
+    {
+        Assert.False(BodyObject.TryRead(Bytes("{\"m\":" + value + "}"), out _));
+    }
+
+    /// <summary>
+    /// The floor under the case above: the two kinds this protocol does have are read, and they
+    /// are told apart. Without this, a reader that refused every value would satisfy it.
+    /// </summary>
+    [Fact]
+    public void TheTwoKindsThisProtocolHasAreReadAndToldApart()
+    {
+        Assert.True(BodyObject.TryRead(Bytes("{\"m\":\"text\",\"n\":7}"), out var read));
+
+        Assert.Equal(2, read.Count);
+        Assert.True(read.TryText("m", out var text));
+        Assert.Equal("text", text);
+        Assert.True(read.TryDigits("n", FieldShape.TimestampDigitLimit, out var digits));
+        Assert.Equal("7", digits);
+
+        Assert.False(read.TryText("n", out _));
+        Assert.False(read.TryDigits("m", FieldShape.TimestampDigitLimit, out _));
+    }
+
+    /// <summary>
+    /// A member name written with an escape is not the member the table names, because the name
+    /// is taken from the bytes that arrived rather than from their unescaping. Asserted against
+    /// the shape, where a reader that unescaped names would admit a second spelling of every
+    /// member and no message-level case could tell which of the two had happened.
+    /// </summary>
+    [Fact]
+    public void AnEscapedNameIsNotTheMemberTheTableNames()
+    {
+        Assert.True(BodyObject.TryRead(Bytes("{\"\\u006d\":\"text\"}"), out var read));
+
+        Assert.False(read.TryText("m", out _));
+        Assert.True(read.TryText("\\u006d", out _));
+    }
+
+    /// <summary>
     /// A message outside the defined set is a caller error rather than a refusal, which is the
     /// same answer every other table in this plugin gives one. Guessing a body for it would
     /// serve a seventh message this protocol does not have.

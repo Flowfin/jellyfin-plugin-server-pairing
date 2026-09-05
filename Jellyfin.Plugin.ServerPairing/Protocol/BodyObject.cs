@@ -23,8 +23,9 @@ namespace Jellyfin.Plugin.ServerPairing.Protocol;
 /// <para>
 /// What it refuses, each because the document says so: a body that is not one object, a member
 /// carrying an object or an array, a member carrying <c>null</c>, a member carrying a boolean -
-/// which no member of this protocol is - the same member twice, a member name written with an
-/// escape rather than as the bytes the table names, and anything at all after the object ends.
+/// which no member of this protocol is - the same member twice, and anything at all after the
+/// object ends. A member name written with an escape is refused as well, and by the read rather
+/// than by a check: the comment at the read says how.
 /// </para>
 /// <para>
 /// WHAT IT DOES NOT DO IS KNOW WHICH MEMBERS A MESSAGE HAS. That is the message's own shape and
@@ -159,14 +160,14 @@ public sealed class BodyObject
 
         while (reader.Read() && reader.TokenType == JsonTokenType.PropertyName)
         {
-            // A name written with an escape decodes to the same characters and is not the same
-            // bytes, and the table says the members are exact byte sequences. Refusing the
-            // escape is what keeps one spelling of a member name on the wire.
-            if (reader.ValueIsEscaped)
-            {
-                return false;
-            }
-
+            // THE RAW SPAN RATHER THAN GetString(), AND THAT IS THE RULE RATHER THAN A SAVED
+            // ALLOCATION. The table says the members are exact byte sequences, so a name written
+            // with an escape is not one of them however it decodes. ValueSpan is the JSON text as
+            // it arrived, so an escaped name arrives here carrying its backslash and matches no
+            // member name; GetString() would unescape it and admit a second spelling of every
+            // member. This started as an explicit refusal of an escaped name beside the read, and
+            // that refusal could not be shown to bite: with the raw span in place, deleting it
+            // reddened nothing, because the comparison had already refused the name.
             var name = Encoding.UTF8.GetString(reader.ValueSpan);
 
             if (!reader.Read() || !TryValue(ref reader, out var value))
