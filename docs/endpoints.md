@@ -501,21 +501,51 @@ above is a reading of somebody else's source at two tags, made through the
 GitHub API and not on a running server, and no test drives any of it. That half
 is prose and stays prose.
 
-Issue #53's third condition asks that a test assert every state-changing
-endpoint refuses a request lacking whatever this document names. It is not met.
-THIS PARAGRAPH SAID THE SET IT QUANTIFIES OVER WAS EMPTY BECAUSE EVERY
-ADMINISTRATIVE ACTION WAS A READ, AND ONE IS NOT NOW: the removal of a mapping
-changes state, so the set has one member. What the suite asserts about it is
-that a principal naming no administrator is refused before the store is touched,
-and that is this plugin's own check rather than the host's credential. Whether
-the host refuses a request lacking its token is the elevation policy, which
-nothing here measures for the reason under the table, so the condition has a
-subject now and is still not met.
+Issue #53's third condition asked that a test assert every state-changing
+endpoint refuses a request lacking whatever this document names. THIS PARAGRAPH
+SAID THAT CONDITION WAS NOT MET AND THAT THE SET IT QUANTIFIES OVER HAD ONE
+MEMBER. The member is still one, the removal of a mapping, and the clause was
+replaced on that issue rather than met as worded. The reason is in this
+document: what it names is a token the host resolves, and the policy that
+refuses a request carrying none is registered in the server's own composition
+rather than in anything this plugin references.
+
+```
+gh api -H "Accept: application/vnd.github.raw" \
+  "repos/jellyfin/jellyfin/contents/Jellyfin.Server/Extensions/ApiServiceCollectionExtensions.cs?ref=v10.11.9" \
+  | grep -n -A2 'Policies.RequiresElevation,'
+90:                    Policies.RequiresElevation,
+91-                    policy => policy.AddAuthenticationSchemes(AuthenticationSchemes.CustomAuthentication)
+92-                        .RequireClaim(ClaimTypes.Role, UserRoles.Administrator));
+```
+
+The same three lines are 87 to 89 at `v12.0-rc3`. A case driving a request to a
+refusal would be standing up those options and judging them, which is the
+framework rather than this plugin, and it is the apparatus the controller's own
+remarks already say is measured by nothing here.
+
+What the replacement asks is asserted, in two halves over that one action.
+`EndpointAuthorizationTableTests` produces the served side out of the host's own
+action discovery and holds this file's authorization column against it, so an
+action carrying no elevation, or carrying an attribute of its own that inherits
+some other default, is an offence there rather than a row somebody has to
+notice. `MappingTableTests.ARemovalNamingNoAdministratorIsRefusedAndRemovesNothing`
+is the endpoint's own check: a principal naming nobody is refused, the mapping
+is still there afterwards, and no entry is written.
+
+WHETHER THE HOST REFUSES A REQUEST CARRYING NO TOKEN IS MEASURED BY NOTHING
+HERE, for the reason under the table, and the replacement claims none of it. Two
+declarations and one check are what is asserted, and the enforcement behind them
+is the elevation policy quoted above, which no run in this repository has ever
+reached.
+
 `PeerPlaneTests` does assert that a request without a verifying signature is
 refused and that its body is not handed on, but every answer this plane gives
 today is the same refusal whatever arrives, so that assertion cannot be
-distinguished from an assertion that everything is refused. Until a request can
-succeed there is nothing for the condition to bite on, and #53 carries it.
+distinguished from an assertion that everything is refused. That plane is not
+this condition's subject either way: what authenticates it is the pairing key
+rather than the host's token, which is the distinction the table draws and which
+issue #27 owns.
 
 It says nothing about how the dashboard page treats a string that came from a
 peer. That is a separate question with a separate failure, and it is issue #52.
