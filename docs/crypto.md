@@ -18,20 +18,26 @@ calls them:
 
 ```
 git grep -lE "HKDF|ECDiffieHellman|SubjectPublicKeyInfo" origin/master -- Jellyfin.Plugin.ServerPairing Jellyfin.Plugin.ServerPairing.Tests
+origin/master:Jellyfin.Plugin.ServerPairing.Tests/Api/PeerPlaneTests.cs
 origin/master:Jellyfin.Plugin.ServerPairing.Tests/KeyStore/KeyMaterialTests.cs
+origin/master:Jellyfin.Plugin.ServerPairing.Tests/Protocol/ArrivingBodyTests.cs
 origin/master:Jellyfin.Plugin.ServerPairing.Tests/Wording/CeremonyWordingTests.cs
 origin/master:Jellyfin.Plugin.ServerPairing/KeyStore/KeyMaterial.cs
 origin/master:Jellyfin.Plugin.ServerPairing/Protocol/KeyOverlap.cs
 ```
 
-and none of the four calls any of them. THIS PARAGRAPH NAMED TWO FILES AND THE
-COMMAND RETURNS FOUR: the key store landed after it was written and two of its
-files name the derivation the way the other two do. `CeremonyWordingTests.cs` is
-a list of words the ceremony wording may not use, where two of these names are
+and none of the six calls any of them. THIS PARAGRAPH NAMED TWO FILES, THEN
+FOUR, AND THE COMMAND RETURNS SIX: the key store landed after it was first
+written and two of its files name the derivation, and the body reader landed
+after that and two of its test files name the encoding. `CeremonyWordingTests.cs`
+is a list of words the ceremony wording may not use, where two of these names are
 there to be kept off an operator's screen. `KeyOverlap.cs`, `KeyMaterial.cs` and
 `KeyMaterialTests.cs` name the derivation in a comment, beside the length it
-fixes. So what the command shows is a name being cited in four places rather
-than a derivation being performed in any of them. No key described here has ever
+fixes. `PeerPlaneTests.cs` and `ArrivingBodyTests.cs` name the encoding in a
+comment beside a public key member built out of bytes that are not a key, which
+is the length this document measured used as test data and nothing more. So what
+the command shows is a name being cited in six places rather than a derivation
+being performed in any of them. No key described here has ever
 been derived, held or destroyed by this plugin, and THE REASON GIVEN HERE HAS
 STOPPED BEING THE REASON: this sentence said there is still no key store, and
 there is one. What holds the claim up instead is that nothing calls the one
@@ -321,16 +327,24 @@ git grep -E 'File\.ReadAllText\(.*"crypto' origin/master -- Jellyfin.Plugin.Serv
 origin/master:Jellyfin.Plugin.ServerPairing.Tests/SecretComparisonTests.cs:        var document = File.ReadAllText(Path.Join(RepositoryRoot(), "docs", "crypto.md"));
 ```
 
-Four name it, and a grep for the name cannot tell a citation from a reading,
+Six name it, and a grep for the name cannot tell a citation from a reading,
 which is why both commands are here rather than the second alone:
 
 ```
 git grep -l "crypto.md" origin/master -- Jellyfin.Plugin.ServerPairing.Tests
+origin/master:Jellyfin.Plugin.ServerPairing.Tests/Api/PeerPlaneTests.cs
 origin/master:Jellyfin.Plugin.ServerPairing.Tests/KeyStore/KeyMaterialTests.cs
+origin/master:Jellyfin.Plugin.ServerPairing.Tests/Protocol/ArrivingBodyTests.cs
 origin/master:Jellyfin.Plugin.ServerPairing.Tests/Protocol/PairingCredentialTests.cs
 origin/master:Jellyfin.Plugin.ServerPairing.Tests/SecretComparisonTests.cs
 origin/master:Jellyfin.Plugin.ServerPairing.Tests/Wording/CeremonyWordingTests.cs
 ```
+
+THAT SENTENCE SAID FOUR AND THE TWO IT DID NOT COUNT ARE WEAKER THAN THE FOUR. The
+body reader's cases name this file for the public key length it measured, which is
+a length used as test data rather than a value either of them asserts, so neither
+adds an assertion to the four the paragraphs above count. The number moved and
+what is asserted did not.
 
 So changing the tag length or the grouping here reddens nothing. The value would
 have to be changed in the test as well, and nothing says so at the moment
