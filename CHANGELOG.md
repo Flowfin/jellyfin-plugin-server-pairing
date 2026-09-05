@@ -38,6 +38,17 @@ claim that cannot be verified belongs rather than in this file.
 
 Anything else is an ordinary line with no marker.
 
+## Unreleased
+
+- [protocol] A peer whose request is signed correctly and declares a protocol
+  version this plugin does not speak is now told so, and the answer names the
+  versions this plugin does speak. It used to be refused with the same answer
+  everything else gets, which left the operator on the other side with a
+  signature error to chase and no way to see that the two servers were on
+  different sides of an upgrade. A caller that has not proved it holds the
+  pairing's key still learns nothing, because the version is read after the
+  signature.
+
 ## 0.1.1.0
 
 Installs on every 10.11 server the manifest promises, which 0.1.0.0 did not.

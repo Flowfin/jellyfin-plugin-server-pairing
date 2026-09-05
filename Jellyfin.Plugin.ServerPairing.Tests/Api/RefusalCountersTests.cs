@@ -38,6 +38,13 @@ public class RefusalCountersTests
     private const string Timestamp = "1786000000";
     private const string NotASignature = "not-the-signature";
 
+    /// <summary>
+    /// A version no build of this plugin speaks, derived from the declared set rather than
+    /// written down, so it stays outside the range on the day the range moves.
+    /// </summary>
+    private static readonly string Unspoken =
+        (SupportedVersions.Highest + 1).ToString(CultureInfo.InvariantCulture);
+
     private static readonly DateTimeOffset At = DateTimeOffset.FromUnixTimeSeconds(1786000000);
 
     private static byte[] Key { get; } = RandomNumberGenerator.GetBytes(32);
@@ -439,6 +446,8 @@ public class RefusalCountersTests
                 PairingMessage.Hello,
                 Arriving(sign: true, carries: FreshNonce()),
                 Filling(FreshnessWindow.NoncesPerPairing)),
+        RefusalCause.VersionNotSpoken =>
+            plane.Serve(PairingMessage.Hello, Arriving(sign: true, version: Unspoken), At),
         _ => throw new ArgumentOutOfRangeException(nameof(cause)),
     };
 
@@ -497,6 +506,9 @@ public class RefusalCountersTests
     /// <param name="pairingId">The identifier it claims.</param>
     /// <param name="sign">Whether to sign it with the key the plane holds.</param>
     /// <param name="exceeded">Whether the body was over its limit.</param>
+    /// <param name="carries">The nonce it carries.</param>
+    /// <param name="stamp">The timestamp it carries.</param>
+    /// <param name="version">The version it declares.</param>
     /// <returns>The request.</returns>
     private static ArrivingRequest Arriving(
         string? target = null,
@@ -504,15 +516,21 @@ public class RefusalCountersTests
         bool sign = false,
         bool exceeded = false,
         string? carries = null,
-        string stamp = Timestamp)
+        string stamp = Timestamp,
+        string? version = null)
     {
         var path = PeerPlane.PathFor(PairingMessage.Hello);
         var body = Array.Empty<byte>();
         var carried = carries ?? Nonce;
+        var declared = version ?? Version;
 
+        // The declared version is signed as well as sent, because it is a covered field: a case
+        // about a version this server does not speak has to get past verification to reach the
+        // site it is about, and a request signed at one version and presented at another is the
+        // case one file over.
         var presented = sign
             ? RequestAuthenticator.Sign(
-                new PairingRequest(PeerPlane.Method, path, pairingId, Version, stamp, carried, body),
+                new PairingRequest(PeerPlane.Method, path, pairingId, declared, stamp, carried, body),
                 Key)
             : NotASignature;
 
@@ -520,7 +538,7 @@ public class RefusalCountersTests
             target ?? path,
             PeerPlane.Method,
             pairingId,
-            Version,
+            declared,
             stamp,
             carried,
             presented,

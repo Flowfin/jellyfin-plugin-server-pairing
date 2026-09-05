@@ -1,3 +1,5 @@
+using System.Globalization;
+
 namespace Jellyfin.Plugin.ServerPairing.Protocol;
 
 /// <summary>
@@ -42,4 +44,26 @@ public static class SupportedVersions
     /// Gets the range this build speaks, as a peer is told it in a <c>hello</c>.
     /// </summary>
     public static VersionRange Range => new VersionRange(Lowest, Highest);
+
+    /// <summary>
+    /// Whether a version, as it arrived on the wire, is one this build speaks.
+    /// </summary>
+    /// <param name="version">The value of the version field, as it arrived.</param>
+    /// <returns>True where it is a version and it is inside <see cref="Range"/>.</returns>
+    /// <remarks>
+    /// The shape is judged before the value, by the same predicate the signature's own field
+    /// check uses, so a leading zero, a sign, whitespace, an empty field and a value past the
+    /// digit limit answer false here rather than reaching a parser that would accept some of
+    /// them. That is what makes this total: it takes the string that arrived and never throws,
+    /// so a caller does not have to have checked the shape first.
+    /// <para>
+    /// It lives here rather than at the caller because this type is the one place the set is
+    /// declared, and a membership test written at a call site is a second copy of the set the
+    /// moment it names a number. Nothing here is a fourth reader of the range: the readers issue
+    /// #25's fourth condition counts are the ones outside this type.
+    /// </para>
+    /// </remarks>
+    public static bool Speaks(string? version) =>
+        FieldShape.IsUnsignedInteger(version, FieldShape.VersionDigitLimit)
+        && Range.Includes(int.Parse(version!, NumberStyles.None, CultureInfo.InvariantCulture));
 }

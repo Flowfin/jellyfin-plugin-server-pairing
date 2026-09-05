@@ -65,8 +65,8 @@ public sealed class RefusalCounters
     /// <returns>The code.</returns>
     /// <exception cref="ArgumentOutOfRangeException">The cause is not one of the defined values.</exception>
     /// <remarks>
-    /// THIS REMARK SAID EVERY CAUSE MAPS TO <see cref="RefusalCode.Refused"/>. Three do not,
-    /// and they are the three the plane reaches only after a request has verified. This method
+    /// THIS REMARK SAID EVERY CAUSE MAPS TO <see cref="RefusalCode.Refused"/>. Four do not,
+    /// and they are the four the plane reaches only after a request has verified. This method
     /// is still the one place that says which code a cause answers, and it is now load-bearing
     /// rather than a single constant: <see cref="PeerPlane.Serve"/> builds its answer by asking
     /// this rather than by naming a code beside a cause, so counting cannot drift from
@@ -83,6 +83,7 @@ public sealed class RefusalCounters
         RefusalCause.TimestampOutsideTheWindow => RefusalCode.Clock,
         RefusalCause.NonceAlreadySeen => RefusalCode.Replay,
         RefusalCause.NoRoomToRememberTheNonce => RefusalCode.Busy,
+        RefusalCause.VersionNotSpoken => RefusalCode.Version,
         _ => throw new ArgumentOutOfRangeException(nameof(cause)),
     };
 
@@ -109,6 +110,7 @@ public sealed class RefusalCounters
         RefusalCause.TimestampOutsideTheWindow => "timestamp-outside-the-window",
         RefusalCause.NonceAlreadySeen => "nonce-already-seen",
         RefusalCause.NoRoomToRememberTheNonce => "no-room-to-remember-the-nonce",
+        RefusalCause.VersionNotSpoken => "version-not-spoken",
         _ => throw new ArgumentOutOfRangeException(nameof(cause)),
     };
 

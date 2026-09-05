@@ -25,6 +25,13 @@ public class PeerPlaneTests
     private const string Timestamp = "1786000000";
 
     /// <summary>
+    /// A version no build of this plugin speaks, derived from the declared set rather than
+    /// written down, so it stays outside the range on the day the range moves.
+    /// </summary>
+    private static readonly string Unspoken =
+        (SupportedVersions.Highest + 1).ToString(CultureInfo.InvariantCulture);
+
+    /// <summary>
     /// The instant every case hands the plane. Time only matters here through the arrival
     /// limit, and no case in this file sends enough to reach one, so one instant serves them
     /// all; <c>ArrivalLimitTests</c> is where time is moved.
@@ -419,6 +426,119 @@ public class PeerPlaneTests
     }
 
     /// <summary>
+    /// A request whose signature verified and whose declared version is not one this build
+    /// speaks is refused for the version, on every message, and nothing of its body is handed
+    /// on.
+    /// </summary>
+    /// <param name="message">The message the request arrives as.</param>
+    /// <remarks>
+    /// The version is a covered field, so the request is signed at the version it declares: a
+    /// request signed at one version and presented at another is refused by verification, which
+    /// is a different case and is <c>RequestAuthenticationTests</c>'s.
+    /// <para>
+    /// The bytes are asserted through <see cref="Refusal.Body(RefusalCode)"/> because that is
+    /// what the controller writes for a code, so what a peer receives is held against the range
+    /// rather than only the enumeration member being checked.
+    /// </para>
+    /// </remarks>
+    [Theory]
+    [MemberData(nameof(EveryMessage))]
+    public void AVerifiedRequestAtAVersionThisBuildDoesNotSpeakIsRefusedForTheVersion(PairingMessage message)
+    {
+        var outcome = Plane().Serve(message, Signed(message, version: Unspoken), At);
+
+        Assert.Equal(RefusalCode.Version, outcome.Code);
+        Assert.False(outcome.BodyWasHandedOn);
+        Assert.Equal(Refusal.VersionBody(SupportedVersions.Range), Refusal.Body(outcome.Code));
+    }
+
+    /// <summary>
+    /// A caller holding no verifying key learns nothing from an unknown version, because the
+    /// version is judged after verification and never before it.
+    /// </summary>
+    /// <remarks>
+    /// This is the case the ordering exists for. The <c>version</c> code carries the range this
+    /// server speaks, which the taxonomy allows only for a caller that has proved it holds the
+    /// key or is inside a window an administrator opened, so a version judged before the
+    /// signature would hand that range to anybody who asked. The two answers are compared as
+    /// bytes rather than as codes, because bytes are what a stranger can tell apart.
+    /// </remarks>
+    [Fact]
+    public void AStrangerLearnsNothingFromAnUnknownVersionBecauseTheVersionIsJudgedAfterVerification()
+    {
+        var plane = Plane();
+
+        var atAnUnknownVersion = plane.Serve(
+            PairingMessage.Hello,
+            Signed(PairingMessage.Hello, signature: "not-the-signature", version: Unspoken),
+            At);
+
+        var atOneThisBuildSpeaks = plane.Serve(
+            PairingMessage.Hello,
+            Signed(PairingMessage.Hello, signature: "not-the-signature", carries: FreshNonce()),
+            At);
+
+        Assert.Equal(RefusalCode.Refused, atAnUnknownVersion.Code);
+        Assert.Equal(
+            Refusal.Body(atOneThisBuildSpeaks.Code),
+            Refusal.Body(atAnUnknownVersion.Code));
+    }
+
+    /// <summary>
+    /// Every version inside the declared range gets past that refusal and reaches the state the
+    /// pairing is in, so what the plane judges is membership of a range rather than equality
+    /// with one number.
+    /// </summary>
+    [Fact]
+    public void EveryVersionThisBuildSpeaksIsNotRefusedForItsVersion()
+    {
+        var plane = Plane();
+
+        for (var version = SupportedVersions.Lowest; version <= SupportedVersions.Highest; version++)
+        {
+            var outcome = plane.Serve(
+                PairingMessage.Hello,
+                Signed(
+                    PairingMessage.Hello,
+                    version: version.ToString(CultureInfo.InvariantCulture),
+                    carries: FreshNonce()),
+                At);
+
+            Assert.Equal(RefusalCode.Refused, outcome.Code);
+            Assert.True(outcome.BodyWasHandedOn);
+        }
+    }
+
+    /// <summary>
+    /// A version one below the range and one above it are both refused for the version, so the
+    /// check is not one-sided.
+    /// </summary>
+    /// <remarks>
+    /// The low side is the half a build with one version cannot otherwise show: with
+    /// <see cref="SupportedVersions.Lowest"/> and <see cref="SupportedVersions.Highest"/> equal,
+    /// a check comparing against the high end alone passes every case that only goes upwards.
+    /// </remarks>
+    [Fact]
+    public void AVersionBelowTheRangeAndOneAboveItAreBothRefusedForTheVersion()
+    {
+        var plane = Plane();
+
+        foreach (var version in new[] { SupportedVersions.Lowest - 1, SupportedVersions.Highest + 1 })
+        {
+            var outcome = plane.Serve(
+                PairingMessage.Hello,
+                Signed(
+                    PairingMessage.Hello,
+                    version: version.ToString(CultureInfo.InvariantCulture),
+                    carries: FreshNonce()),
+                At);
+
+            Assert.Equal(RefusalCode.Version, outcome.Code);
+            Assert.False(outcome.BodyWasHandedOn);
+        }
+    }
+
+    /// <summary>
     /// A message outside the defined set is a caller error rather than a refusal, on both
     /// tables this type holds. Guessing a path or a limit for it would serve a sixth message
     /// this protocol does not have.
@@ -734,14 +854,16 @@ public class PeerPlaneTests
         byte[]? body = null,
         bool exceeded = false,
         string? carries = null,
-        string stamp = Timestamp)
+        string stamp = Timestamp,
+        string? version = null)
     {
         var path = PeerPlane.PathFor(message);
         var bytes = body ?? Array.Empty<byte>();
         var carried = carries ?? Nonce;
+        var declared = version ?? Version;
 
         var id = string.Equals(drop, "id", StringComparison.Ordinal) ? null : pairingId;
-        var version = string.Equals(drop, "version", StringComparison.Ordinal) ? null : Version;
+        var sent = string.Equals(drop, "version", StringComparison.Ordinal) ? null : declared;
         var timestamp = string.Equals(drop, "timestamp", StringComparison.Ordinal) ? null : stamp;
         var nonce = string.Equals(drop, "nonce", StringComparison.Ordinal) ? null : carried;
 
@@ -756,7 +878,7 @@ public class PeerPlaneTests
                 PeerPlane.Method,
                 path,
                 pairingId ?? string.Empty,
-                Version,
+                declared,
                 stamp,
                 carried,
                 bytes);
@@ -768,7 +890,7 @@ public class PeerPlaneTests
             target is { Length: 0 } ? path : target,
             method,
             id,
-            version,
+            sent,
             timestamp,
             nonce,
             presented,

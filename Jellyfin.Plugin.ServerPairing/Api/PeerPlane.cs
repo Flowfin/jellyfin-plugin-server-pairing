@@ -145,6 +145,21 @@ public sealed class PeerPlane
     /// every site answers the same code and a count taken from the answer would be one number.
     /// </para>
     /// <para>
+    /// THE DECLARED VERSION IS JUDGED IN THE SAME PLACE AND FOR THE SAME REASON. A request whose
+    /// signature verified and whose <c>X-Pairing-Version</c> is outside
+    /// <see cref="Protocol.SupportedVersions.Range"/> is answered
+    /// <see cref="RefusalCode.Version"/>, and that answer carries the range this build speaks,
+    /// which is the one exception the taxonomy makes to the refusal shape. The audience is why
+    /// it sits after verification: that code may be seen by a caller holding a key or one inside
+    /// an enrolment window an administrator opened, and by nobody else, so judging the version
+    /// before the signature would hand the range to a stranger.
+    /// <para>
+    /// The other caller the taxonomy allows is a <c>hello</c> whose range does not overlap this
+    /// server's, and no site answers that one: the two ranges are body members and nothing in
+    /// this plugin turns a body into fields. Issue #25 carries that half.
+    /// </para>
+    /// </para>
+    /// <para>
     /// FRESHNESS IS JUDGED AFTER VERIFICATION AND THAT POSITION IS THE ORACLE ARGUMENT RATHER
     /// THAN AN ORDERING CONVENIENCE. <c>docs/threat-model.md</c> keeps one distinction on this
     /// plane deliberately: a refusal caused by clock skew says clock rather than reading as a
@@ -242,8 +257,20 @@ public sealed class PeerPlane
         }
 
         // Only now, and never earlier. Everything below this line answers a caller that has
-        // proved it holds the pairing's key, which is what lets these three refusals be told
-        // apart from one another at all.
+        // proved it holds the pairing's key, which is what lets these refusals be told apart
+        // from one another at all.
+        //
+        // The version comes first of them, and before freshness rather than after it. A version
+        // this server does not speak says the rest of the request is to be read against a
+        // specification this build does not have, so there is nothing further about it worth
+        // judging; and the nonce store is a bounded allowance per pairing, so remembering the
+        // nonce of a message this server cannot read would spend that room on a request it is
+        // going to refuse anyway.
+        if (!SupportedVersions.Speaks(request.Version))
+        {
+            return Refuse(RefusalCause.VersionNotSpoken);
+        }
+
         var freshness = _freshness.Judge(request.PairingId, request.Nonce, request.Timestamp, at);
 
         if (freshness != FreshnessOutcome.Fresh)

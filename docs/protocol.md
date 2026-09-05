@@ -862,7 +862,7 @@ is where that was decided.
 | --- | --- | --- | --- |
 | `refused` | An unknown pairing identifier, a signature that does not verify, a body over its limit, an arrival past the limit for the identifier it claims, a malformed header value, a request in a state that does not accept it from an unverified caller, a revoked pairing, a request when no pairing exists, a second `hello` with a different key, a fault on this side while serving the request | anyone | No, and deliberately so. Every one of those causes produces the same bytes |
 | `clock` | The signature verified and the timestamp is outside the freshness window | only a caller holding a verifying key | Yes |
-| `version` | No version in common | a caller inside an open enrolment window, or a caller holding a verifying key | Yes, to those callers only |
+| `version` | No version in common, which is a `hello` whose range does not overlap this server's, or a request whose signature verified declaring a version this server does not speak | a caller inside an open enrolment window, or a caller holding a verifying key | Yes, to those callers only |
 | `state` | The signature verified and the message is not accepted in this state | only a caller holding a verifying key | Yes |
 | `malformed` | The signature verified and the body does not parse, or a field is outside its limit | only a caller holding a verifying key | Yes |
 | `replay` | The signature verified, the timestamp is inside the window, and this nonce has already been seen for this pairing | only a caller holding a verifying key | Yes |
@@ -1017,6 +1017,39 @@ A version this server does not know is not a version it guesses at. There is no
 best-effort parse of an unknown version and no forward compatibility rule beyond
 the range, because a message a server does not understand is one it cannot make a
 security decision about.
+
+WHERE THAT IS JUDGED ON AN ARRIVING REQUEST IS AFTER ITS SIGNATURE HAS VERIFIED,
+and this paragraph said no route judged it at all. The plane reads the declared
+version against the set this build speaks and answers `version`, with the range,
+to a caller that has proved it holds the pairing's key. A caller that has not is
+answered `refused` and learns nothing, which is the audience the taxonomy fixes
+for that code, so the position of the check is the property rather than a
+convenience: judging the version first would hand the range to anybody who asked.
+
+```
+git grep -ln 'SupportedVersions.Speaks' origin/master -- Jellyfin.Plugin.ServerPairing/
+origin/master:Jellyfin.Plugin.ServerPairing/Api/PeerPlane.cs
+```
+
+One site asks it, which is the plane, and the set it asks about is declared in one
+place:
+
+```
+git grep -n 'public static bool Speaks' origin/master -- Jellyfin.Plugin.ServerPairing/Protocol/SupportedVersions.cs
+origin/master:Jellyfin.Plugin.ServerPairing/Protocol/SupportedVersions.cs:66:    public static bool Speaks(string? version) =>
+```
+
+THAT IS NOT THE `state` RULE ABOVE, AND THE TWO ARE WORTH KEEPING APART. A version
+this server does not speak at all is `version`. A version it does speak that is
+not the one this pairing settled on is `state`, and that one needs the selected
+version to have been remembered, which is issue #316. Nothing remembers one, so
+only the first of the two is answered today.
+
+The other caller the taxonomy lets see `version` is a `hello` whose range does not
+overlap this server's, and no site answers that one. The two ranges are body
+members and nothing in this plugin turns a body into fields, so a peer outside the
+overlap is refused for its signature or for the state rather than for the version.
+That is the half of issue #25 that stays open.
 
 ## What is not decided here
 
