@@ -40,6 +40,30 @@ Anything else is an ordinary line with no marker.
 
 ## Unreleased
 
+- [protocol] The body of a request is now read as the members the specification
+  names, and a peer that sends anything else is told its body was malformed
+  instead of being refused with the same answer everything else gets. A member
+  the specification does not name, a missing member, a member sent twice, a
+  member sent as `null`, a value outside its limit, and a body at all on a
+  message that carries none are each refused rather than ignored or filled in
+  with a default. A caller that has not proved it holds the pairing's key still
+  learns nothing, because the body is read after the signature. Two bodies are
+  not read: `rotate`, which has no reader yet, and `exchange`, whose contents
+  belong to the plugin on the other end of it.
+
+- [protocol] The JSON type of every named body member is now written down in the
+  specification: the two version numbers are numbers and everything else is a
+  string. Both spellings were previously defensible from the same document, and a
+  server that chose the other one would have interoperated with this plugin up to
+  the first `hello` and no further.
+
+- [protocol] Two servers whose supported protocol versions do not overlap now say
+  so to each other, and the answer names the range each of them speaks. Before
+  this, a peer whose versions had moved out from under an existing pairing was
+  refused with the same answer as a bad signature, so the operator on either side
+  had nothing to act on. A server that has never paired is unaffected: it is still
+  refused for its signature, because nothing yet authenticates a first `hello`.
+
 - [protocol] A peer whose request is signed correctly and declares a protocol
   version this plugin does not speak is now told so, and the answer names the
   versions this plugin does speak. It used to be refused with the same answer
