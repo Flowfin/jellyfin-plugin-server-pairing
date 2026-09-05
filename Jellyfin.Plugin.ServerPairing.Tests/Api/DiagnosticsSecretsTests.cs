@@ -28,7 +28,7 @@ namespace Jellyfin.Plugin.ServerPairing.Tests.Api;
 /// </para>
 /// <para>
 /// WHAT THIS IS NOT. #51's second condition asks for the FULL LIFECYCLE, and there is none:
-/// nothing derives a key pair, which is #18, and no route ends a pairing, which is #24, so the
+/// nothing derives a key pair, which is #19, and no route ends a pairing, which is #24, so the
 /// harness seeds the key an enrolment would have produced. What runs here is a signed exchange
 /// and a set of refusals, not an enrolment, a rotation and a revocation.
 /// </para>

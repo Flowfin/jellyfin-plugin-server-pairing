@@ -6,8 +6,9 @@ namespace Jellyfin.Plugin.ServerPairing.Protocol;
 /// <remarks>
 /// The transition table gives hello two different answers in the half-built states, and the
 /// thing that separates them is this comparison. It arrives as an input rather than being made
-/// here: comparing two keys is enrolment's work, in issues #18 and #19, and the state machine
-/// is about what each answer means.
+/// here: comparing two keys is the ceremony's work, in issue #19, and the state machine is
+/// about what each answer means. THIS NAMED #18 BESIDE IT, and #18 is the window: it decides
+/// when a hello may arrive at all, not whether the key on one is the recorded one.
 /// </remarks>
 public enum OfferedKey
 {

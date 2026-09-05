@@ -235,9 +235,9 @@ writes is under the reading rather than counted here.
     origin/master:Jellyfin.Plugin.ServerPairing/Mapping/HeldAboutUser.cs:54:    public HeldAboutUser(IUserMappingStore mappings, ILogger<HeldAboutUser> log)
     origin/master:Jellyfin.Plugin.ServerPairing/Mapping/UserMappings.cs:38:    private readonly ILogger<UserMappings> _log;
     origin/master:Jellyfin.Plugin.ServerPairing/Mapping/UserMappings.cs:54:    public UserMappings(IUserMappingStore mappings, PairingStateMachine pairings, ILogger<UserMappings> log)
-    origin/master:Jellyfin.Plugin.ServerPairing/PluginServiceRegistrator.cs:126:                services.GetRequiredService<ILogger<FilePairingKeyStore>>()));
-    origin/master:Jellyfin.Plugin.ServerPairing/PluginServiceRegistrator.cs:216:            services.GetRequiredService<ILogger<HeldAboutUser>>()));
-    origin/master:Jellyfin.Plugin.ServerPairing/PluginServiceRegistrator.cs:235:            services.GetRequiredService<ILogger<UserMappings>>()));
+    origin/master:Jellyfin.Plugin.ServerPairing/PluginServiceRegistrator.cs:130:                services.GetRequiredService<ILogger<FilePairingKeyStore>>()));
+    origin/master:Jellyfin.Plugin.ServerPairing/PluginServiceRegistrator.cs:220:            services.GetRequiredService<ILogger<HeldAboutUser>>()));
+    origin/master:Jellyfin.Plugin.ServerPairing/PluginServiceRegistrator.cs:239:            services.GetRequiredService<ILogger<UserMappings>>()));
 
 THIS BLOCK WENT STALE TWICE AND NO RUN ON THIS REPOSITORY SAW EITHER TIME. It
 pasted two types, then four, then five, and the command returns 7 that hold a logger; the registration line

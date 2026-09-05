@@ -39,8 +39,9 @@ namespace Jellyfin.Plugin.ServerPairing.Tests.Harness;
 /// WHAT IT DOES NOT DO IS ENROL. <see cref="PairBothSides"/> puts a key into both stores
 /// directly. It derives nothing, no key pair is generated, no fingerprint is computed and no
 /// operator confirms anything, so it is the state an enrolment would leave behind rather than
-/// an enrolment. The enrolment is #18 and the ceremony is #19; until they land, a lifecycle
-/// driven through here starts at a key nobody agreed on. Revocation is #24, and there is no
+/// an enrolment. What it starts from is a key nobody agreed on, and the issue that would agree
+/// one is the ceremony in #19. THIS SAID "THE ENROLMENT IS #18 AND THE CEREMONY IS #19": #18 is
+/// the window and it is in the tree, so naming it here read as two absences where there is one. Revocation is #24, and there is no
 /// route that ends a pairing, so the full run from enrolment through revocation that this
 /// issue's first condition asks for cannot be written yet and is not written here.
 /// </para>
@@ -110,7 +111,8 @@ internal sealed class PairedInstances : IDisposable
     /// <remarks>
     /// THIS IS NOT AN ENROLMENT AND MUST NOT BE READ AS ONE. It writes the state an enrolment
     /// would leave behind, so that everything downstream of a key existing can be exercised
-    /// before #18 exists. What it skips is every part that carries the trust: the key pair, the
+    /// before the ceremony in #19 exists. What it skips is every part that carries the trust:
+    /// the key pair, the
     /// exchange, the fingerprint and the two confirmations. A case built on this proves what
     /// happens once two servers hold a shared key and proves nothing about how they came to.
     /// </remarks>

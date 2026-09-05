@@ -35,7 +35,7 @@ worth asserting on. That harness is #29 and it is in the tree:
 
 ```
 git grep -n 'internal sealed class PairedInstances' origin/master -- Jellyfin.Plugin.ServerPairing.Tests/
-origin/master:Jellyfin.Plugin.ServerPairing.Tests/Harness/PairedInstances.cs:48:internal sealed class PairedInstances : IDisposable
+origin/master:Jellyfin.Plugin.ServerPairing.Tests/Harness/PairedInstances.cs:49:internal sealed class PairedInstances : IDisposable
 ```
 
 WHAT IT RUNS TODAY IS NOT THAT SENTENCE, and the paragraph above states the
@@ -181,7 +181,7 @@ receiving side's own controller reads. THERE IS STILL NOTHING HERE THAT RUNS A
 FULL ENROLMENT, A ROTATION AND A REVOCATION IN ONE TEST PROCESS, which is what
 #29's first condition asks for, and that sentence is unchanged in what it
 denies. The reason is not the harness: nothing in this plugin derives a key
-pair, so there is no enrolment to drive, which is #18, and no route ends a
+pair, so there is no enrolment to drive, which is #19, and no route ends a
 pairing, which is #24.
 
 ```

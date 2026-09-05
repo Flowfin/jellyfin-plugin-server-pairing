@@ -41,7 +41,7 @@ now, which is issue #287:
 
 ```
 git grep -n 'new StoreBackedKeys' origin/master -- Jellyfin.Plugin.ServerPairing/PluginServiceRegistrator.cs
-origin/master:Jellyfin.Plugin.ServerPairing/PluginServiceRegistrator.cs:68:            new StoreBackedKeys(services.GetRequiredService<IPairingKeyStore>()));
+origin/master:Jellyfin.Plugin.ServerPairing/PluginServiceRegistrator.cs:72:            new StoreBackedKeys(services.GetRequiredService<IPairingKeyStore>()));
 ```
 
 What makes the sentence still right is one step further back. No route puts a key
@@ -53,9 +53,26 @@ git grep -lni 'ECDiffieHellman' origin/master -- Jellyfin.Plugin.ServerPairing ;
 exit=1
 ```
 
-which is issue #18. So the six paths are served and every one of them refuses, for
+which is issue #19. So the six paths are served and every one of them refuses, for
 want of a key rather than for want of a lookup, and nothing has ever
 been signed by this plugin against a key it holds or accepted from a peer.
+
+THIS SENTENCE NAMED ISSUE #18 AND THAT NUMBER IS THE ONE PART OF AN ENROLMENT
+THAT HAS LANDED. An enrolment here is three things: the window an administrator
+opens, the join that writes a record when it opens, and the ceremony that derives
+a key pair, exchanges public keys and puts the fingerprint in front of two
+operators. The first two are in the tree.
+
+```
+git grep -ln 'class EnrolmentWindow\|class Enrolment' origin/master -- Jellyfin.Plugin.ServerPairing/Protocol/
+origin/master:Jellyfin.Plugin.ServerPairing/Protocol/Enrolment.cs
+origin/master:Jellyfin.Plugin.ServerPairing/Protocol/EnrolmentWindow.cs
+```
+
+The third is not, which the reading above says, and it is issue #19. Every other
+place in this repository that gave #18 as the reason a server holds no key names
+#19 now, for the same reason: a reader who follows a pointer to work that is
+built concludes the absence is gone.
 Everything below about what happens after a signature verifies is therefore still
 a design position rather than a measured property of something that runs, and the
 sentences about the state machine and the canonical form are the specification
@@ -717,7 +734,7 @@ to hold it under. The wire already says as much about the request that arrives i
 that state:
 
     git grep -n "^them. Its .X-Pairing-Id. is 32" origin/master -- docs/protocol.md
-    origin/master:docs/protocol.md:419:them. Its `X-Pairing-Id` is 32 `0` characters, which is what line 5 of its
+    origin/master:docs/protocol.md:436:them. Its `X-Pairing-Id` is 32 `0` characters, which is what line 5 of its
 
 **`OFFERED` IS WRITTEN, UNDER A PROVISIONAL IDENTIFIER.** Opening a window mints
 one and writes the record under it. The record moves to the derived identifier at
@@ -1051,8 +1068,8 @@ What is NOT claimed by that, and is the half to read carefully: no request has
 ever reached this on a running server. Nothing puts a key into a key store, so
 nothing verifies there, and a request that does not verify is refused before its
 timestamp is considered. What is proved is proved against the types and against
-the two-instance harness, and what a server does is unchanged until an enrolment
-exists, which is issue #18.
+the two-instance harness, and what a server does is unchanged until a ceremony
+derives a key pair, which is issue #19.
 
 THIS LIST CARRIED WHAT IDENTIFIER HOLDS A PAIRING IN `Offered` AND IT IS DECIDED.
 A record is written, under a provisional identifier that no peer can name and that

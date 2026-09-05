@@ -15,9 +15,11 @@ namespace Jellyfin.Plugin.ServerPairing.Protocol;
 /// <para>
 /// It is registered in <see cref="PluginServiceRegistrator"/> against the source that reads
 /// this server's key store, so a pairing that has a key can be verified. What has never put a
-/// key into that store is the enrolment, which is issue #18, so on a server today the store is
+/// key into that store is the enrolment, which is issue #19, so on a server today the store is
 /// empty and every arriving request is refused for want of a key rather than for want of a
-/// route.
+/// route. THAT NUMBER WAS #18 AND #18 IS THE WINDOW, WHICH IS IN THIS TREE: what has no producer
+/// is the key pair a ceremony derives, and <c>docs/protocol.md</c> carries the reading that
+/// separates the two.
 /// </para>
 /// </remarks>
 public sealed class RequestAuthenticator
