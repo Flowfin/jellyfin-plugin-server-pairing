@@ -108,12 +108,12 @@ public class PeerControlledStringsOnThePageTests
         Assert.Contains(PeerControlledField, page, StringComparison.Ordinal);
         Assert.Contains("cell(row, " + PeerControlledField + ")", page, StringComparison.Ordinal);
 
-        foreach (var helper in RenderingHelpers)
-        {
-            var body = FunctionBody(page, helper);
-
-            Assert.Contains(".textContent = ", body, StringComparison.Ordinal);
-        }
+        // Every helper rather than the first that fails, and the index of the one that did.
+        // A loop here stopped at the first, so a page where one helper assigned text and the
+        // other wrote markup reported the same failure as a page where neither did.
+        Assert.All(
+            RenderingHelpers,
+            helper => Assert.Contains(".textContent = ", FunctionBody(page, helper), StringComparison.Ordinal));
     }
 
     /// <summary>
