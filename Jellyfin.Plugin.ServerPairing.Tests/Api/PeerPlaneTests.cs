@@ -689,17 +689,19 @@ public class PeerPlaneTests
             HelloOffering(SupportedVersions.Highest + 1, SupportedVersions.Highest + 2),
         };
 
-        foreach (var body in bodies)
-        {
-            var outcome = plane.Serve(
-                PairingMessage.Hello,
-                Signed(PairingMessage.Hello, signature: "not-the-signature", body: body, carries: FreshNonce()),
-                At);
+        Assert.All(
+            bodies,
+            body =>
+            {
+                var outcome = plane.Serve(
+                    PairingMessage.Hello,
+                    Signed(PairingMessage.Hello, signature: "not-the-signature", body: body, carries: FreshNonce()),
+                    At);
 
-            Assert.Equal(RefusalCode.Refused, outcome.Code);
-            Assert.Equal("{\"code\":\"refused\"}", Refusal.Body(outcome.Code));
-            Assert.False(outcome.BodyWasHandedOn);
-        }
+                Assert.Equal(RefusalCode.Refused, outcome.Code);
+                Assert.Equal("{\"code\":\"refused\"}", Refusal.Body(outcome.Code));
+                Assert.False(outcome.BodyWasHandedOn);
+            });
     }
 
     /// <summary>

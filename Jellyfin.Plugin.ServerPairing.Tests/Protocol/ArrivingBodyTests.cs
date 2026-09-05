@@ -319,14 +319,16 @@ public class ArrivingBodyTests
     [MemberData(nameof(Unread))]
     public void ABodyNoReaderJudgesIsNeitherReadNorRefused(PairingMessage message)
     {
-        foreach (var written in new[] { string.Empty, "{}", "not json at all", "{\"anything\":1}" })
-        {
-            var read = ArrivingBody.Read(message, Bytes(written));
+        Assert.All(
+            new[] { string.Empty, "{}", "not json at all", "{\"anything\":1}" },
+            written =>
+            {
+                var read = ArrivingBody.Read(message, Bytes(written));
 
-            Assert.Equal(BodyOutcome.NotReadHere, read.Outcome);
-            Assert.Null(read.Hello);
-            Assert.Null(read.Confirm);
-        }
+                Assert.Equal(BodyOutcome.NotReadHere, read.Outcome);
+                Assert.Null(read.Hello);
+                Assert.Null(read.Confirm);
+            });
     }
 
     /// <summary>
