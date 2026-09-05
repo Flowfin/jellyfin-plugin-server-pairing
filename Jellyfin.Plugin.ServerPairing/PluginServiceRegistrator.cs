@@ -62,8 +62,12 @@ public class PluginServiceRegistrator : IPluginServiceRegistrator
         //
         // The key source reads the store registered below, so a pairing that has a key can be
         // verified. What has never put a key into that store is the enrolment, which is issue
-        // #18: a server's store is empty until one runs, and an empty store refuses everything
+        // #19: a server's store is empty until one runs, and an empty store refuses everything
         // for want of a key rather than for want of a lookup.
+        //
+        // THAT NUMBER WAS #18, WHICH IS THE WINDOW AND IS REGISTERED IN THIS SAME METHOD. What
+        // has no producer is the key pair a ceremony derives; docs/protocol.md carries the
+        // reading that separates the two.
         serviceCollection.AddSingleton<IPairingKeySource>(services =>
             new StoreBackedKeys(services.GetRequiredService<IPairingKeyStore>()));
         serviceCollection.AddSingleton(services => new RequestAuthenticator(services.GetRequiredService<IPairingKeySource>()));

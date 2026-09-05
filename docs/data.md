@@ -223,7 +223,7 @@ THE KEY SOURCE THE PLANE IS GIVEN HOLDS NO KEYS. The source reads the key store
 now, which is issue #287:
 
     git grep -n 'new StoreBackedKeys' origin/master -- Jellyfin.Plugin.ServerPairing/PluginServiceRegistrator.cs
-    origin/master:Jellyfin.Plugin.ServerPairing/PluginServiceRegistrator.cs:68:            new StoreBackedKeys(services.GetRequiredService<IPairingKeyStore>()));
+    origin/master:Jellyfin.Plugin.ServerPairing/PluginServiceRegistrator.cs:72:            new StoreBackedKeys(services.GetRequiredService<IPairingKeyStore>()));
 
 What no route does is put a key in that store. There is no enrolment, so nothing
 generates a long-term key pair for one:
@@ -231,8 +231,9 @@ generates a long-term key pair for one:
     git grep -lni 'ECDiffieHellman' origin/master -- Jellyfin.Plugin.ServerPairing ; echo "exit=$?"
     exit=1
 
-which is issue #18. A server's store is therefore empty, and every arriving request
-is refused for want of a key rather than for want of a lookup. So no window is
+which is issue #19, the ceremony rather than the window that has landed. A
+server's store is therefore empty, and every arriving request is refused for want
+of a key rather than for want of a lookup. So no window is
 consulted, no credential is checked and no revocation is applied on any path a
 request takes. The reading of the transition table above them is a
 reading of a specification for the same reason, and the types named here are

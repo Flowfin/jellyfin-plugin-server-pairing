@@ -184,8 +184,10 @@ public sealed class PeerPlane
     /// reader of this paragraph could previously not make. The key store is read on this path,
     /// so a request signed under a pairing's key reaches the second field of
     /// <see cref="PeerPlaneOutcome"/> as verified and is still refused by the row above. What
-    /// no route puts a key into that store is the enrolment, which is issue #18, so on a server
-    /// today nothing verifies for want of a key rather than for want of a lookup.
+    /// no route puts a key into that store is the enrolment, which is issue #19, so on a server
+    /// today nothing verifies for want of a key rather than for want of a lookup. THAT NUMBER WAS
+    /// #18 AND #18 IS THE WINDOW, WHICH IS IN THIS TREE: what has no producer is the key pair a
+    /// ceremony derives, and <c>docs/protocol.md</c> carries the reading that separates the two.
     /// </para>
     /// </para>
     /// </remarks>

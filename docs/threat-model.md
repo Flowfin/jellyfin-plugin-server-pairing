@@ -117,7 +117,7 @@ which is issue #287:
 
 ```
 git grep -n 'new StoreBackedKeys' origin/master -- Jellyfin.Plugin.ServerPairing/PluginServiceRegistrator.cs
-origin/master:Jellyfin.Plugin.ServerPairing/PluginServiceRegistrator.cs:68:            new StoreBackedKeys(services.GetRequiredService<IPairingKeyStore>()));
+origin/master:Jellyfin.Plugin.ServerPairing/PluginServiceRegistrator.cs:72:            new StoreBackedKeys(services.GetRequiredService<IPairingKeyStore>()));
 ```
 
 What holds instead is that the store an adversary would have to be in is empty on
@@ -129,7 +129,8 @@ git grep -lni 'ECDiffieHellman' origin/master -- Jellyfin.Plugin.ServerPairing ;
 exit=1
 ```
 
-which is issue #18. So no adversary described below is currently refused by anything
+which is issue #19, the ceremony rather than the window that has landed. So no
+adversary described below is currently refused by anything
 that reads what they sent: nothing an adversary sends reaches a decision beyond that
 refusal.
 What landed is the
@@ -393,7 +394,7 @@ the second is an ordering inside one method rather than a rule somebody has to
 remember at each call site:
 
     git grep -n "public VerificationOutcome VerifyThenRead" origin/master -- Jellyfin.Plugin.ServerPairing/Protocol/RequestAuthenticator.cs
-    origin/master:Jellyfin.Plugin.ServerPairing/Protocol/RequestAuthenticator.cs:159:    public VerificationOutcome VerifyThenRead<T>(
+    origin/master:Jellyfin.Plugin.ServerPairing/Protocol/RequestAuthenticator.cs:161:    public VerificationOutcome VerifyThenRead<T>(
 
 Two tests hold it, and the pair is what makes either worth anything. One counts
 the reader's calls at zero on a request that fails, the other counts them at one
@@ -839,7 +840,7 @@ server's key store, which is issue #287:
 
 ```
 git grep -n 'new StoreBackedKeys' origin/master -- Jellyfin.Plugin.ServerPairing/PluginServiceRegistrator.cs
-origin/master:Jellyfin.Plugin.ServerPairing/PluginServiceRegistrator.cs:68:            new StoreBackedKeys(services.GetRequiredService<IPairingKeyStore>()));
+origin/master:Jellyfin.Plugin.ServerPairing/PluginServiceRegistrator.cs:72:            new StoreBackedKeys(services.GetRequiredService<IPairingKeyStore>()));
 ```
 
 **THE REACH THAT BUYS AN ADVERSARY IS A LOOKUP AND NOT A KEY**, and the two are
@@ -853,7 +854,8 @@ git grep -lni 'ECDiffieHellman' origin/master -- Jellyfin.Plugin.ServerPairing ;
 exit=1
 ```
 
-That is issue #18. So nothing an outside caller sends reaches the state machine, the
+That is issue #19, the ceremony rather than the window that has landed. So nothing
+an outside caller sends reaches the state machine, the
 freshness window or the key overlap, what it reaches in the key store is an empty
 answer, and what stands behind every one of the
 six today is still a caller the test project stands in for. The model is written

@@ -194,7 +194,7 @@ public sealed class FilePairingRecordStoreTests : IDisposable
         var expired = ProvisionalPairingId.Mint();
 
         // Seeded through the store the machine is given, because there is no enrolment to drive
-        // either pairing into these states: that is issue #18 and it is why the seam is here.
+        // either pairing into these states: that is issue #19 and it is why the seam is here.
         var seed = new FilePairingRecordStore(file);
 
         seed.Write(new PairingRecord(expired, PairingState.Pending, PairingState.Offered, "Hello", Peer, _at, Address));

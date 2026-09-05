@@ -26,7 +26,7 @@ namespace Jellyfin.Plugin.ServerPairing.Tests.Harness;
 /// </para>
 /// <para>
 /// WHAT NONE OF THIS PROVES. No pairing here was enrolled: the key is put into both stores by
-/// the harness, which is #18's work skipped rather than done. Nothing is rotated and nothing is
+/// the harness, which is #19's work skipped rather than done. Nothing is rotated and nothing is
 /// revoked, so the run from enrolment through revocation that #29's first condition asks for is
 /// not among these cases.
 /// </para>
