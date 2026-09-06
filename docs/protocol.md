@@ -492,11 +492,17 @@ response body. Every later message carries the real one.
 A `hello` is therefore matched to an enrolment window by the peer address the
 local administrator entered, and by nothing else.
 
-**Nothing authenticates a `hello`.** It carries no `X-Pairing-Signature`, no
-canonical form is built for one, and a `hello` carrying that header is refused
-rather than verified, by the same rule that refuses a body member this document
-does not name: a credential nothing reads is a credential in name only, and
-leaving it accepted and ignored is how an undocumented extension starts.
+**Nothing authenticates a `hello`.** The request carries no `X-Pairing-Signature`,
+no canonical form is built for one, and a `hello` request carrying that header is
+refused rather than verified, by the same rule that refuses a body member this
+document does not name: a credential nothing reads is a credential in name only,
+and leaving it accepted and ignored is how an undocumented extension starts.
+
+That is the request and not the answer to it. A `hello` RESPONSE is signed like
+every other response, because the receiver holds both public keys by the time it
+answers and can derive the key that signs one, so the first signature in a pairing
+is the responder's rather than the initiator's. Which value line 3 of its
+canonical form holds is issue #369, and this section settles the request alone.
 
 THIS PARAGRAPH SAID A `hello` WAS SIGNED WITH THE PRIVATE HALF OF THE KEY IT
 OFFERS, OVER THE SAME CANONICAL FORM. Nothing in [`crypto.md`](crypto.md) could

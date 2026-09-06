@@ -40,8 +40,9 @@ Anything else is an ordinary line with no marker.
 
 ## Unreleased
 
-- [protocol] A `hello` carries no signature, and a `hello` that carries one is
-  refused. The specification said a `hello` was signed with the private half of
+- [protocol] A `hello` request carries no signature, and one that carries a
+  signature header is refused. The response to it is signed as every other
+  response is. The specification said a `hello` was signed with the private half of
   the key it offers, and no primitive that could produce such a signature was ever
   pinned, so the first message of every pairing rested on a construction neither
   document chose. What admits a `hello` is an enrolment window an operator opened,
