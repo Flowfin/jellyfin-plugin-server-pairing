@@ -21,22 +21,27 @@ git grep -lE "HKDF|ECDiffieHellman|SubjectPublicKeyInfo" origin/master -- Jellyf
 origin/master:Jellyfin.Plugin.ServerPairing.Tests/Api/PeerPlaneTests.cs
 origin/master:Jellyfin.Plugin.ServerPairing.Tests/KeyStore/KeyMaterialTests.cs
 origin/master:Jellyfin.Plugin.ServerPairing.Tests/Protocol/ArrivingBodyTests.cs
+origin/master:Jellyfin.Plugin.ServerPairing.Tests/Protocol/HelloAuthenticationTests.cs
 origin/master:Jellyfin.Plugin.ServerPairing.Tests/Wording/CeremonyWordingTests.cs
 origin/master:Jellyfin.Plugin.ServerPairing/KeyStore/KeyMaterial.cs
 origin/master:Jellyfin.Plugin.ServerPairing/Protocol/KeyOverlap.cs
 ```
 
-and none of the six calls any of them. THIS PARAGRAPH NAMED TWO FILES, THEN
-FOUR, AND THE COMMAND RETURNS SIX: the key store landed after it was first
-written and two of its files name the derivation, and the body reader landed
-after that and two of its test files name the encoding. `CeremonyWordingTests.cs`
+and none of the seven calls any of them. THIS PARAGRAPH NAMED TWO FILES, THEN
+FOUR, THEN SIX, AND THE COMMAND RETURNS SEVEN: the key store landed after it was
+first written and two of its files name the derivation, the body reader landed
+after that and two of its test files name the encoding, and the `hello` answer
+landed after that. `HelloAuthenticationTests.cs` names the key pair's type in a
+fixture line the guard there has to leave alone, which is the near miss for the
+signature primitive it refuses, so it is a name held as test data and nothing
+more. `CeremonyWordingTests.cs`
 is a list of words the ceremony wording may not use, where two of these names are
 there to be kept off an operator's screen. `KeyOverlap.cs`, `KeyMaterial.cs` and
 `KeyMaterialTests.cs` name the derivation in a comment, beside the length it
 fixes. `PeerPlaneTests.cs` and `ArrivingBodyTests.cs` name the encoding in a
 comment beside a public key member built out of bytes that are not a key, which
 is the length this document measured used as test data and nothing more. So what
-the command shows is a name being cited in six places rather than a derivation
+the command shows is a name being cited in seven places rather than a derivation
 being performed in any of them. No key described here has ever
 been derived, held or destroyed by this plugin, and THE REASON GIVEN HERE HAS
 STOPPED BEING THE REASON: this sentence said there is still no key store, and
@@ -210,6 +215,54 @@ The body is covered by its SHA-256 digest inside those lines rather than being
 fed to the MAC directly, so the authenticated material has a fixed length
 whatever the body is.
 
+## What authenticates a `hello`
+
+Nothing authenticates a `hello`. It carries no signature, this document pins no
+primitive that could produce one, and none is owed.
+
+THIS DOCUMENT PINNED NO ANSWER AT ALL UNTIL NOW, AND
+[`protocol.md`](protocol.md) PINNED ONE IT COULD NOT SUPPLY. That document said a
+`hello` is signed with the private half of the key it offers. The long-term key
+pair above is an `ECDiffieHellman` key and produces no signature, and the one
+authentication primitive here is HMAC-SHA-256 over a key derived from an
+agreement, which neither side can compute while a `hello` is in flight: the
+receiver holds no peer public key yet, so there is nothing to derive from. The
+first message of every pairing therefore rested on a construction nobody had
+chosen. Issue #364 is where that was found and this section is the answer.
+
+WHY NO PRIMITIVE IS ADDED RATHER THAN ONE BEING CHOSEN. A signature on a `hello`
+can only be made with a key the receiver has no prior knowledge of, so it proves
+that the sender holds the key in the message and nothing about who the sender is.
+To prove more, the signing key would have to be one the two operators compare,
+which puts it into the fingerprint - and then the fingerprint covers two keys and
+the ceremony grows in order to buy a proof the ceremony already gives. A signing
+key left outside the fingerprint is a key nobody ever checks, and a signature made
+with it is a ceremony of its own rather than evidence.
+
+What it would cost is also more than a call. `ECDsa` on the same curve is in the
+base class library, and using the long-term key pair for it means taking a private
+scalar out of one algorithm and into another - a construction this document would
+have to argue for, and one key serving two purposes, which is the thing the
+context labels above exist to prevent. A second key pair is the alternative, and
+it is the paragraph before this one.
+
+What carries the weight instead is three things, none of them a primitive, and
+they are written out once in [`protocol.md`](protocol.md) under the `hello`
+message rather than twice: the enrolment window admits the message at all, the
+comparison the two operators perform turns the offered key into an identity, and
+the first message after `hello` proves possession because it is signed with a key
+derived from an agreement only the holder of the private half can compute. Key
+confirmation rather than a proof of possession up front.
+
+WHAT IT COSTS. A `hello` is unauthenticated, so anyone who can reach the endpoint
+while an enrolment window is open can put a public key of their own choosing in
+front of an operator, and this plugin will show its fingerprint faithfully.
+Nothing in the cryptography refuses that. The operator comparison is the whole of
+what stands between it and a pairing, which is the same thing this document says
+below about the fingerprint - the comparison being performed at all is the one
+mechanism in this design that is a person - and a signed `hello` would not have
+improved that sentence.
+
 ## The comparison used on anything secret
 
 `CryptographicOperations.FixedTimeEquals`, everywhere, on every value where being
@@ -280,6 +333,9 @@ implemented in this repository. Every call named above is one the base class
 library already ships, and a change that adds a cryptographic package reference is
 a change against this document.
 
+No signature. Nothing this plugin produces is signed with an asymmetric key, and
+the `hello` that used to be is the section above.
+
 No password-authenticated key exchange. It would give a short transcribed code the
 resistance to offline attack that a long one has, and there is none in the base
 class library, so it means a cryptographic dependency or hand-rolling one. Neither
@@ -306,28 +362,38 @@ protects the file at rest and what does not, under a heading of its own.
 
     git grep -n '^## What protects it at rest' -- docs/keystore.md
 
-Four things here are asserted by a test, and one of the four assertions reads
-this file. THIS PARAGRAPH SAID THREE; the fourth arrived with the key store. The
-comparison rule is refused by `SecretComparisonTests`, which opens this document
-and requires it to go on naming the call it pins. The tag length is asserted by
-`PairingCredentialTests` against what the pairing plane accepts as a credential.
-The grouping is asserted by `CeremonyWordingTests` against the sentence an
-operator reads, and that test also refuses the names in this document appearing
-in that sentence. The derived key's length is asserted by `KeyMaterialTests`
-against the length the rotation overlap already refuses anything else against,
-rather than against a second number beside it.
+Five things here are asserted by a test, and two of the five assertions read this
+file. THIS PARAGRAPH SAID FOUR; the fifth arrived with the `hello` answer above.
+The comparison rule is refused by `SecretComparisonTests`, which opens this
+document and requires it to go on naming the call it pins. The tag length is
+asserted by `PairingCredentialTests` against what the pairing plane accepts as a
+credential. The grouping is asserted by `CeremonyWordingTests` against the
+sentence an operator reads, and that test also refuses the names in this document
+appearing in that sentence. The derived key's length is asserted by
+`KeyMaterialTests` against the length the rotation overlap already refuses
+anything else against, rather than against a second number beside it. The `hello`
+answer is asserted by `HelloAuthenticationTests`, which opens this document and
+[`protocol.md`](protocol.md) and requires both to carry the same answer and the
+same statement of what it costs, and which refuses in the plugin source the
+signature primitives that answer rules out.
 
 The second and third hold their own copy of the value, with this document named
 in a comment beside it. That is a citation rather than a reading, and the
 difference is the whole of what changing a number here would do. One test opens
-this file:
+this file by a path written out in it:
 
 ```
 git grep -E 'File\.ReadAllText\(.*"crypto' origin/master -- Jellyfin.Plugin.ServerPairing.Tests
 origin/master:Jellyfin.Plugin.ServerPairing.Tests/SecretComparisonTests.cs:        var document = File.ReadAllText(Path.Join(RepositoryRoot(), "docs", "crypto.md"));
 ```
 
-Six name it, and a grep for the name cannot tell a citation from a reading,
+THE SECOND READER IS NOT IN THAT OUTPUT AND IS NOT MISSING FROM THE COUNT.
+`HelloAuthenticationTests` opens this document through a file name it is handed
+rather than one written into the call, so a grep for the literal cannot see it,
+and a reader who takes that one line for the whole set of readers is wrong in the
+direction that matters. The command below is the wider one and it does return it.
+
+Seven name it, and a grep for the name cannot tell a citation from a reading,
 which is why both commands are here rather than the second alone:
 
 ```
@@ -335,16 +401,17 @@ git grep -l "crypto.md" origin/master -- Jellyfin.Plugin.ServerPairing.Tests
 origin/master:Jellyfin.Plugin.ServerPairing.Tests/Api/PeerPlaneTests.cs
 origin/master:Jellyfin.Plugin.ServerPairing.Tests/KeyStore/KeyMaterialTests.cs
 origin/master:Jellyfin.Plugin.ServerPairing.Tests/Protocol/ArrivingBodyTests.cs
+origin/master:Jellyfin.Plugin.ServerPairing.Tests/Protocol/HelloAuthenticationTests.cs
 origin/master:Jellyfin.Plugin.ServerPairing.Tests/Protocol/PairingCredentialTests.cs
 origin/master:Jellyfin.Plugin.ServerPairing.Tests/SecretComparisonTests.cs
 origin/master:Jellyfin.Plugin.ServerPairing.Tests/Wording/CeremonyWordingTests.cs
 ```
 
-THAT SENTENCE SAID FOUR AND THE TWO IT DID NOT COUNT ARE WEAKER THAN THE FOUR. The
-body reader's cases name this file for the public key length it measured, which is
-a length used as test data rather than a value either of them asserts, so neither
-adds an assertion to the four the paragraphs above count. The number moved and
-what is asserted did not.
+THAT COUNT HAS READ FOUR AND SIX BEFORE READING SEVEN, AND TWO OF THE SEVEN ARE
+WEAKER THAN THE REST. The body reader's cases name this file for the public key
+length it measured, which is a length used as test data rather than a value either
+of them asserts, so neither adds an assertion to the five the paragraphs above
+count. The number moved and what is asserted did not.
 
 So changing the tag length or the grouping here reddens nothing. The value would
 have to be changed in the test as well, and nothing says so at the moment

@@ -40,6 +40,19 @@ Anything else is an ordinary line with no marker.
 
 ## Unreleased
 
+- [protocol] A `hello` carries no signature, and a `hello` that carries one is
+  refused. The specification said a `hello` was signed with the private half of
+  the key it offers, and no primitive that could produce such a signature was ever
+  pinned, so the first message of every pairing rested on a construction neither
+  document chose. What admits a `hello` is an enrolment window an operator opened,
+  what turns the key it offers into an identity is the fingerprint the two
+  operators compare on their two screens, and what proves the sender holds the
+  private half is the first message after it, which is signed with a key derived
+  from both public keys. An operator pairing two servers is unaffected by this
+  today: nothing has ever completed an enrolment, so no `hello` has ever been
+  sent. A server built against the older sentence would send a header this one
+  refuses.
+
 - [protocol] The body of a request is now read as the members the specification
   names, and a peer that sends anything else is told its body was malformed
   instead of being refused with the same answer everything else gets. A member
