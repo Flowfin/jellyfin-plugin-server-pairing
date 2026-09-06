@@ -40,6 +40,18 @@ Anything else is an ordinary line with no marker.
 
 ## Unreleased
 
+- [protocol] The `hello` response signs over the pairing identifier the two public
+  keys derive, and not over the 32 zeros the request carried. The specification
+  fixed a response's signed bytes at six lines and made line 3 the pairing
+  identifier, and a `hello` is the one message where those are two different
+  values, so two servers built from the same document could each sign bytes the
+  other never builds and refuse each other at the first signature in a pairing.
+  The choice buys no cryptographic strength: the identifier already salts the key
+  the signature is made with, so servers that derive different identifiers fail to
+  verify each other whichever value line 3 holds. What it buys is that they sign
+  the same bytes. Nothing has ever sent a `hello`, so an operator pairing two
+  servers is unaffected today.
+
 - [protocol] A `hello` request carries no signature, and one that carries a
   signature header is refused. The response to it is signed as every other
   response is. The specification said a `hello` was signed with the private half of

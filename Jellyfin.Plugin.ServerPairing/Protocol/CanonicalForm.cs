@@ -63,8 +63,25 @@ public static class CanonicalForm
     /// <summary>
     /// Builds the canonical bytes for a response.
     /// </summary>
+    /// <remarks>
+    /// Six lines rather than eight, and line 3 is the pairing identifier of the pairing the
+    /// message belongs to. On a <c>hello</c> response that is the identifier the two public
+    /// keys derive, and never the 32 zeros the request carried: the zeros are the initiator's
+    /// placeholder, and a responder holds both keys by the time it answers, so nothing is
+    /// standing in for anything by then. <c>docs/protocol.md</c> is where that is argued and
+    /// is the authority.
+    /// <para>
+    /// This method reproduces the identifier it is handed and chooses nothing, so the
+    /// obligation is the caller's. Nothing in this repository builds a <c>hello</c> response
+    /// yet; the enrolment is issue #19, and what it owes is that the value reaching this
+    /// parameter is the derived one rather than the value the request's <c>X-Pairing-Id</c>
+    /// carried.
+    /// </para>
+    /// </remarks>
     /// <param name="version">The protocol version of the pairing.</param>
-    /// <param name="pairingId">The pairing identifier.</param>
+    /// <param name="pairingId">
+    /// The pairing identifier, which on a <c>hello</c> response is the derived one.
+    /// </param>
     /// <param name="requestNonce">The nonce of the request being answered.</param>
     /// <param name="timestamp">The timestamp on the response.</param>
     /// <param name="body">The response body bytes.</param>
