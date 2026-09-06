@@ -4,17 +4,20 @@ Every cryptographic choice this plugin makes is here. A later issue does not get
 to make one quietly, and where a number belongs to this document a second copy of
 it somewhere else is a defect rather than a convenience.
 
-Two of the choices below are implemented and the rest are not, which is a
+Some of the choices below are implemented and the rest are not, which is a
 different sentence from the one this paragraph carried while none of them were.
-The message authentication and the fixed-time comparison are in the tree:
+They are named rather than counted, because a count in a document drifts against
+the tree it describes and this one has drifted twice. The message authentication
+and the fixed-time comparison are in the tree:
 
 ```
 git grep -ln "HMACSHA256" origin/master -- Jellyfin.Plugin.ServerPairing
 origin/master:Jellyfin.Plugin.ServerPairing/Protocol/RequestAuthenticator.cs
 ```
 
-The key pair, the agreement and the derivation are not. Nothing in either project
-calls them:
+The fingerprint the two operators compare is in the tree as well, with the pairing
+identifier it shares its material with. The long term key pair, the agreement and
+the key derivation are not:
 
 ```
 git grep -lE "HKDF|ECDiffieHellman|SubjectPublicKeyInfo" origin/master -- Jellyfin.Plugin.ServerPairing Jellyfin.Plugin.ServerPairing.Tests
@@ -22,32 +25,45 @@ origin/master:Jellyfin.Plugin.ServerPairing.Tests/Api/PeerPlaneTests.cs
 origin/master:Jellyfin.Plugin.ServerPairing.Tests/KeyStore/KeyMaterialTests.cs
 origin/master:Jellyfin.Plugin.ServerPairing.Tests/Protocol/ArrivingBodyTests.cs
 origin/master:Jellyfin.Plugin.ServerPairing.Tests/Protocol/HelloAuthenticationTests.cs
+origin/master:Jellyfin.Plugin.ServerPairing.Tests/Protocol/PairingIdentityTests.cs
 origin/master:Jellyfin.Plugin.ServerPairing.Tests/Wording/CeremonyWordingTests.cs
 origin/master:Jellyfin.Plugin.ServerPairing/KeyStore/KeyMaterial.cs
 origin/master:Jellyfin.Plugin.ServerPairing/Protocol/KeyOverlap.cs
+origin/master:Jellyfin.Plugin.ServerPairing/Protocol/PairingIdentity.cs
 ```
 
-and none of the seven calls any of them. THIS PARAGRAPH NAMED TWO FILES, THEN
-FOUR, THEN SIX, AND THE COMMAND RETURNS SEVEN: the key store landed after it was
-first written and two of its files name the derivation, the body reader landed
-after that and two of its test files name the encoding, and the `hello` answer
-landed after that. `HelloAuthenticationTests.cs` names the key pair's type in a
-fixture line the guard there has to leave alone, which is the near miss for the
-signature primitive it refuses, so it is a name held as test data and nothing
-more. `CeremonyWordingTests.cs`
+THIS PARAGRAPH NAMED TWO FILES, THEN FOUR, THEN SIX, THEN SEVEN, AND WHAT MOVED
+THIS TIME IS THE SENTENCE ABOVE THE COMMAND RATHER THAN THE COUNT UNDER IT. Every
+time before this one, the answer was that a name had been cited somewhere new and
+nothing had been called. That is still true of seven of the nine.
+`HelloAuthenticationTests.cs` names the key pair's type in a fixture line the guard
+there has to leave alone, which is the near miss for the signature primitive it
+refuses, so it is a name held as test data and nothing more. `CeremonyWordingTests.cs`
 is a list of words the ceremony wording may not use, where two of these names are
 there to be kept off an operator's screen. `KeyOverlap.cs`, `KeyMaterial.cs` and
 `KeyMaterialTests.cs` name the derivation in a comment, beside the length it
 fixes. `PeerPlaneTests.cs` and `ArrivingBodyTests.cs` name the encoding in a
 comment beside a public key member built out of bytes that are not a key, which
-is the length this document measured used as test data and nothing more. So what
-the command shows is a name being cited in seven places rather than a derivation
-being performed in any of them. No key described here has ever
-been derived, held or destroyed by this plugin, and THE REASON GIVEN HERE HAS
-STOPPED BEING THE REASON: this sentence said there is still no key store, and
-there is one. What holds the claim up instead is that nothing calls the one
-routine that would produce a key, and nothing on a request path reaches the store
-that would hold it:
+is the length this document measured used as test data and nothing more.
+
+**THE TWO NEW ONES ARE DIFFERENT AND THAT IS WHY THIS SENTENCE CHANGED.**
+`PairingIdentity.cs` is the construction under [`protocol.md`](protocol.md) that
+derives the pairing identifier and the fingerprint from two public key encodings,
+landed under issue #19. It names the encoding and calls neither the key pair nor
+the agreement, because it digests the bytes it is handed and reads no key. Its
+cases DO call `ECDiffieHellman.Create` and `ExportSubjectPublicKeyInfo`: the
+material the construction is over is that encoding, and a case over arbitrary
+bytes would not meet the lengths and the byte patterns a real key has. So a key
+pair is created in the test project and in no other place.
+
+WHAT THAT MOVES AND WHAT IT DOES NOT. No key described here has ever been derived,
+held or destroyed by this PLUGIN, which is narrower than the sentence that stood
+here and is still true: a pair a case creates and drops inside one method is not a
+key this plugin holds, nothing writes one to a store, and no private half outlives
+the test that made it. The agreement and the HKDF derivation are called by nothing
+at all, in either project. What holds the rest of the claim up is unchanged:
+nothing calls the one routine that would produce a pairing key, and nothing on a
+request path reaches the store that would hold it:
 
 ```
 git grep -n 'KeyMaterial.Fresh()' origin/master -- Jellyfin.Plugin.ServerPairing/
@@ -318,6 +334,25 @@ a fingerprint shown as an unbroken run of characters is one people compare
 badly. The sentences said around it are in the tree, in `CeremonyWording`, and
 the page that would show them is issue #49. The comparison being performed at all
 is the one mechanism in this design that is a person.
+
+**THE DIGEST AND THE TRUNCATION ARE IN THE TREE AND THE GROUPING IS NOT, AND THE
+REASON IS THAT NOTHING PINS IT.** `PairingIdentity` computes the digest and hands
+back the leading 128 bits, and it refuses a value that is not a whole digest
+rather than shortening whatever it is given:
+
+```
+git grep -n 'public static string ShownToAnOperator' origin/master -- Jellyfin.Plugin.ServerPairing/Protocol/PairingIdentity.cs
+origin/master:Jellyfin.Plugin.ServerPairing/Protocol/PairingIdentity.cs:111:    public static string ShownToAnOperator(string fingerprintDigest)
+```
+
+What separates one group of four from the next is written nowhere - not here, not
+in [`protocol.md`](protocol.md), not in `CeremonyWording` - so a type choosing a
+separator would be taking a decision this document owns and has not taken. That is
+the same shape as the question issue #369 answered one document over, where two
+readings of a sentence produced two different signed byte strings, and it is
+recorded on issue #19 rather than settled in passing by whoever writes the page.
+Until it is taken, the sentence above claims a pinned construction that is pinned
+except for one byte.
 
 ## What is deliberately absent
 

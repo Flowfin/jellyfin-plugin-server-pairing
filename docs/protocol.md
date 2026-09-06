@@ -9,12 +9,13 @@ does not is what a reader has to be told about first. The types that hold the
 state machine, the canonical form, the field limits, the freshness window with
 its nonce store, the key overlap, the peer address, the enrolment window, the
 version negotiation, the reader that turns an arriving body into the members
-the table below names, the store a pairing record is kept in and the revocation
-that stops a pairing on this server are here:
+the table below names, the store a pairing record is kept in, the revocation
+that stops a pairing on this server and the two values two public keys derive are
+here:
 
 ```
 git ls-tree -r --name-only origin/master -- Jellyfin.Plugin.ServerPairing/Protocol | wc -l
-51
+52
 ```
 
 **This paragraph said nothing reached any of them from outside this server, that
@@ -160,6 +161,18 @@ and why that length defeats an attacker grinding for a second preimage, is in
 The identifier is a digest of two public keys, so it is not secret and it names
 no person. That is why [`logging.md`](logging.md) allows it in a log line while
 allowing almost nothing else.
+
+Both constructions are in the tree, under issue #19, and that type is this section
+expressed in code rather than a second statement of it:
+
+```
+git grep -l 'class PairingIdentity' origin/master -- Jellyfin.Plugin.ServerPairing/
+origin/master:Jellyfin.Plugin.ServerPairing/Protocol/PairingIdentity.cs
+```
+
+Nothing calls it. What would is the ceremony, which derives this server's key pair,
+sends the public half in a `hello` and puts the fingerprint in front of two
+operators, and none of those three exists.
 
 ## The states
 
@@ -860,7 +873,7 @@ to hold it under. The wire already says as much about the request that arrives i
 that state:
 
     git grep -n "^them. Its .X-Pairing-Id. is 32" origin/master -- docs/protocol.md
-    origin/master:docs/protocol.md:512:them. Its `X-Pairing-Id` is 32 `0` characters, which is what line 5 of its
+    origin/master:docs/protocol.md:525:them. Its `X-Pairing-Id` is 32 `0` characters, which is what line 5 of its
 
 **`OFFERED` IS WRITTEN, UNDER A PROVISIONAL IDENTIFIER.** Opening a window mints
 one and writes the record under it. The record moves to the derived identifier at
