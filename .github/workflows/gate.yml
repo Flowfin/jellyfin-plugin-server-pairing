@@ -132,3 +132,69 @@ jobs:
 
       - name: Test on net10.0
         run: dotnet test Jellyfin.Plugin.ServerPairing.sln --no-build -c Release -f net10.0
+
+  harness:
+    # A second job rather than a step in the one above, and that is the whole
+    # design of it. The fuzz harness is deliberately absent from the solution so
+    # that no route which packages the plugin ever restores SharpFuzz, which its
+    # own project file states as the reason. A separate job restores it on a
+    # separate runner, so the build and test job's graph is untouched and the
+    # decision the project file records is not undone by making the break
+    # visible.
+    #
+    # WHAT THIS EXISTS AGAINST IS A CHANGE THAT COMPILES EVERYWHERE THE MERGE
+    # LOOKS. The harness implements interfaces the plugin declares. Widening one
+    # of them leaves the solution green, the suite green and this pull request
+    # green, while the one project outside the solution that implements it stops
+    # compiling, and nothing says so until somebody dispatches the fuzz workflow
+    # by hand. That is issue #371, found with the harness already broken at the
+    # mainline.
+    #
+    # The seeds are driven as well as the project built. A harness that compiles
+    # and no longer reaches the path under test is the green that proves nothing,
+    # which is the failure .github/workflows/fuzz.yml names its own smoke step
+    # for; this runs the same step at the moment the change is proposed rather
+    # than at the moment somebody asks for a fuzz run.
+    #
+    # Nothing native is involved: the instrumentation command and the libFuzzer
+    # runtime are Linux-only pieces this job does not use, and the smoke mode
+    # runs the managed harness directly.
+    name: Build the fuzz harness
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read # check out the repository being built
+    env:
+      FUZZ_DLL: Jellyfin.Plugin.ServerPairing.Fuzz/bin/Release/net10.0/Jellyfin.Plugin.ServerPairing.Fuzz.dll
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # No step pushes via git, so do not persist the GITHUB_TOKEN.
+          persist-credentials: false
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+        with:
+          # global.json pins the SDK, so no version is named here, and the
+          # harness targets net10.0 alone, so the 9 runtime the job above needs
+          # is not needed here.
+          global-json-file: global.json
+
+      - name: Restore the harness, locked
+        # By path, because the harness is not in the solution and this job must
+        # not put it there.
+        run: dotnet restore Jellyfin.Plugin.ServerPairing.Fuzz/Jellyfin.Plugin.ServerPairing.Fuzz.csproj --locked-mode
+
+      - name: Build the harness, warnings as errors
+        run: dotnet build Jellyfin.Plugin.ServerPairing.Fuzz/Jellyfin.Plugin.ServerPairing.Fuzz.csproj --no-restore -c Release -warnaserror
+
+      - name: Drive every seed through every target
+        # The smoke mode exits non-zero on a finding and on an empty corpus, so
+        # a target that stopped reading its seeds fails here rather than passing
+        # quietly.
+        run: |
+          for target in envelope canonical address; do
+            SERVERPAIRING_FUZZ_SMOKE=1 SERVERPAIRING_FUZZ_TARGET="$target" \
+              dotnet "$FUZZ_DLL" "Jellyfin.Plugin.ServerPairing.Fuzz/corpus/${target}"
+          done

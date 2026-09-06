@@ -65,6 +65,20 @@ internal static class Program
         0x79, 0x2d, 0x6e, 0x6f, 0x74, 0x2d, 0x61, 0x2d, 0x73, 0x65, 0x63, 0x72, 0x65, 0x74, 0x21, 0x21,
     };
 
+    /// <summary>
+    /// The instant every verification here is judged at, fixed for the same reason the key is.
+    /// </summary>
+    /// <remarks>
+    /// A verifier takes the instant because a superseded key stops verifying at a moment, and
+    /// it hands the instant to the key source and uses it for nothing else. The source below
+    /// holds one key, answers the same for every instant and never opens an overlap, so the
+    /// instant is not an input this target varies and a moving one would only make a reproducer
+    /// stop reproducing. WHAT THAT COSTS IS STATED RATHER THAN LEFT TO BE NOTICED: nothing here
+    /// drives a rotation overlap, so no property about which of two keys verifies at which
+    /// moment is fuzzed by this file.
+    /// </remarks>
+    private static readonly DateTimeOffset FixedInstant = DateTimeOffset.FromUnixTimeSeconds(1786000000);
+
     private static int Main(string[] args)
     {
         var target = Environment.GetEnvironmentVariable(TargetVariable) ?? "envelope";
@@ -149,14 +163,14 @@ internal static class Program
         var wellFormed = FieldShape.IsWellFormed(request);
 
         // Whatever arrived in the signature header, presented as it arrived.
-        if (verifier.Verify(request, wire.Signature) == VerificationOutcome.Verified && !wellFormed)
+        if (verifier.Verify(request, wire.Signature, FixedInstant) == VerificationOutcome.Verified && !wellFormed)
         {
             throw new FuzzFinding("A request the shape check refuses was verified.");
         }
 
         if (!wellFormed)
         {
-            if (verifier.Verify(request, null) == VerificationOutcome.Verified)
+            if (verifier.Verify(request, null, FixedInstant) == VerificationOutcome.Verified)
             {
                 throw new FuzzFinding("A request with no signature at all was verified.");
             }
@@ -166,7 +180,7 @@ internal static class Program
 
         var signature = RequestAuthenticator.Sign(request, FixedKey);
 
-        if (verifier.Verify(request, signature) != VerificationOutcome.Verified)
+        if (verifier.Verify(request, signature, FixedInstant) != VerificationOutcome.Verified)
         {
             throw new FuzzFinding("A request did not verify under the signature this key just produced over it.");
         }
@@ -176,7 +190,7 @@ internal static class Program
         var tampered = Convert.FromBase64String(signature);
         tampered[0] ^= 0x01;
 
-        if (verifier.Verify(request, Convert.ToBase64String(tampered)) == VerificationOutcome.Verified)
+        if (verifier.Verify(request, Convert.ToBase64String(tampered), FixedInstant) == VerificationOutcome.Verified)
         {
             throw new FuzzFinding("A signature one bit away from the correct one verified.");
         }
@@ -455,10 +469,10 @@ internal static class Program
             _key = key;
         }
 
-        public ReadOnlyMemory<byte> ArrivingKey(string pairingId)
+        public AcceptedKeys ArrivingKeys(string pairingId, DateTimeOffset at)
             => string.Equals(pairingId, _pairingId, StringComparison.Ordinal)
-                ? _key
-                : ReadOnlyMemory<byte>.Empty;
+                ? new AcceptedKeys(_key, default)
+                : AcceptedKeys.None;
     }
 
     /// <summary>

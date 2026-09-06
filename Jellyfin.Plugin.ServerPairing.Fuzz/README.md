@@ -3,7 +3,23 @@
 The coverage-guided harness over the parse and validate path, issue #69. It is
 not in `Jellyfin.Plugin.ServerPairing.sln`, so no ordinary build, test, mutation
 or packaging run restores SharpFuzz or compiles this project, and the packaged
-plugin cannot carry it. The fuzz workflow builds it by path.
+plugin cannot carry it. Two workflows build it by path: the fuzz run, which is
+dispatched by hand, and a job on every pull request that builds it and drives its
+seeds.
+
+**THAT SECOND JOB EXISTS BECAUSE THIS PROJECT STOPPED COMPILING AND NOTHING SAID
+SO.** This harness implements interfaces the plugin declares, and widening one of
+them left the solution green, the suite green and every pull request green while
+the harness did not build, until somebody dispatched the fuzz run. Issue #371 is
+where that was found, with the break already at the mainline. The job is in
+`.github/workflows/gate.yml` and is a job of its own rather than a step in the
+build, so SharpFuzz is restored on its own runner and the sentence above about the
+package stays true:
+
+```
+git grep -n 'name: Build the fuzz harness' origin/master -- .github/workflows/gate.yml
+origin/master:.github/workflows/gate.yml:162:    name: Build the fuzz harness
+```
 
 ## The three surfaces
 
