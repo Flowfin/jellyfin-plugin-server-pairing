@@ -71,12 +71,13 @@ state machine, the canonical form and its field limits, the freshness window
 with its nonce store, the key overlap, the peer address and the channel that
 holds a request to it, the request authenticator, the enrolment window, the
 version negotiation, the reader that turns an arriving body into fields, the file
-a pairing record is kept in and the revocation that stops a pairing on this
-server.
+a pairing record is kept in, the revocation that stops a pairing on this server
+and the construction that derives the pairing identifier and the fingerprint from
+two public keys.
 
 ```
 git ls-tree -r --name-only origin/master -- Jellyfin.Plugin.ServerPairing/Protocol | wc -l
-51
+52
 ```
 
 That count rises whenever a file lands under that directory, so a reader who
