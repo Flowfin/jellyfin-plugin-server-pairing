@@ -410,10 +410,12 @@ section.
 
 ## What is authenticated, and over exactly which bytes
 
-Every pairing plane request carries five headers. They are custom headers rather
-than `Authorization`, because the host reads `Authorization` for its own token
-and a credential of this plugin's in that header would be handed to the server's
-own authentication before this plugin saw it.
+Every pairing plane request carries five headers, except a `hello`, which carries
+four: nothing authenticates a `hello`, so there is no `X-Pairing-Signature` on
+one. That is the section on `hello` below rather than a detail of this list. They
+are custom headers rather than `Authorization`, because the host reads
+`Authorization` for its own token and a credential of this plugin's in that header
+would be handed to the server's own authentication before this plugin saw it.
 
 ```
 X-Pairing-Id
@@ -488,10 +490,59 @@ canonical form holds, and the receiver returns the derived identifier in the
 response body. Every later message carries the real one.
 
 A `hello` is therefore matched to an enrolment window by the peer address the
-local administrator entered, and by nothing else. It is signed with the private
-half of the key it offers, over the same canonical form, so it proves possession
-of that key and nothing else. That is the whole of what it is allowed to prove:
-the comparison the two operators perform is what turns a key into an identity.
+local administrator entered, and by nothing else.
+
+**Nothing authenticates a `hello`.** The request carries no `X-Pairing-Signature`,
+no canonical form is built for one, and a `hello` request carrying that header is
+refused rather than verified, by the same rule that refuses a body member this
+document does not name: a credential nothing reads is a credential in name only,
+and leaving it accepted and ignored is how an undocumented extension starts.
+
+That is the request and not the answer to it. A `hello` RESPONSE is signed like
+every other response, because the receiver holds both public keys by the time it
+answers and can derive the key that signs one, so the first signature in a pairing
+is the responder's rather than the initiator's. Which value line 3 of its
+canonical form holds is issue #369, and this section settles the request alone.
+
+THIS PARAGRAPH SAID A `hello` WAS SIGNED WITH THE PRIVATE HALF OF THE KEY IT
+OFFERS, OVER THE SAME CANONICAL FORM. Nothing in [`crypto.md`](crypto.md) could
+produce that signature. The long-term key pair is an `ECDiffieHellman` key, which
+signs nothing, and the one authentication primitive that document pins is
+HMAC-SHA-256 over a key derived from an agreement, which neither side can compute
+while a `hello` is in flight because the receiver holds no peer public key yet. So
+the sentence described a construction no document chose, on the first message of
+every pairing. Issue #364 is where that was found and where the answer was taken,
+and [`crypto.md`](crypto.md) is where it is argued, because it is a statement about
+the cryptography rather than about the bytes.
+
+Three things carry the weight instead, and none of them is a primitive.
+
+**The enrolment window admits the message.** A `hello` reaches this plane only
+where an administrator has a window open against the address it claims, so a
+`hello` arriving when none is open reaches nothing. What bounds it beyond that is
+the shared arrival allowance above rather than a credential.
+
+**The operator comparison turns the offered key into an identity.** That is
+decision 1 of issue #1 and is the root of trust of this design. A signature made
+with the offered key could prove only that the sender holds it, and the sender of
+a hostile `hello` holds a key of their own choosing, so such a proof separates
+nobody from anybody. The fingerprint two operators read off two screens does.
+
+**The first message after `hello` proves possession, and proves it for free.**
+Every later message is signed with a key derived from the agreement between the
+two public keys, so a sender that does not hold the private half of the key it
+offered can produce nothing this server accepts. A `hello` from somebody holding
+no private half therefore buys a pairing that cannot take one further step. That
+is key confirmation rather than a proof of possession up front, and it is what the
+sentence this paragraph replaced was reaching for.
+
+**What it costs, stated rather than left to be inferred.** Anyone who can reach
+this endpoint while a window is open can put a public key of their own choosing in
+front of an operator, and this plugin will show its fingerprint faithfully.
+Nothing in the cryptography stops that and nothing here claims to. The operator
+comparing the fingerprint is the whole of what stands between that and a pairing,
+an operator who clicks through it has established nothing, and a signed `hello`
+would not have changed either sentence by one word.
 
 ## Freshness
 
@@ -784,7 +835,7 @@ to hold it under. The wire already says as much about the request that arrives i
 that state:
 
     git grep -n "^them. Its .X-Pairing-Id. is 32" origin/master -- docs/protocol.md
-    origin/master:docs/protocol.md:486:them. Its `X-Pairing-Id` is 32 `0` characters, which is what line 5 of its
+    origin/master:docs/protocol.md:488:them. Its `X-Pairing-Id` is 32 `0` characters, which is what line 5 of its
 
 **`OFFERED` IS WRITTEN, UNDER A PROVISIONAL IDENTIFIER.** Opening a window mints
 one and writes the record under it. The record moves to the derived identifier at
@@ -1111,12 +1162,15 @@ origin/master:Jellyfin.Plugin.ServerPairing/Api/PeerPlane.cs:331:            ret
 WHICH OF THE TWO CALLERS REACHES IT TODAY IS THE HALF TO READ CAREFULLY. The
 taxonomy names two, and the one that has a route is the caller holding a verifying
 key. The other is a caller inside an open enrolment window, and that route does not
-exist: a `hello` carries 32 zero characters where the identifier goes and is signed
-with the private half of the key it offers, and no such verification is built, so
-nothing on this plane admits a caller that holds no pairing key. A peer outside the
-overlap that has never paired is therefore still refused for its signature. What is
-answered `version` is a peer whose range moved out from under a pairing that
-already has one.
+exist: every request this plane admits is verified against a pairing key, and the
+route that admits a caller holding none is the enrolment, which is issue #19 and is
+not built, so nothing on this plane admits a caller that holds no pairing key.
+THE REASON MOVED AND THE ABSENCE DID NOT. What stood here said a `hello` is signed
+with the private half of the key it offers and that no such verification is built;
+nothing authenticates a `hello` at all, which is the section above and is issue
+#364. A peer outside the overlap that has never paired is therefore still refused,
+now for want of a route rather than for its signature. What is answered `version`
+is a peer whose range moved out from under a pairing that already has one.
 
 ## What is not decided here
 
