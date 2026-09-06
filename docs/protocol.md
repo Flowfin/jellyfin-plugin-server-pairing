@@ -208,7 +208,7 @@ violation is a refusal rather than a truncation.
 
 | Field | Type | Limit |
 | --- | --- | --- |
-| pairing identifier | 32 lowercase hex characters | exactly 32, and `[0-9a-f]` only. 32 zeros on a `hello` and nowhere else |
+| pairing identifier | 32 lowercase hex characters | exactly 32, and `[0-9a-f]` only. 32 zeros on a `hello` request and nowhere else |
 | protocol version | unsigned decimal integer, no leading zero | at most 4 digits |
 | version range | two versions, low and high, low not above high | as above, each |
 | timestamp | unsigned decimal integer, seconds since the Unix epoch | at most 20 digits |
@@ -472,6 +472,30 @@ A response carries `X-Pairing-Timestamp`, `X-Pairing-Nonce` and
 Line 4 is what binds a response to its request, so a captured response cannot be
 replayed against a different one.
 
+Line 3 holds the pairing identifier of the pairing the message belongs to, and on
+a `hello` response that is the derived identifier rather than the 32 zeros the
+request carried. The zeros are the initiator's placeholder and exist only because
+a sender holding one public key cannot compute a value derived from two; a
+responder holds both by the time it answers, so by then nothing is standing in
+for anything. It is the same value the response body's `pairingId` member carries
+and the same value that salts the key the signature is made with, so one message
+carries one spelling of the field rather than two.
+
+**That choice buys no cryptographic strength, and reading it as though it did is
+the mistake worth naming here.** The identifier is already the HKDF salt in
+[`crypto.md`](crypto.md), so two servers that derive different identifiers derive
+different keys and fail to verify each other whichever value line 3 holds. What
+it buys is that two implementations sign the same bytes, and that a reader who
+meets the pairing identifier twice in one message meets one value.
+
+Nothing in this repository builds a `hello` response or signs one; the enrolment
+is issue #19. What is owed at the moment something does is that the value
+reaching line 3 is the one this server derived from the two public keys, and
+never the one the request's `X-Pairing-Id` carried, which on a `hello` is the
+placeholder. `CanonicalForm.ForResponse` reproduces the identifier its caller
+hands it and chooses nothing, so the obligation is the caller's and the caller is
+where a mistake would live.
+
 So which fields are authenticated has a short answer in both directions. Every
 field of every body is, because the body is covered whole by its digest and a
 single changed byte moves it. The five header values are, because each is written
@@ -501,8 +525,9 @@ and leaving it accepted and ignored is how an undocumented extension starts.
 That is the request and not the answer to it. A `hello` RESPONSE is signed like
 every other response, because the receiver holds both public keys by the time it
 answers and can derive the key that signs one, so the first signature in a pairing
-is the responder's rather than the initiator's. Which value line 3 of its
-canonical form holds is issue #369, and this section settles the request alone.
+is the responder's rather than the initiator's. Line 3 of its canonical form
+holds the derived identifier, which the canonical form section above fixes and
+argues; this section settles the request alone.
 
 THIS PARAGRAPH SAID A `hello` WAS SIGNED WITH THE PRIVATE HALF OF THE KEY IT
 OFFERS, OVER THE SAME CANONICAL FORM. Nothing in [`crypto.md`](crypto.md) could
@@ -835,7 +860,7 @@ to hold it under. The wire already says as much about the request that arrives i
 that state:
 
     git grep -n "^them. Its .X-Pairing-Id. is 32" origin/master -- docs/protocol.md
-    origin/master:docs/protocol.md:488:them. Its `X-Pairing-Id` is 32 `0` characters, which is what line 5 of its
+    origin/master:docs/protocol.md:512:them. Its `X-Pairing-Id` is 32 `0` characters, which is what line 5 of its
 
 **`OFFERED` IS WRITTEN, UNDER A PROVISIONAL IDENTIFIER.** Opening a window mints
 one and writes the record under it. The record moves to the derived identifier at
