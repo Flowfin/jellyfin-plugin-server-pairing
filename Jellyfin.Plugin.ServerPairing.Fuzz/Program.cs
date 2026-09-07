@@ -232,6 +232,7 @@ internal static class Program
         }
 
         AssertCanonicalFormIsRecoverable(request);
+        AssertResponseCanonicalFormIsRecoverable(request);
     }
 
     /// <summary>
@@ -358,6 +359,80 @@ internal static class Program
             if (!string.Equals(lines[i], expected[i], StringComparison.Ordinal))
             {
                 throw new FuzzFinding("A line of the canonical form is not the field it was built from.");
+            }
+        }
+    }
+
+    /// <summary>
+    /// The bytes a response's signature covers have to name their own field boundaries too.
+    /// Six lines rather than eight, each ended by one line feed, no carriage return and
+    /// nothing outside ASCII.
+    /// </summary>
+    /// <remarks>
+    /// Five of the six lines are compared against the value they were built from. The sixth is
+    /// the body digest and is compared against nothing here, for the reason the request half
+    /// gives: checking it means computing it, and a harness computing it the same way the code
+    /// under test does proves the two agree with each other rather than with the specification.
+    /// <para>
+    /// WHAT DRIVES THIS IS A REQUEST'S FIELDS AND NOT A RESPONSE'S, and that is a bound rather
+    /// than a convenience. <see cref="CanonicalForm.ForResponse"/> takes its values as
+    /// arguments, nothing in this repository builds a response yet, and the four covered values
+    /// this target has to hand are the ones the request carried. So what is proven is that the
+    /// builder reproduces the values it is given; that a responder gives it the right ones -
+    /// the derived pairing identifier rather than the placeholder the request carried - is the
+    /// caller's obligation and is fuzzed by nothing here.
+    /// </para>
+    /// </remarks>
+    private static void AssertResponseCanonicalFormIsRecoverable(PairingRequest request)
+    {
+        var bytes = CanonicalForm.ForResponse(
+            request.Version,
+            request.PairingId,
+            request.Nonce,
+            request.Timestamp,
+            request.Body);
+
+        foreach (var b in bytes)
+        {
+            if (b > 0x7f)
+            {
+                throw new FuzzFinding("The canonical form of a response carries a byte outside ASCII.");
+            }
+
+            if (b == (byte)'\r')
+            {
+                throw new FuzzFinding("The canonical form of a response carries a carriage return.");
+            }
+        }
+
+        var text = Encoding.ASCII.GetString(bytes);
+
+        if (text.Length == 0 || text[^1] != '\n')
+        {
+            throw new FuzzFinding("The canonical form of a response does not end in a line feed.");
+        }
+
+        var lines = text[..^1].Split('\n');
+
+        if (lines.Length != 6)
+        {
+            throw new FuzzFinding("The canonical form of a response built from a well-formed request is not six lines.");
+        }
+
+        var expected = new[]
+        {
+            CanonicalForm.ResponseLabel,
+            request.Version,
+            request.PairingId,
+            request.Nonce,
+            request.Timestamp,
+        };
+
+        for (var i = 0; i < expected.Length; i++)
+        {
+            if (!string.Equals(lines[i], expected[i], StringComparison.Ordinal))
+            {
+                throw new FuzzFinding("A line of the canonical form of a response is not the value it was built from.");
             }
         }
     }
