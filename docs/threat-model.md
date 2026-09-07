@@ -409,6 +409,19 @@ instead of passing the first:
 
 Nothing hands this type a request from the network, for the reason under A1, so
 what it bounds today is a caller the test project stands in for.
+
+Against the enrolment window, the limit is where this adversary sits, and it is
+no limit. A `hello` is matched to an open window by the remote endpoint of the
+connection that delivered it, which issue #377 decided and
+[`protocol.md`](protocol.md) fixes, and this adversary is on the path between the
+two servers. So the address a window is held against is one it can present: a
+`hello` it forges arrives from the peer's address as far as this server can
+tell, and the window admits it. What the match excludes is a `hello` from an
+address no window is held against, which is the position of somebody who can
+reach this endpoint from elsewhere rather than from the path, and it narrows who
+can put a public key in front of an operator to somebody on the path. It
+excludes this adversary by nothing, and nothing here claims otherwise.
+
 Against enrolment specifically, the limit is the fingerprint comparison. This
 adversary can substitute its own public key in either direction and there is no
 transcribed code it has to guess to do it, so what catches it is two
@@ -548,6 +561,11 @@ owed by issue #28.
 
 Reach while an enrolment window is open is larger, because the window is the one
 moment the plugin accepts something from a party it has not yet authenticated.
+It is bounded by where the caller arrives from: a window is held against the
+address the administrator entered and matched by the remote endpoint of the
+connection, issue #377, so a caller arriving from anywhere else meets the
+refusal a `hello` meets when no window is open, and what is left inside the
+bound is the position under A2.
 There is no transcribed code to guess, because what the window accepts is a
 public key. So the limit is not the entropy of a secret: it is that the window is
 small, single use and fail closed, and that a key arriving inside it still has to

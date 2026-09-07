@@ -527,7 +527,46 @@ canonical form holds, and the receiver returns the derived identifier in the
 response body. Every later message carries the real one.
 
 A `hello` is therefore matched to an enrolment window by the peer address the
-local administrator entered, and by nothing else.
+local administrator entered, and by nothing else. What is compared against that
+address is supplied by the transport rather than by the message: the remote
+endpoint of the connection that delivered the `hello`. No message carries the
+sender's address and none needs to, and the `address` member of a `hello` keeps
+its one job, which is to name the server the sender believes it is talking to.
+Issue #377 is where that was decided, after this sentence and the one under
+`### What holds a pairing that is not yet identified` below, which says no
+message on the wire supplies the address, were read as a contradiction. They are
+not one: both stand, because the transport is what supplies the value.
+
+The rule for the responder is fixed here, so that it is not chosen inside the
+responder by accident:
+
+- when a window opens, the configured `PeerAddress` is resolved to its set of IP
+  addresses and the window is held against that set for as long as it is open
+- when a `hello` arrives, the remote IP address of the connection that delivered
+  it is compared against the set of every open window, and the remote port is
+  ignored, because a sender's source port is ephemeral and says nothing
+- exactly one window matching is the window the `hello` belongs to
+- no window matching is refused without disclosing that any window is open, under
+  the same refusal as a `hello` arriving when none is
+- two windows matching, which is two configured addresses resolving to one IP
+  address, is refused as a configuration error and the log names it, because a
+  server that cannot tell which peer it is talking to must not guess
+- a `hello` whose `address` member does not name this server is refused as
+  misdirected, whatever window its connection matches
+
+What this server answers under, for the last of those, is held by no type in this
+tree today, and the responder that needs it is where that is met rather than
+here:
+
+    git grep -n -i 'OwnAddress\|ServerAddress\|LocalAddress' origin/master -- Jellyfin.Plugin.ServerPairing ; echo "exit=$?"
+    exit=1
+
+This changes no byte on the wire, so [`versioning.md`](versioning.md) and the
+changelog carry no line for it. One case decides itself and is stated where the
+setting is: an administrator whose peer is seen from a different address than the
+one they entered, because a translated network sits between the two servers, gets
+no match by design and enters the address the peer is seen from, which
+[`configuration.md`](configuration.md) says under `PeerAddress`.
 
 **Nothing authenticates a `hello`.** The request carries no `X-Pairing-Signature`,
 no canonical form is built for one, and a `hello` request carrying that header is
@@ -556,7 +595,7 @@ the cryptography rather than about the bytes.
 Three things carry the weight instead, and none of them is a primitive.
 
 **The enrolment window admits the message.** A `hello` reaches this plane only
-where an administrator has a window open against the address it claims, so a
+where an administrator has a window open against the address it arrives from, so a
 `hello` arriving when none is open reaches nothing. What bounds it beyond that is
 the shared arrival allowance above rather than a credential.
 
@@ -952,7 +991,11 @@ on a running server, and no pairing has been in `Offered` on one.
 
 The record it writes carries the peer address, which is the field the reader of
 the open windows and the refusal against re-pairing an existing peer both need,
-and which no message on the wire supplies:
+and which no message on the wire supplies, because the transport does: what an
+open window is matched against is the remote endpoint of the connection that
+delivers the `hello`, under the rule the `hello` paragraphs of
+`## What is authenticated, and over exactly which bytes` fix, and the address on
+the record is the one that endpoint is compared with:
 
     git grep -n 'public string? PeerAddress' origin/master -- Jellyfin.Plugin.ServerPairing/Protocol/PairingRecord.cs
     origin/master:Jellyfin.Plugin.ServerPairing/Protocol/PairingRecord.cs:107:    public string? PeerAddress { get; }
