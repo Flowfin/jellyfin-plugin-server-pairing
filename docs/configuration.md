@@ -126,6 +126,15 @@ the type that decides them rather than restated here:
 
     git grep -n 'return PeerAddressOutcome' -- Jellyfin.Plugin.ServerPairing/Protocol/PeerAddress.cs
 
+It is also the address an arriving `hello` is matched against, by the remote
+endpoint of the connection that delivered it, which is the rule
+[`docs/protocol.md`](protocol.md) fixes where it describes a `hello`. So it is
+the address the peer is seen from by this server, and not the address the peer
+would name for itself. Where a translated network sits between the two servers,
+the peer arrives from an address other than the one its own administrator would
+give, gets no match by design, and the repair is to enter the address this
+server sees the peer from. Issue #377 is where that was decided.
+
 `AcknowledgeCleartextTransport` is the operator acknowledgement that decision 3 on
 issue #1 settles the shape of. Its safe value is `false`, and `false` is also what
 a missing element deserialises to, so a configuration file that never mentions it
