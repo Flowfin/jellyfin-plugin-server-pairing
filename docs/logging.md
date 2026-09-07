@@ -236,8 +236,8 @@ writes is under the reading rather than counted here.
     origin/master:Jellyfin.Plugin.ServerPairing/Mapping/UserMappings.cs:38:    private readonly ILogger<UserMappings> _log;
     origin/master:Jellyfin.Plugin.ServerPairing/Mapping/UserMappings.cs:54:    public UserMappings(IUserMappingStore mappings, PairingStateMachine pairings, ILogger<UserMappings> log)
     origin/master:Jellyfin.Plugin.ServerPairing/PluginServiceRegistrator.cs:130:                services.GetRequiredService<ILogger<FilePairingKeyStore>>()));
-    origin/master:Jellyfin.Plugin.ServerPairing/PluginServiceRegistrator.cs:220:            services.GetRequiredService<ILogger<HeldAboutUser>>()));
-    origin/master:Jellyfin.Plugin.ServerPairing/PluginServiceRegistrator.cs:239:            services.GetRequiredService<ILogger<UserMappings>>()));
+    origin/master:Jellyfin.Plugin.ServerPairing/PluginServiceRegistrator.cs:224:            services.GetRequiredService<ILogger<HeldAboutUser>>()));
+    origin/master:Jellyfin.Plugin.ServerPairing/PluginServiceRegistrator.cs:243:            services.GetRequiredService<ILogger<UserMappings>>()));
 
 THIS BLOCK WENT STALE TWICE AND NO RUN ON THIS REPOSITORY SAW EITHER TIME. It
 pasted two types, then four, then five, and the command returns 7 that hold a logger; the registration line
