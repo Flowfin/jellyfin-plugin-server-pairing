@@ -143,10 +143,14 @@ public class PluginServiceRegistrator : IPluginServiceRegistrator
         // PairingStateMachine takes this and an IUserMappingStore and the second had no
         // implementation in this assembly. It has one now and both are registered below.
         //
-        // What is unchanged is that nothing on a server writes a record, because nothing joins an
-        // enrolment to the state machine, which is issue #350. So the read above answers an empty
-        // list on every server, which is stated at the action rather than left for a reader to
-        // infer.
+        // THIS COMMENT SAID NOTHING ON A SERVER WRITES A RECORD AND THAT THE READ ABOVE ANSWERS
+        // AN EMPTY LIST ON EVERY SERVER, because nothing joined an enrolment to the state
+        // machine. Enrolment.Open applies LocalEvent.WindowOpened through the state machine and
+        // the administrative plane calls it, so a window an administrator opens is a record in
+        // PairingState.Offered and the read answers with it.
+        //
+        // What is unchanged is that no record reaches PairingState.Active, because the ceremony
+        // that would take it there is issue #19 and nothing derives a long term key pair yet.
         serviceCollection.AddSingleton<IPairingRecordStore>(services =>
             new FilePairingRecordStore(
                 RecordStorePath.FileFor(services.GetRequiredService<IApplicationPaths>())));
