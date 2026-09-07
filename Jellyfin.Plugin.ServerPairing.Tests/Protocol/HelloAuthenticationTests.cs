@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Text;
 using Xunit;
 
 namespace Jellyfin.Plugin.ServerPairing.Tests.Protocol;
@@ -296,26 +297,26 @@ public class HelloAuthenticationTests
     private static List<string> Names(string line)
     {
         var names = new List<string>();
-        var current = string.Empty;
+        var current = new StringBuilder();
 
         foreach (var c in line)
         {
             if (char.IsLetterOrDigit(c) || c == '_')
             {
-                current += c;
+                current.Append(c);
                 continue;
             }
 
             if (current.Length > 0)
             {
-                names.Add(current);
-                current = string.Empty;
+                names.Add(current.ToString());
+                current.Clear();
             }
         }
 
         if (current.Length > 0)
         {
-            names.Add(current);
+            names.Add(current.ToString());
         }
 
         return names;
